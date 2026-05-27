@@ -5,8 +5,9 @@
 ## The rule
 
 - **Server code** returns `Task` or `ValueTask`. Use `ValueTask` for hot paths where the result is often available synchronously.
-- **Unity client code** returns `UniTask` (or `UniTask<T>`). MagicOnion's Unity client surface bridges this automatically.
-- **Shared interfaces** declared in `src/Shared/ClashUp.Shared/` use `UniTask`. MagicOnion bridges `UniTask` to `Task` on the server side; do NOT declare client-only and server-only variants of the same interface.
+- **Unity client code** returns `UniTask` (or `UniTask<T>`).
+- **Shared MagicOnion interfaces** in `src/Shared/ClashUp.Shared/` use `Task<T>`. MagicOnion's Unity client source generator emits a UniTask-returning proxy from the same `Task<T>` interface (with `MagicOnion.Client.Unity` configured for UniTask integration). Server implementations return `Task<T>` directly. Do not declare client-only and server-only variants of the same interface.
+- **Non-MagicOnion Unity-only async APIs** (player input, scene loading, animations) return `UniTask` directly — they never cross the wire.
 
 ## Forbidden
 

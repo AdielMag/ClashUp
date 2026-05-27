@@ -1,0 +1,10 @@
+{
+  "name": "com.clashup.shared",
+  "version": "0.0.1",
+  "displayName": "ClashUp Shared",
+  "description": "Cross-tier contracts (hubs, services, DTOs, wire types) shared between the ClashUp Unity client and the C# servers.",
+  "unity": "6000.0",
+  "author": {
+    "name": "ClashUp"
+  }
+}

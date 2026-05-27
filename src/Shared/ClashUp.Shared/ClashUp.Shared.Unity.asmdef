@@ -1,0 +1,21 @@
+{
+    "name": "ClashUp.Shared",
+    "rootNamespace": "ClashUp.Shared",
+    "references": [
+        "MagicOnion.Shared",
+        "MessagePack"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "MagicOnion.Shared.dll",
+        "MessagePack.dll",
+        "MessagePack.Annotations.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

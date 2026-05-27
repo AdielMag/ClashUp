@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      netstandard2.1 so the same source compiles unchanged inside Unity
+      (consumed via the sibling ClashUp.Shared.Unity.asmdef). The server
+      csprojs reference this output as a netstandard2.1 dependency.
+    -->
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>ClashUp.Shared</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MagicOnion.Shared" />
+    <PackageReference Include="MessagePack" />
+  </ItemGroup>
+
+</Project>
