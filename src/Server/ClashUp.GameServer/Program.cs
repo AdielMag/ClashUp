@@ -37,6 +37,7 @@ builder.Services.AddSingleton<GameServerIdentity>();
 builder.Services.AddSingleton<IServicesRegistryClient, ServicesRegistryClient>();
 builder.Services.AddHostedService<GameServerRegistrar>();
 builder.Services.AddHostedService<HeartbeatBackgroundService>();
+builder.Services.AddHostedService<GracefulDrainService>();
 
 builder.Services.AddGrpc();
 builder.Services.AddMagicOnion(options =>

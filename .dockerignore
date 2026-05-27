@@ -1,0 +1,19 @@
+# Used by both server Dockerfiles. Keep build context lean.
+**/bin/
+**/obj/
+**/Library/
+**/Temp/
+**/Logs/
+**/Builds/
+**/Build/
+**/UserSettings/
+**/MemoryCaptures/
+**/Packages/
+**/.git/
+**/.idea/
+**/.vs/
+**/.vscode/
+client/
+external/
+docs/
+README.md

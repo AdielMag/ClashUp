@@ -24,5 +24,8 @@ public sealed class ServicesRegistryClient : IServicesRegistryClient, IDisposabl
     public async Task HeartbeatAsync(GsHeartbeat heartbeat, CancellationToken cancellationToken) =>
         await _client.HeartbeatAsync(heartbeat);
 
+    public async Task MarkDrainingAsync(string instanceId, CancellationToken cancellationToken) =>
+        await _client.MarkDrainingAsync(instanceId);
+
     public void Dispose() => _channel.Dispose();
 }

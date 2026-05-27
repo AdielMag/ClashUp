@@ -19,4 +19,10 @@ public interface IGameServerRegistry : IService<IGameServerRegistry>
     UnaryResult ReportMatchStartedAsync(GsMatchStarted notice);
 
     UnaryResult ReportMatchEndedAsync(GsMatchEnded notice);
+
+    /// <summary>
+    /// Marks the GS as Draining. The matchmaker will stop placing new
+    /// matches on it; in-flight matches continue.
+    /// </summary>
+    UnaryResult MarkDrainingAsync(string instanceId);
 }

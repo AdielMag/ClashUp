@@ -66,4 +66,10 @@ public sealed class GameServerRegistryImpl : ServiceBase<IGameServerRegistry>, I
         _logger.LogInformation("Match ended: {MatchId} on {InstanceId}", notice.MatchId, notice.InstanceId);
         return default;
     }
+
+    public async UnaryResult MarkDrainingAsync(string instanceId)
+    {
+        await _repository.MarkStatusAsync(instanceId, "Draining", Context.CallContext.CancellationToken);
+        _logger.LogInformation("GS marked draining: {InstanceId}", instanceId);
+    }
 }
