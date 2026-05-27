@@ -12,18 +12,16 @@
   ],
   "dependencies": {
     "com.clashup.shared": "file:../../../src/Shared/ClashUp.Shared",
+    "com.cysharp.slnmerge": "2.0.1",
     "com.cysharp.unitask": "2.5.10",
     "com.cysharp.yetanotherhttphandler": "1.7.0",
-    "com.cysharp.messagepack.unity": "3.1.4",
-    "com.cysharp.magiconion.client.unity": "7.10.1",
-    "com.cysharp.slnmerge": "1.1.0",
-    "com.github-glitchenzo.nugetforunity": "4.2.1",
-    "jp.hadashikick.vcontainer": "1.16.6",
-    "com.unity.collab-proxy": "2.5.2",
-    "com.unity.ide.rider": "3.0.31",
-    "com.unity.ide.visualstudio": "2.0.22",
-    "com.unity.test-framework": "1.4.5",
+    "com.github-glitchenzo.nugetforunity": "4.5.0",
+    "com.unity.collab-proxy": "2.12.4",
+    "com.unity.ide.rider": "3.0.39",
+    "com.unity.ide.visualstudio": "2.0.27",
+    "com.unity.test-framework": "1.6.0",
     "com.unity.ugui": "2.0.0",
-    "com.unity.visualscripting": "1.9.4"
+    "com.unity.visualscripting": "1.9.11",
+    "jp.hadashikick.vcontainer": "1.18.0"
   }
 }
