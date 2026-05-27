@@ -1,0 +1,71 @@
+# ===== .NET =====
+bin/
+obj/
+out/
+*.user
+*.suo
+*.userprefs
+*.swp
+.vs/
+.vscode/
+*.cache
+TestResults/
+[Cc]overage*/
+
+# ===== Unity (root project only) =====
+client/ClashUp.Unity/[Ll]ibrary/
+client/ClashUp.Unity/[Tt]emp/
+client/ClashUp.Unity/[Oo]bj/
+client/ClashUp.Unity/[Bb]uild/
+client/ClashUp.Unity/[Bb]uilds/
+client/ClashUp.Unity/[Ll]ogs/
+client/ClashUp.Unity/[Uu]ser[Ss]ettings/
+client/ClashUp.Unity/[Mm]emoryCaptures/
+
+# Unity-regenerated solution/csproj at the Unity project root.
+# We keep the root ClashUp.sln; Rider/VS merge the Unity-generated sln via SlnMerge.
+client/ClashUp.Unity/*.csproj
+client/ClashUp.Unity/*.sln
+client/ClashUp.Unity/*.unityproj
+client/ClashUp.Unity/Assembly-*.csproj
+
+# Meta files for ignored Unity folders
+client/ClashUp.Unity/[Ll]ibrary.meta
+client/ClashUp.Unity/[Tt]emp.meta
+client/ClashUp.Unity/[Bb]uild.meta
+client/ClashUp.Unity/[Bb]uilds.meta
+client/ClashUp.Unity/[Ll]ogs.meta
+client/ClashUp.Unity/[Uu]ser[Ss]ettings.meta
+client/ClashUp.Unity/[Mm]emoryCaptures.meta
+
+# Unity asset/scene backups
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+*.unitypackage
+*.aab
+*.apk
+*.ipa
+*.app
+
+# Crashlytics
+crashlytics-build.properties
+
+# NOTE: client/ClashUp.Unity/Assets/Packages/ (NugetForUnity install dir) IS COMMITTED.
+# Do not ignore it.
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Rider / VS =====
+*.sln.iml
+.idea/
+
+# ===== Tools / local dev =====
+tools/cert/*.pfx
+tools/cert/*.key
+tools/cert/*.pem
+.env
+.env.local
