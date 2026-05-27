@@ -7,7 +7,8 @@
       "Bash(\"C:/Users/Adiel/Documents/ClashUp/client/ClashUp.Unity/Assets/AppStarter/Content.meta\":*)",
       "Bash(\"C:/Users/Adiel/Documents/ClashUp/client/ClashUp.Unity/Assets/AppStarter/Content/Prefabs.meta\":*)",
       "Bash(\"C:/Users/Adiel/Documents/ClashUp/client/ClashUp.Unity/Assets/AppStarter/Content/Scenes.meta\":*)",
-      "Bash(\"C:/Users/Adiel/Documents/ClashUp/client/ClashUp.Unity/Assets/CoreStarter/Content.meta\":*)"
+      "Bash(\"C:/Users/Adiel/Documents/ClashUp/client/ClashUp.Unity/Assets/CoreStarter/Content.meta\":*)",
+      "Bash(\"C:/Users/Adiel/Documents/ClashUp/client/ClashUp.Unity/Assets/Editor/SceneManager/SceneBuildManagerWindow.cs.meta\":*)"
     ]
   }
 }
