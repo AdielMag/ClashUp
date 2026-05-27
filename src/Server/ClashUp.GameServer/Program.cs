@@ -23,6 +23,7 @@ builder.Services
     .Bind(builder.Configuration.GetSection(GameServerOptions.SectionName));
 
 builder.Services.AddSingleton<IJwtKeyProvider, JwtKeyProvider>();
+builder.Services.AddSingleton<IMatchTokenValidator, MatchTokenValidator>();
 builder.Services.AddSingleton<IMatchRegistry, MatchRegistry>();
 
 // Per-match scoped simulation pieces. Resolved via MatchContext's

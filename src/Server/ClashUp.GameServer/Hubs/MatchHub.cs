@@ -1,4 +1,6 @@
+using ClashUp.Server.Common.Auth;
 using ClashUp.Server.GameServer.Match;
+using ClashUp.Server.GameServer.Registration;
 using ClashUp.Shared.Hubs;
 using ClashUp.Shared.MessagePackObjects;
 using MagicOnion.Server.Hubs;
@@ -6,27 +8,43 @@ using MagicOnion.Server.Hubs;
 namespace ClashUp.Server.GameServer.Hubs;
 
 /// <summary>
-/// Per-match StreamingHub. Validates the join token, registers the
+/// Per-match StreamingHub. Validates the MatchToken JWT, registers the
 /// connection with the match's Group, and enqueues inputs into the
 /// per-match InputBuffer. No sim work happens here — see
 /// docs/rules/magiconion-hub-discipline.md.
-///
-/// JWT validation of the MatchToken is a TODO for step 11 (reconnect
-/// hardening). The skeleton is in place; the validator call is the
-/// only missing piece.
 /// </summary>
 public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, IMatchHub
 {
     private readonly IMatchRegistry _matches;
-    private MatchContext? _context;
+    private readonly IMatchTokenValidator _tokens;
+    private readonly GameServerIdentity _identity;
 
-    public MatchHub(IMatchRegistry matches)
+    private MatchContext? _context;
+    private MatchTokenClaims _claims;
+
+    public MatchHub(IMatchRegistry matches, IMatchTokenValidator tokens, GameServerIdentity identity)
     {
         _matches = matches;
+        _tokens = tokens;
+        _identity = identity;
     }
 
     public async Task<JoinResult> JoinAsync(MatchJoinRequest request)
     {
+        _claims = _tokens.Validate(request.MatchToken);
+
+        if (!string.Equals(_claims.MatchId, request.MatchId.Value, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("MatchToken.matchId does not match the requested match.");
+        }
+
+        if (!string.IsNullOrEmpty(_identity.InstanceId)
+            && !string.Equals(_claims.GsInstanceId, _identity.InstanceId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"MatchToken issued for GS {_claims.GsInstanceId}, not this instance ({_identity.InstanceId}).");
+        }
+
         if (!_matches.TryGet(request.MatchId, out var context))
         {
             throw new InvalidOperationException($"Match {request.MatchId} not hosted on this instance.");
@@ -36,12 +54,10 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
         var group = await Group.AddAsync(context.MatchId.Value);
         context.Group ??= group;
 
-        // Notify everyone (including the joiner) so HUD lists rebuild.
         var summary = new PlayerSummary
         {
-            // TODO step 11: pull PlayerId from validated MatchToken claims.
-            Id = new PlayerId("anonymous"),
-            DisplayName = "Player",
+            Id = new PlayerId(_claims.PlayerId),
+            DisplayName = $"Player-{_claims.PlayerId[..6]}",
             TeamId = 0,
         };
         context.Group?.All.OnPlayerJoined(summary);

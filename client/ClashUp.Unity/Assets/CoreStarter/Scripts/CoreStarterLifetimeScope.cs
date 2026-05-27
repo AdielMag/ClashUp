@@ -28,6 +28,7 @@ public sealed class CoreStarterLifetimeScope : LifetimeScope
         builder.Register<MagicOnionChannelProvider>(Lifetime.Singleton);
         builder.Register<SessionTokenStore>(Lifetime.Singleton);
         builder.Register<MatchmakingClient>(Lifetime.Singleton);
+        builder.Register<ResolveMatchClient>(Lifetime.Singleton);
         builder.Register<GameServerChannelFactory>(Lifetime.Singleton);
     }
 }
