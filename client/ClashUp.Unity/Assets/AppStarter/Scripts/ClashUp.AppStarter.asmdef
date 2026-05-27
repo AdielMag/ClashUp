@@ -1,0 +1,21 @@
+{
+    "name": "ClashUp.AppStarter",
+    "rootNamespace": "ClashUp.Client.AppStarter",
+    "references": [
+        "ClashUp.Core",
+        "ClashUp.Networking",
+        "ClashUp.Shared",
+        "UniTask",
+        "VContainer",
+        "VContainer.Unity"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

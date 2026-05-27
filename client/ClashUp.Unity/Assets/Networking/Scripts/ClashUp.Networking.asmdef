@@ -1,0 +1,26 @@
+{
+    "name": "ClashUp.Networking",
+    "rootNamespace": "ClashUp.Client.Networking",
+    "references": [
+        "ClashUp.Core",
+        "ClashUp.Shared",
+        "MagicOnion.Client",
+        "MagicOnion.Shared",
+        "MessagePack",
+        "MessagePack.Annotations",
+        "Grpc.Net.Client",
+        "Grpc.Core.Api",
+        "Cysharp.Net.Http.YetAnotherHttpHandler",
+        "UniTask",
+        "VContainer"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

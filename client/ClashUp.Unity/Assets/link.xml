@@ -1,0 +1,12 @@
+<linker>
+  <!-- Preserve Shared wire types so IL2CPP doesn't strip them. -->
+  <assembly fullname="ClashUp.Shared" preserve="all" />
+
+  <!-- MessagePack runtime + generated formatters. -->
+  <assembly fullname="MessagePack" preserve="all" />
+  <assembly fullname="MessagePack.Annotations" preserve="all" />
+
+  <!-- MagicOnion client + generated hub proxies. -->
+  <assembly fullname="MagicOnion.Client" preserve="all" />
+  <assembly fullname="MagicOnion.Shared" preserve="all" />
+</linker>

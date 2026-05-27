@@ -1,0 +1,16 @@
+{
+    "name": "ClashUp.Gameplay",
+    "rootNamespace": "ClashUp.Client.Gameplay",
+    "references": [
+        "ClashUp.Core",
+        "ClashUp.Shared",
+        "UniTask",
+        "VContainer",
+        "VContainer.Unity"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "autoReferenced": true,
+    "noEngineReferences": false
+}
