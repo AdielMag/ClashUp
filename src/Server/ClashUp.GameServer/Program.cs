@@ -3,6 +3,7 @@ using ClashUp.Server.Common.Configuration;
 using ClashUp.Server.Common.Interceptors;
 using ClashUp.Server.GameServer.Match;
 using ClashUp.Server.GameServer.Registration;
+using ClashUp.Server.GameServer.Simulation;
 using MagicOnion.Server;
 using Serilog;
 
@@ -23,6 +24,13 @@ builder.Services
 
 builder.Services.AddSingleton<IJwtKeyProvider, JwtKeyProvider>();
 builder.Services.AddSingleton<IMatchRegistry, MatchRegistry>();
+
+// Per-match scoped simulation pieces. Resolved via MatchContext's
+// IServiceScope. Swap NullServerSimulation for the AetherNet adapter
+// once external/AetherNet/ is on disk.
+builder.Services.AddScoped<IServerSimulation, NullServerSimulation>();
+builder.Services.AddScoped<InputBuffer>();
+builder.Services.AddScoped<MatchClock>();
 
 builder.Services.AddSingleton<GameServerIdentity>();
 builder.Services.AddSingleton<IServicesRegistryClient, ServicesRegistryClient>();

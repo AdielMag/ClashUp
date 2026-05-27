@@ -1,11 +1,20 @@
 using System.Collections.Concurrent;
+using ClashUp.Server.GameServer.Simulation;
 using ClashUp.Shared.MessagePackObjects;
 
 namespace ClashUp.Server.GameServer.Match;
 
-public sealed class MatchRegistry : IMatchRegistry
+public sealed class MatchRegistry : IMatchRegistry, IDisposable
 {
     private readonly ConcurrentDictionary<MatchId, MatchContext> _matches = new();
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILoggerFactory _loggerFactory;
+
+    public MatchRegistry(IServiceScopeFactory scopeFactory, ILoggerFactory loggerFactory)
+    {
+        _scopeFactory = scopeFactory;
+        _loggerFactory = loggerFactory;
+    }
 
     public int Count => _matches.Count;
 
@@ -14,14 +23,33 @@ public sealed class MatchRegistry : IMatchRegistry
 
     public MatchContext Register(MatchProvision provision)
     {
-        var context = new MatchContext(provision);
+        var scope = _scopeFactory.CreateScope();
+        var context = new MatchContext(provision, scope);
         if (!_matches.TryAdd(provision.MatchId, context))
         {
+            scope.Dispose();
             throw new InvalidOperationException(
                 $"Match {provision.MatchId} is already registered on this instance.");
         }
+
+        context.TickLoop = new MatchTickLoop(context, _loggerFactory.CreateLogger<MatchTickLoop>());
         return context;
     }
 
-    public void Remove(MatchId matchId) => _matches.TryRemove(matchId, out _);
+    public void Remove(MatchId matchId)
+    {
+        if (_matches.TryRemove(matchId, out var ctx))
+        {
+            ctx.Dispose();
+        }
+    }
+
+    public void Dispose()
+    {
+        foreach (var (_, ctx) in _matches)
+        {
+            ctx.Dispose();
+        }
+        _matches.Clear();
+    }
 }

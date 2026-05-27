@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using ClashUp.Client.Gameplay;
 using ClashUp.Client.Networking;
 using ClashUp.Shared.MessagePackObjects;
 using Cysharp.Threading.Tasks;
@@ -17,11 +18,13 @@ public sealed class MatchSessionRunner : IAsyncStartable, IDisposable
 {
     private readonly MatchSession _session;
     private readonly MatchHandoffHolder _handoff;
+    private readonly ClientPredictionWorld _prediction;
 
-    public MatchSessionRunner(MatchSession session, MatchHandoffHolder handoff)
+    public MatchSessionRunner(MatchSession session, MatchHandoffHolder handoff, ClientPredictionWorld prediction)
     {
         _session = session;
         _handoff = handoff;
+        _prediction = prediction;
     }
 
     public async UniTask StartAsync(CancellationToken cancellation)
@@ -31,6 +34,8 @@ public sealed class MatchSessionRunner : IAsyncStartable, IDisposable
             Debug.LogError("[Match] No handoff present in scope; cannot start session.");
             return;
         }
+
+        _session.Receiver.SnapshotReceived += OnSnapshot;
 
         try
         {
@@ -43,8 +48,11 @@ public sealed class MatchSessionRunner : IAsyncStartable, IDisposable
         }
     }
 
+    private void OnSnapshot(SnapshotPacket snapshot) => _prediction.ApplyServerSnapshot(snapshot);
+
     public void Dispose()
     {
+        _session.Receiver.SnapshotReceived -= OnSnapshot;
         _session.LeaveAsync().Forget();
         _session.Dispose();
     }
