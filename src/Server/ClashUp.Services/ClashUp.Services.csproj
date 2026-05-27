@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>ClashUp.Server.Services</RootNamespace>
+    <AssemblyName>ClashUp.Services</AssemblyName>
+    <UserSecretsId>clashup-services-dev</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Shared\ClashUp.Shared\ClashUp.Shared.csproj" />
+    <ProjectReference Include="..\ClashUp.Server.Common\ClashUp.Server.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MagicOnion.Server" />
+    <PackageReference Include="Grpc.AspNetCore.Server" />
+    <PackageReference Include="Serilog.AspNetCore" />
+  </ItemGroup>
+
+</Project>
