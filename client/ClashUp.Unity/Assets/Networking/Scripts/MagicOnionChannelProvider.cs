@@ -1,8 +1,6 @@
 using System;
-using Cysharp.Net.Http;
-using Grpc.Net.Client;
 
-namespace ClashUp.Client.Networking;
+namespace ClashUp.Client.Networking.Networking.Scripts;
 
 /// <summary>
 /// Owns the lazily-created GrpcChannel to the Services tier. Built on

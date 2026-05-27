@@ -1,13 +1,14 @@
 using System;
 using System.Threading;
+
 using ClashUp.Shared.MessagePackObjects;
 using ClashUp.Shared.Services;
+
 using Cysharp.Threading.Tasks;
-using MagicOnion.Client;
 
-namespace ClashUp.Client.Networking;
+namespace ClashUp.Client.Networking.Networking.Scripts;
 
-public sealed class MatchmakingClient
+public abstract sealed class MatchmakingClient
 {
     private readonly MagicOnionChannelProvider _channels;
 

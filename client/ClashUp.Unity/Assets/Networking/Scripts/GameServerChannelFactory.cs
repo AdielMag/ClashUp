@@ -1,8 +1,4 @@
-using System;
-using Cysharp.Net.Http;
-using Grpc.Net.Client;
-
-namespace ClashUp.Client.Networking;
+namespace ClashUp.Client.Networking.Networking.Scripts;
 
 /// <summary>
 /// Builds a fresh GrpcChannel pointed at a per-match GS endpoint. Owned

@@ -1,9 +1,11 @@
 using System;
+
 using ClashUp.Shared.Hubs;
 using ClashUp.Shared.MessagePackObjects;
+
 using UnityEngine;
 
-namespace ClashUp.Client.Networking;
+namespace ClashUp.Client.Networking.Networking.Scripts;
 
 /// <summary>
 /// Default IMatchHubReceiver. Logs everything; gameplay code subscribes

@@ -1,10 +1,11 @@
 using System.Threading;
+
 using ClashUp.Shared.MessagePackObjects;
 using ClashUp.Shared.Services;
-using Cysharp.Threading.Tasks;
-using MagicOnion.Client;
 
-namespace ClashUp.Client.Networking;
+using Cysharp.Threading.Tasks;
+
+namespace ClashUp.Client.Networking.Networking.Scripts;
 
 public sealed class AuthClient
 {

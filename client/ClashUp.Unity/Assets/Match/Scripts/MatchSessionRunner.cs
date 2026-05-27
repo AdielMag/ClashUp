@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using ClashUp.Client.Gameplay;
 using ClashUp.Client.Networking;
+using ClashUp.Client.Networking.Networking.Scripts;
 using ClashUp.Shared.MessagePackObjects;
 using Cysharp.Threading.Tasks;
 using UnityEngine;

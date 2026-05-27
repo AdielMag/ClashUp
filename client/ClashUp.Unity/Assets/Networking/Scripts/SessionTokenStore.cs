@@ -1,6 +1,6 @@
 using System;
 
-namespace ClashUp.Client.Networking;
+namespace ClashUp.Client.Networking.Networking.Scripts;
 
 /// <summary>
 /// Holds the active end-user JWT and (during a match) the per-match

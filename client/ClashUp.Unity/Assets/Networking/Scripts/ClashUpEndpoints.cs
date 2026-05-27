@@ -1,4 +1,4 @@
-namespace ClashUp.Client.Networking;
+namespace ClashUp.Client.Networking.Networking.Scripts;
 
 /// <summary>
 /// Backend endpoint configuration. Populated at boot from a config asset

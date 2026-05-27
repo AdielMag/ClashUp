@@ -1,10 +1,11 @@
-namespace ClashUp.Shared.MessagePackObjects;
-
-public enum LeaveReason
+namespace ClashUp.Shared.MessagePackObjects
 {
-    Unknown = 0,
-    ClientLeave = 1,
-    Disconnect = 2,
-    Kicked = 3,
-    MatchEnded = 4,
+    public enum LeaveReason
+    {
+        Unknown = 0,
+        ClientLeave = 1,
+        Disconnect = 2,
+        Kicked = 3,
+        MatchEnded = 4,
+    }
 }

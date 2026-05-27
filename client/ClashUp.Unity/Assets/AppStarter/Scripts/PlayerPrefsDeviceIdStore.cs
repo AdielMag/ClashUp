@@ -2,23 +2,24 @@ using System;
 using ClashUp.Client.Core;
 using UnityEngine;
 
-namespace ClashUp.Client.AppStarter;
-
-public sealed class PlayerPrefsDeviceIdStore : IDeviceIdStore
+namespace ClashUp.Client.AppStarter
 {
-    private const string Key = "clashup.deviceId";
-
-    public string GetOrCreate()
+    public sealed class PlayerPrefsDeviceIdStore : IDeviceIdStore
     {
-        var existing = PlayerPrefs.GetString(Key, string.Empty);
-        if (!string.IsNullOrEmpty(existing))
-        {
-            return existing;
-        }
+        private const string Key = "clashup.deviceId";
 
-        var fresh = Guid.NewGuid().ToString("N");
-        PlayerPrefs.SetString(Key, fresh);
-        PlayerPrefs.Save();
-        return fresh;
+        public string GetOrCreate()
+        {
+            var existing = PlayerPrefs.GetString(Key, string.Empty);
+            if (!string.IsNullOrEmpty(existing))
+            {
+                return existing;
+            }
+
+            var fresh = Guid.NewGuid().ToString("N");
+            PlayerPrefs.SetString(Key, fresh);
+            PlayerPrefs.Save();
+            return fresh;
+        }
     }
 }

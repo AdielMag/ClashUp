@@ -1,6 +1,7 @@
-namespace ClashUp.Shared.Hubs;
-
-public interface IPingHubReceiver
+namespace ClashUp.Shared.Hubs
 {
-    void OnHeartbeat(long serverStampMs);
+    public interface IPingHubReceiver
+    {
+        void OnHeartbeat(long serverStampMs);
+    }
 }
