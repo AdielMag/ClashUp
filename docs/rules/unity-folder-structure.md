@@ -59,6 +59,42 @@ The following folders are infrastructure, not domains, and sit at `Assets/` root
 - `StreamingAssets/` — Unity's runtime-accessible bundle dir, if used.
 - `link.xml` — IL2CPP link directives. See [`il2cpp-aot.md`](il2cpp-aot.md).
 
+## Asmdef hierarchy and references
+
+Every domain asmdef follows a layered dependency graph. Reference only what you actually need.
+
+```
+ClashUp.Shared          (leaf — no asmdef refs, only precompiledReferences)
+   ^
+ClashUp.Core            (refs: Shared, UniTask, VContainer)
+   ^
+ClashUp.Networking      (refs: Core, Shared, MagicOnion/gRPC libs, UniTask, VContainer)
+ClashUp.Gameplay        (refs: Core, Shared, UniTask, VContainer)
+   ^
+ClashUp.Match           (refs: Core, Networking, Gameplay, Shared, UniTask, VContainer)
+   ^
+ClashUp.CoreStarter     (refs: Core, Networking, Match, Shared, UniTask, VContainer)
+ClashUp.AppStarter      (refs: Core, Networking, Shared, UniTask, VContainer)
+ClashUp.UI              (refs: Core, AppStarter, Networking, UniTask, VContainer, ugui)
+```
+
+**Key rules:**
+
+- **Shared** uses `overrideReferences: true` + `precompiledReferences` because it references NuGet DLLs directly (`MagicOnion.Abstractions.dll`, `MagicOnion.Shared.dll`, `MessagePack.dll`, `MessagePack.Annotations.dll`). It has `noEngineReferences: true` since it contains no Unity API calls.
+- **Networking** is the only domain that references MagicOnion/gRPC asmdef assemblies (`MagicOnion.Client`, `MagicOnion.Shared`, `Grpc.Net.Client`, `Grpc.Core.Api`, `Cysharp.Net.Http.YetAnotherHttpHandler`). Other domains talk to the network through interfaces in Core, not by referencing Networking directly (except Starters and Match which wire things up).
+- **Core** is the common dependency — abstractions, interfaces, session state. Keep it thin.
+- **Gameplay** holds client-prediction / simulation code. It depends on Core and Shared but NOT Networking.
+- **Match** orchestrates a match session — it pulls in Networking and Gameplay.
+- **Starters** (AppStarter, CoreStarter) are composition roots for VContainer. They reference whatever they need to wire up.
+- **UI** references AppStarter to access boot-time services and Core for shared interfaces.
+
+**When adding a new asmdef:**
+
+1. Place it at the right layer. If it only needs Core + Shared, don't reference Networking.
+2. Every asmdef must include `UniTask` and `VContainer` if it uses async or DI (almost always).
+3. Never add a reference "just in case" — circular or unnecessary refs slow compilation and break layering.
+4. If you need NuGet DLLs directly, set `overrideReferences: true` and list them in `precompiledReferences`. Do NOT put DLL assembly names in `references` (that field is for asmdef-to-asmdef only).
+
 ## Adding a new domain
 
 1. Pick a name. Use PascalCase, single word if possible.

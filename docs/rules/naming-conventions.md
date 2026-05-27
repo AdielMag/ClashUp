@@ -6,6 +6,17 @@
 
 Pattern: `ClashUp.<Tier>.<Domain>[.<Subarea>]`.
 
+**Client and Shared code must use block-scoped namespaces** (with braces). Unity's C# version is 9.0, which does not support file-scoped namespaces (`namespace Foo.Bar;`). Always write:
+
+```csharp
+namespace ClashUp.Client.Networking
+{
+    // ...
+}
+```
+
+Server projects target modern .NET and may use either style.
+
 | Tier      | Example namespace                       | Where it lives                              |
 |-----------|-----------------------------------------|---------------------------------------------|
 | Shared    | `ClashUp.Shared.Hubs`                   | `src/Shared/ClashUp.Shared/Hubs/`           |
