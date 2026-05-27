@@ -1,3 +1,5 @@
+using System;
+
 using MessagePack;
 
 namespace ClashUp.Shared.MessagePackObjects

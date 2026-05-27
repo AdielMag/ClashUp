@@ -6,6 +6,13 @@
       "source": "local",
       "dependencies": {}
     },
+    "com.cysharp.magiconion.client.unity": {
+      "version": "https://github.com/Cysharp/MagicOnion.git?path=src/MagicOnion.Client.Unity/Assets/Scripts/MagicOnion.Client.Unity",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "396573c3373cfdfc47d52669847660db6105ce19"
+    },
     "com.cysharp.slnmerge": {
       "version": "2.0.1",
       "depth": 0,
@@ -21,11 +28,11 @@
       "url": "https://package.openupm.com"
     },
     "com.cysharp.yetanotherhttphandler": {
-      "version": "1.7.0",
+      "version": "https://github.com/Cysharp/YetAnotherHttpHandler.git?path=src/YetAnotherHttpHandler",
       "depth": 0,
-      "source": "registry",
+      "source": "git",
       "dependencies": {},
-      "url": "https://package.openupm.com"
+      "hash": "d8e0d78543a6243b846ef9d9bfe7ae2b1ec3061c"
     },
     "com.github-glitchenzo.nugetforunity": {
       "version": "4.5.0",

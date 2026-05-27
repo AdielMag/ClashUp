@@ -6,6 +6,8 @@ using ClashUp.Shared.MessagePackObjects;
 
 using Cysharp.Threading.Tasks;
 
+using MagicOnion.Client;
+
 using UnityEngine;
 
 namespace ClashUp.Client.Networking.Networking.Scripts
@@ -44,7 +46,7 @@ namespace ClashUp.Client.Networking.Networking.Scripts
 
         public void Dispose()
         {
-            _hub?.DisposeAsync().Forget();
+            _hub?.DisposeAsync().AsUniTask().Forget();
             _hub = null;
         }
     }

@@ -1,4 +1,5 @@
 using ClashUp.Client.Gameplay;
+using ClashUp.Client.Match.Match.Scripts;
 using ClashUp.Client.Networking;
 using ClashUp.Client.Networking.Networking.Scripts;
 

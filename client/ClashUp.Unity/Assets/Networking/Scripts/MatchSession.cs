@@ -6,6 +6,10 @@ using ClashUp.Shared.MessagePackObjects;
 
 using Cysharp.Threading.Tasks;
 
+using Grpc.Net.Client;
+
+using MagicOnion.Client;
+
 using UnityEngine;
 
 namespace ClashUp.Client.Networking.Networking.Scripts
@@ -138,7 +142,7 @@ namespace ClashUp.Client.Networking.Networking.Scripts
             _reconnectCts?.Dispose();
             _reconnectCts = null;
 
-            _hub?.DisposeAsync().Forget();
+            _hub?.DisposeAsync().AsUniTask().Forget();
             _hub = null;
             _channel?.Dispose();
             _channel = null;

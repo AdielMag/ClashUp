@@ -1,17 +1,22 @@
-namespace ClashUp.Client.Networking.Networking.Scripts;
+using Cysharp.Net.Http;
 
-/// <summary>
-/// Builds a fresh GrpcChannel pointed at a per-match GS endpoint. Owned
-/// by the MatchLifetimeScope so the channel is disposed alongside the match.
-/// </summary>
-public sealed class GameServerChannelFactory
+using Grpc.Net.Client;
+
+namespace ClashUp.Client.Networking.Networking.Scripts
 {
-    public GrpcChannel Create(string endpoint) =>
-        GrpcChannel.ForAddress(
-            endpoint,
-            new GrpcChannelOptions
-            {
-                HttpHandler = new YetAnotherHttpHandler { Http2Only = true },
-                DisposeHttpClient = true,
-            });
+    /// <summary>
+    /// Builds a fresh GrpcChannel pointed at a per-match GS endpoint. Owned
+    /// by the MatchLifetimeScope so the channel is disposed alongside the match.
+    /// </summary>
+    public sealed class GameServerChannelFactory
+    {
+        public GrpcChannel Create(string endpoint) =>
+            GrpcChannel.ForAddress(
+                endpoint,
+                new GrpcChannelOptions
+                {
+                    HttpHandler = new YetAnotherHttpHandler { Http2Only = true },
+                    DisposeHttpClient = true,
+                });
+    }
 }

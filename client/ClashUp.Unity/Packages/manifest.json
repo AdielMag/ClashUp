@@ -12,9 +12,10 @@
   ],
   "dependencies": {
     "com.clashup.shared": "file:../../../src/Shared/ClashUp.Shared",
+    "com.cysharp.magiconion.client.unity": "https://github.com/Cysharp/MagicOnion.git?path=src/MagicOnion.Client.Unity/Assets/Scripts/MagicOnion.Client.Unity",
     "com.cysharp.slnmerge": "2.0.1",
     "com.cysharp.unitask": "2.5.10",
-    "com.cysharp.yetanotherhttphandler": "1.7.0",
+    "com.cysharp.yetanotherhttphandler": "https://github.com/Cysharp/YetAnotherHttpHandler.git?path=src/YetAnotherHttpHandler",
     "com.github-glitchenzo.nugetforunity": "4.5.0",
     "com.unity.collab-proxy": "2.12.4",
     "com.unity.ide.rider": "3.0.39",
