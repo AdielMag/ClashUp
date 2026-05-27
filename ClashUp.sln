@@ -6,7 +6,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A1B1C1D1-000
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{A1B1C1D1-0000-0000-0000-000000000002}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server", "Server", "{A1B1C1D1-0000-0000-0000-000000000003}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashUp.Shared", "src\Shared\ClashUp.Shared\ClashUp.Shared.csproj", "{59DC6573-B019-41F3-9C5A-D7493E17EC05}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClashUp.Server.Common", "src\Server\ClashUp.Server.Common\ClashUp.Server.Common.csproj", "{BD82594A-947B-4EC9-82A5-BF1017125F94}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,12 +22,18 @@ Global
 		{59DC6573-B019-41F3-9C5A-D7493E17EC05}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{59DC6573-B019-41F3-9C5A-D7493E17EC05}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{59DC6573-B019-41F3-9C5A-D7493E17EC05}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD82594A-947B-4EC9-82A5-BF1017125F94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD82594A-947B-4EC9-82A5-BF1017125F94}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD82594A-947B-4EC9-82A5-BF1017125F94}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD82594A-947B-4EC9-82A5-BF1017125F94}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{A1B1C1D1-0000-0000-0000-000000000002} = {A1B1C1D1-0000-0000-0000-000000000001}
+		{A1B1C1D1-0000-0000-0000-000000000003} = {A1B1C1D1-0000-0000-0000-000000000001}
 		{59DC6573-B019-41F3-9C5A-D7493E17EC05} = {A1B1C1D1-0000-0000-0000-000000000002}
+		{BD82594A-947B-4EC9-82A5-BF1017125F94} = {A1B1C1D1-0000-0000-0000-000000000003}
 	EndGlobalSection
 EndGlobal
