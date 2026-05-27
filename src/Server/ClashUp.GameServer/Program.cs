@@ -2,6 +2,7 @@ using ClashUp.Server.Common.Auth;
 using ClashUp.Server.Common.Configuration;
 using ClashUp.Server.Common.Interceptors;
 using ClashUp.Server.GameServer.Match;
+using ClashUp.Server.GameServer.Registration;
 using MagicOnion.Server;
 using Serilog;
 
@@ -22,6 +23,11 @@ builder.Services
 
 builder.Services.AddSingleton<IJwtKeyProvider, JwtKeyProvider>();
 builder.Services.AddSingleton<IMatchRegistry, MatchRegistry>();
+
+builder.Services.AddSingleton<GameServerIdentity>();
+builder.Services.AddSingleton<IServicesRegistryClient, ServicesRegistryClient>();
+builder.Services.AddHostedService<GameServerRegistrar>();
+builder.Services.AddHostedService<HeartbeatBackgroundService>();
 
 builder.Services.AddGrpc();
 builder.Services.AddMagicOnion(options =>

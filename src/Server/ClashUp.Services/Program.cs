@@ -2,6 +2,7 @@ using ClashUp.Server.Common.Auth;
 using ClashUp.Server.Common.Configuration;
 using ClashUp.Server.Common.Interceptors;
 using ClashUp.Server.Common.Mongo;
+using ClashUp.Server.Services.Persistence;
 using MagicOnion.Server;
 using Serilog;
 
@@ -22,6 +23,10 @@ builder.Services
 
 builder.Services.AddSingleton<IJwtKeyProvider, JwtKeyProvider>();
 builder.Services.AddSingleton<IMongoContext, MongoContext>();
+
+builder.Services.AddSingleton<IGameServerInstanceRepository, GameServerInstanceRepository>();
+builder.Services.AddSingleton<IIndexInitializer, GameServerInstanceIndexInitializer>();
+builder.Services.AddHostedService<IndexBootstrapper>();
 
 builder.Services.AddGrpc();
 builder.Services.AddMagicOnion(options =>
