@@ -21,7 +21,9 @@ Assets/
       Fonts/
 ```
 
-No loose scripts at `Assets/` root. No mixing asset types inside a flat `Content/`.
+No loose scripts at `Assets/` root. No mixing asset types inside a flat `Content/`. Prefabs and Scenes always live under `Content/`, never directly under the domain folder.
+
+**Scenes and prefabs go under Content:** LifetimeScope prefabs live in `Content/Prefabs/`, scene files live in `Content/Scenes/`. A scene references its LifetimeScope via a prefab instance — do not put the MonoBehaviour directly in the scene.
 
 ## Good vs bad
 
@@ -42,7 +44,29 @@ Assets/MatchController.cs                # loose script at root
 Assets/Prefabs/MatchHud.prefab           # asset-type folder at root, not under a domain
 Assets/Match/MatchHud.prefab             # asset directly in domain, not under Content/
 Assets/Match/Content/MatchHud.prefab     # asset directly in Content/, not under Prefabs/
+Assets/Match/Scenes/Match.unity          # Scenes/ directly under domain, not under Content/
+Assets/Match/Prefabs/MatchScope.prefab   # Prefabs/ directly under domain, not under Content/
 ```
+
+## Meta files
+
+Unity `.meta` files for folders are placed as **siblings** of the folder, not inside it. For example, the meta for `Content/` is `Content.meta` in the parent directory:
+
+```
+Assets/AppStarter/
+  Content.meta            <-- meta for the Content/ folder
+  Content/
+    Prefabs.meta          <-- meta for the Prefabs/ folder
+    Prefabs/
+      MyPrefab.prefab
+      MyPrefab.prefab.meta
+    Scenes.meta           <-- meta for the Scenes/ folder
+    Scenes/
+      MyScene.unity
+      MyScene.unity.meta
+```
+
+Never place a folder meta inside the folder itself (e.g. `Content/Content.meta` is wrong).
 
 ## Asmdef placement
 

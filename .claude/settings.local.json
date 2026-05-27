@@ -3,7 +3,11 @@
     "allow": [
       "Bash(git push:*)",
       "Bash(gh auth:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(\"C:/Users/Adiel/Documents/ClashUp/client/ClashUp.Unity/Assets/AppStarter/Content.meta\":*)",
+      "Bash(\"C:/Users/Adiel/Documents/ClashUp/client/ClashUp.Unity/Assets/AppStarter/Content/Prefabs.meta\":*)",
+      "Bash(\"C:/Users/Adiel/Documents/ClashUp/client/ClashUp.Unity/Assets/AppStarter/Content/Scenes.meta\":*)",
+      "Bash(\"C:/Users/Adiel/Documents/ClashUp/client/ClashUp.Unity/Assets/CoreStarter/Content.meta\":*)"
     ]
   }
 }
