@@ -2,7 +2,9 @@ using ClashUp.Server.Common.Auth;
 using ClashUp.Server.Common.Configuration;
 using ClashUp.Server.Common.Interceptors;
 using ClashUp.Server.Common.Mongo;
+using ClashUp.Server.Services.Matchmaking;
 using ClashUp.Server.Services.Persistence;
+using ClashUp.Shared.Services;
 using MagicOnion.Server;
 using Serilog;
 
@@ -21,12 +23,27 @@ builder.Services
     .AddOptions<MongoOptions>()
     .Bind(builder.Configuration.GetSection(MongoOptions.SectionName));
 
+builder.Services
+    .AddOptions<MatchmakingOptions>()
+    .Bind(builder.Configuration.GetSection(MatchmakingOptions.SectionName));
+
 builder.Services.AddSingleton<IJwtKeyProvider, JwtKeyProvider>();
+builder.Services.AddSingleton<IJwtTokenIssuer, JwtTokenIssuer>();
 builder.Services.AddSingleton<IMongoContext, MongoContext>();
 
+builder.Services.AddSingleton<IAccountRepository, AccountRepository>();
+builder.Services.AddSingleton<IMatchRepository, MatchRepository>();
 builder.Services.AddSingleton<IGameServerInstanceRepository, GameServerInstanceRepository>();
+
+builder.Services.AddSingleton<IIndexInitializer, AccountIndexInitializer>();
+builder.Services.AddSingleton<IIndexInitializer, MatchIndexInitializer>();
 builder.Services.AddSingleton<IIndexInitializer, GameServerInstanceIndexInitializer>();
 builder.Services.AddHostedService<IndexBootstrapper>();
+
+builder.Services.AddSingleton<MatchmakingQueue>();
+builder.Services.AddSingleton<GameServerAdminClientFactory>();
+builder.Services.AddSingleton<IGameServerProvisioner, GameServerProvisionerStub>();
+builder.Services.AddHostedService<Matchmaker>();
 
 builder.Services.AddGrpc();
 builder.Services.AddMagicOnion(options =>
@@ -42,5 +59,4 @@ app.MapMagicOnionService();
 
 app.Run();
 
-// Make Program partial so integration tests (added later) can reference it.
 public partial class Program { }
