@@ -1,0 +1,1 @@
+Generate Unity-style GUIDs using `python tools/generate-guid.py [count]`. Use these whenever you need to create .meta files, asmdefs, or any Unity asset that requires a GUID. Never hand-write or guess GUIDs.

@@ -25,5 +25,10 @@ namespace ClashUp.Client.Networking
         {
             return servicesUrls.TryGetValue(current, out var url) ? url : "http://localhost:5001";
         }
+
+        public void SetCurrent(ServerEnvironment env) => current = env;
+
+        public ServerEnvironment[] GetAllEnvironments() =>
+            (ServerEnvironment[])System.Enum.GetValues(typeof(ServerEnvironment));
     }
 }

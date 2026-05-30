@@ -1,11 +1,8 @@
 {
-    "name": "ClashUp.AppStarter",
-    "rootNamespace": "ClashUp.Client.AppStarter",
+    "name": "ClashUp.Lobby",
+    "rootNamespace": "ClashUp.Client.Lobby",
     "references": [
         "ClashUp.Core",
-        "ClashUp.Networking",
-        "ClashUp.UI",
-        "ClashUp.Shared",
         "UniTask",
         "VContainer",
         "VContainer.Unity",

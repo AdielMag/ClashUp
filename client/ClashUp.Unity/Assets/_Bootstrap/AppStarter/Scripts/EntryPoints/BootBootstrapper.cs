@@ -1,0 +1,94 @@
+using System;
+using System.Threading;
+using ClashUp.Client.Core;
+using ClashUp.Client.Networking;
+using ClashUp.Client.UI;
+
+using Cysharp.Threading.Tasks;
+using UnityEngine;
+using VContainer.Unity;
+
+using Object = UnityEngine.Object;
+
+namespace ClashUp.Client.AppStarter
+{
+    public sealed class BootBootstrapper : IAsyncStartable, IDisposable
+    {
+        private readonly IDeviceIdStore _deviceIdStore;
+        private readonly PingHubClient _pingHub;
+        private readonly ISceneLoader _sceneLoader;
+        private readonly ClashUpEndpoints _endpoints;
+        private readonly EnvironmentConfig _environmentConfig;
+        private readonly LifetimeScope _scope;
+
+        public BootBootstrapper(
+            IDeviceIdStore deviceIdStore,
+            PingHubClient pingHub,
+            ISceneLoader sceneLoader,
+            ClashUpEndpoints endpoints,
+            EnvironmentConfig environmentConfig,
+            LifetimeScope scope)
+        {
+            _deviceIdStore = deviceIdStore;
+            _pingHub = pingHub;
+            _sceneLoader = sceneLoader;
+            _endpoints = endpoints;
+            _environmentConfig = environmentConfig;
+            _scope = scope;
+        }
+
+        public async UniTask StartAsync(CancellationToken cancellation)
+        {
+            // 1. Load persistent UI scene and get loading screen
+            await _sceneLoader.LoadAdditiveAsync("PersistentUI", ct: cancellation);
+            var loadingScreen = Object.FindAnyObjectByType<LoadingScreenPresenter>();
+
+            await loadingScreen.ShowAsync(cancellation);
+            loadingScreen.SetProgress(0.1f);
+
+            // 2. Environment picker (dev only)
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+            var selectedEnv = await EnvironmentPickerUI.ShowAndWaitAsync(_environmentConfig);
+            _environmentConfig.SetCurrent(selectedEnv);
+            _endpoints.ServicesAddress = _environmentConfig.GetServicesUrl();
+            Debug.Log($"[Boot] Environment: {selectedEnv} → {_endpoints.ServicesAddress}");
+#endif
+            loadingScreen.SetProgress(0.2f);
+
+            // 3. Identity
+            loadingScreen.SetStepText("Preparing identity...");
+            var deviceId = _deviceIdStore.GetOrCreate();
+            loadingScreen.SetUserId(deviceId);
+            Debug.Log($"[Boot] device id = {deviceId}");
+            loadingScreen.SetProgress(0.4f);
+
+            // 4. Ping server
+            loadingScreen.SetStepText("Connecting to server...");
+            try
+            {
+                var pong = await _pingHub.PingAsync(cancellation);
+                var rttMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - pong.ClientStampMs;
+                Debug.Log($"[Boot] Pong from Services v{pong.ServerVersion} rtt={rttMs}ms");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[Boot] Ping failed: {ex.Message}");
+            }
+            loadingScreen.SetProgress(0.7f);
+
+            // 5. Load lobby scene
+            loadingScreen.SetStepText("Loading lobby...");
+            using (LifetimeScope.EnqueueParent(_scope))
+            {
+                await _sceneLoader.LoadAdditiveAsync("Lobby", ct: cancellation);
+            }
+            loadingScreen.SetProgress(1f);
+
+            // 6. Wait for progress bar to visually complete, then hide
+            await loadingScreen.WaitForProgressComplete(cancellation);
+            await loadingScreen.HideAsync(cancellation);
+        }
+
+        public void Dispose() => _pingHub.Dispose();
+    }
+}
