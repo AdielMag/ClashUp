@@ -1,5 +1,21 @@
 {
   "dependencies": {
+    "com.bgtools.playerprefseditor": {
+      "version": "https://github.com/Dysman/bgTools-playerPrefsEditor.git#upm",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "211f644d5d859c06d22d7a7f5144b449d432ee09"
+    },
+    "com.browar.editor-toolbox": {
+      "version": "https://github.com/arimger/Unity-Editor-Toolbox.git#upm",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.editorcoroutines": "1.0.0"
+      },
+      "hash": "88f93fa385570f02f2b24eb8066260cfe0eafbd0"
+    },
     "com.clashup.shared": {
       "version": "file:../../../src/Shared/ClashUp.Shared",
       "depth": 0,
@@ -44,6 +60,13 @@
     "com.unity.collab-proxy": {
       "version": "2.12.4",
       "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.editorcoroutines": {
+      "version": "1.1.0",
+      "depth": 1,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"

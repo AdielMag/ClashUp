@@ -1,0 +1,47 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: clashup-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - clashup-mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  services:
+    build:
+      context: ../../
+      dockerfile: ops/docker/services.Dockerfile
+    container_name: clashup-services
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Mongo__ConnectionString=mongodb://mongo:27017
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  gameserver:
+    build:
+      context: ../../
+      dockerfile: ops/docker/gameserver.Dockerfile
+    container_name: clashup-gameserver
+    restart: unless-stopped
+    ports:
+      - "5101:5101"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - GameServer__ServicesEndpoint=http://services:5001
+      - GameServer__PublicEndpoint=http://localhost:5101
+    depends_on:
+      - services
+
+volumes:
+  clashup-mongo-data:

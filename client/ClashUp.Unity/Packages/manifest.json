@@ -11,6 +11,8 @@
     }
   ],
   "dependencies": {
+    "com.bgtools.playerprefseditor": "https://github.com/Dysman/bgTools-playerPrefsEditor.git#upm",
+    "com.browar.editor-toolbox": "https://github.com/arimger/Unity-Editor-Toolbox.git#upm",
     "com.clashup.shared": "file:../../../src/Shared/ClashUp.Shared",
     "com.cysharp.magiconion.client.unity": "https://github.com/Cysharp/MagicOnion.git?path=src/MagicOnion.Client.Unity/Assets/Scripts/MagicOnion.Client.Unity",
     "com.cysharp.slnmerge": "2.0.1",

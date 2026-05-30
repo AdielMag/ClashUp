@@ -63,12 +63,12 @@ public sealed class MatchTickLoop : IDisposable
         }
     }
 
-    private async Task BroadcastAsync()
+    private Task BroadcastAsync()
     {
         var group = _context.Group;
         if (group is null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         var snapshot = new SnapshotPacket
@@ -79,7 +79,8 @@ public sealed class MatchTickLoop : IDisposable
             DeltaBlob = _context.Simulation.EncodeDelta(0),
         };
 
-        await group.All.OnSnapshot(snapshot);
+        group.All.OnSnapshot(snapshot);
+        return Task.CompletedTask;
     }
 
     public void Dispose()

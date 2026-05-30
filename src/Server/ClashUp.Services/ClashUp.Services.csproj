@@ -13,7 +13,9 @@
 
   <ItemGroup>
     <PackageReference Include="MagicOnion.Server" />
+    <PackageReference Include="MagicOnion.Client" />
     <PackageReference Include="Grpc.AspNetCore.Server" />
+    <PackageReference Include="Grpc.Net.Client" />
     <PackageReference Include="Serilog.AspNetCore" />
   </ItemGroup>
 

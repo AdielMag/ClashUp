@@ -7,6 +7,6 @@ namespace ClashUp.Shared.MessagePackObjects
     public class MatchJoinRequest
     {
         [Key(0)] public MatchId MatchId { get; init; }
-        [Key(1)] public string MatchToken { get; init; }
+        [Key(1)] public string MatchToken { get; init; } = "";
     }
 }
