@@ -1,6 +1,7 @@
 <Project>
 
-  <PropertyGroup Label="Output redirection — keeps bin/obj out of Unity's local package import">
+  <PropertyGroup Label="Output redirection — keeps bin/obj out of Unity's local package import"
+                 Condition="'$(DOTNET_RUNNING_IN_CONTAINER)' != 'true'">
     <BaseOutputPath>$(MSBuildThisFileDirectory).artifacts\bin\$(MSBuildProjectName)\</BaseOutputPath>
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory).artifacts\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
   </PropertyGroup>

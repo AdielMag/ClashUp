@@ -1,3 +1,4 @@
+using ClashUp.Client.Lobby;
 using ClashUp.Client.UI;
 
 using TMPro;
@@ -127,8 +128,33 @@ namespace ClashUp.Editor
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
 
             var lobbyRoot = new GameObject("LobbyLifetimeScope");
-
             lobbyRoot.AddComponent<LobbyLifetimeScope>();
+
+            // Camera
+            var camGo = new GameObject("Main Camera");
+            camGo.tag = "MainCamera";
+            camGo.AddComponent<Camera>();
+
+            // Lobby label (Canvas with text so it's easy to see we're in the lobby)
+            var canvasGo = new GameObject("LobbyCanvas");
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 0;
+            canvasGo.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasGo.AddComponent<GraphicRaycaster>();
+
+            var labelGo = new GameObject("LobbyLabel");
+            labelGo.transform.SetParent(canvasGo.transform, false);
+            var labelRect = labelGo.AddComponent<RectTransform>();
+            labelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            labelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            labelRect.sizeDelta = new Vector2(600, 80);
+            labelRect.anchoredPosition = Vector2.zero;
+            var labelTmp = labelGo.AddComponent<TextMeshProUGUI>();
+            labelTmp.text = "LOBBY";
+            labelTmp.fontSize = 48;
+            labelTmp.alignment = TextAlignmentOptions.Center;
+            labelTmp.color = Color.white;
 
             EditorSceneManager.SaveScene(scene, scenePath);
             EditorSceneManager.CloseScene(scene, true);

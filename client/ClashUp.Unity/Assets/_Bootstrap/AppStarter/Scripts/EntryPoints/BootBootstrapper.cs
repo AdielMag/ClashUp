@@ -14,6 +14,7 @@ namespace ClashUp.Client.AppStarter
 {
     public sealed class BootBootstrapper : IAsyncStartable, IDisposable
     {
+        private readonly IDebugLogger _log;
         private readonly IDeviceIdStore _deviceIdStore;
         private readonly PingHubClient _pingHub;
         private readonly ISceneLoader _sceneLoader;
@@ -22,6 +23,7 @@ namespace ClashUp.Client.AppStarter
         private readonly LifetimeScope _scope;
 
         public BootBootstrapper(
+            IDebugLogger log,
             IDeviceIdStore deviceIdStore,
             PingHubClient pingHub,
             ISceneLoader sceneLoader,
@@ -29,6 +31,7 @@ namespace ClashUp.Client.AppStarter
             EnvironmentConfig environmentConfig,
             LifetimeScope scope)
         {
+            _log = log;
             _deviceIdStore = deviceIdStore;
             _pingHub = pingHub;
             _sceneLoader = sceneLoader;
@@ -51,7 +54,7 @@ namespace ClashUp.Client.AppStarter
             var selectedEnv = await EnvironmentPickerUI.ShowAndWaitAsync(_environmentConfig);
             _environmentConfig.SetCurrent(selectedEnv);
             _endpoints.ServicesAddress = _environmentConfig.GetServicesUrl();
-            Debug.Log($"[Boot] Environment: {selectedEnv} → {_endpoints.ServicesAddress}");
+            _log.Log($"[Boot] Environment: {selectedEnv} → {_endpoints.ServicesAddress}");
 #endif
             loadingScreen.SetProgress(0.2f);
 
@@ -59,20 +62,30 @@ namespace ClashUp.Client.AppStarter
             loadingScreen.SetStepText("Preparing identity...");
             var deviceId = _deviceIdStore.GetOrCreate();
             loadingScreen.SetUserId(deviceId);
-            Debug.Log($"[Boot] device id = {deviceId}");
+            _log.Log($"[Boot] device id = {deviceId}");
             loadingScreen.SetProgress(0.4f);
 
-            // 4. Ping server
+            // 4. Ping server (retry until connected)
             loadingScreen.SetStepText("Connecting to server...");
-            try
+            while (!cancellation.IsCancellationRequested)
             {
-                var pong = await _pingHub.PingAsync(cancellation);
-                var rttMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - pong.ClientStampMs;
-                Debug.Log($"[Boot] Pong from Services v{pong.ServerVersion} rtt={rttMs}ms");
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[Boot] Ping failed: {ex.Message}");
+                try
+                {
+                    var pong = await _pingHub.PingAsync(cancellation);
+                    var rttMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - pong.ClientStampMs;
+                    _log.Log($"[Boot] Pong from Services v{pong.ServerVersion} rtt={rttMs}ms");
+                    break;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"[Boot] Ping failed, retrying in 3s: {ex.Message}");
+                    loadingScreen.SetStepText("Connection failed. Retrying...");
+                    await UniTask.Delay(3000, cancellationToken: cancellation);
+                }
             }
             loadingScreen.SetProgress(0.7f);
 

@@ -1,9 +1,10 @@
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
+using System.Collections.Generic;
 using System.Linq;
 using ClashUp.Client.Networking;
 using Cysharp.Threading.Tasks;
-using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace ClashUp.Client.AppStarter
@@ -15,16 +16,30 @@ namespace ClashUp.Client.AppStarter
             var tcs = new UniTaskCompletionSource<ServerEnvironment>();
             var environments = config.GetAllEnvironments();
 
+            // Ensure EventSystem exists
+            if (EventSystem.current == null)
+            {
+                var esGo = new GameObject("EventSystem");
+                esGo.AddComponent<EventSystem>();
+                esGo.AddComponent<StandaloneInputModule>();
+                Object.DontDestroyOnLoad(esGo);
+            }
+
             var go = new GameObject("EnvironmentPicker");
             Object.DontDestroyOnLoad(go);
 
             var canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 200;
-            go.AddComponent<CanvasScaler>();
+
+            var scaler = go.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = 1f;
+
             go.AddComponent<GraphicRaycaster>();
 
-            // Background
+            // Background panel
             var panel = new GameObject("Panel");
             panel.transform.SetParent(go.transform, false);
             var panelRect = panel.AddComponent<RectTransform>();
@@ -32,63 +47,89 @@ namespace ClashUp.Client.AppStarter
             panelRect.anchorMax = Vector2.one;
             panelRect.offsetMin = Vector2.zero;
             panelRect.offsetMax = Vector2.zero;
-            var panelImg = panel.AddComponent<Image>();
-            panelImg.color = new Color(0f, 0f, 0f, 0.85f);
+            panel.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.85f);
 
             // Title
-            var title = new GameObject("Title");
-            title.transform.SetParent(panel.transform, false);
-            var titleRect = title.AddComponent<RectTransform>();
+            var title = CreateText(panel.transform, "Select Environment", 28, TextAnchor.MiddleCenter);
+            var titleRect = title.GetComponent<RectTransform>();
             titleRect.anchorMin = new Vector2(0.5f, 0.5f);
             titleRect.anchorMax = new Vector2(0.5f, 0.5f);
             titleRect.sizeDelta = new Vector2(400f, 50f);
-            titleRect.anchoredPosition = new Vector2(0f, 60f);
-            var titleTmp = title.AddComponent<TextMeshProUGUI>();
-            titleTmp.text = "Select Environment";
-            titleTmp.fontSize = 28;
-            titleTmp.alignment = TextAlignmentOptions.Center;
-            titleTmp.color = Color.white;
+            titleRect.anchoredPosition = new Vector2(0f, 80f);
 
             // Dropdown
-            var dropdownGo = new GameObject("Dropdown");
-            dropdownGo.transform.SetParent(panel.transform, false);
-            var dropdownRect = dropdownGo.AddComponent<RectTransform>();
+            var dropdownGo = CreateDropdown(panel.transform, environments, config.Current);
+            var dropdownRect = dropdownGo.GetComponent<RectTransform>();
             dropdownRect.anchorMin = new Vector2(0.5f, 0.5f);
             dropdownRect.anchorMax = new Vector2(0.5f, 0.5f);
             dropdownRect.sizeDelta = new Vector2(250f, 40f);
-            dropdownRect.anchoredPosition = new Vector2(0f, 0f);
+            dropdownRect.anchoredPosition = new Vector2(0f, 20f);
 
-            var dropdownImg = dropdownGo.AddComponent<Image>();
-            dropdownImg.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+            var dropdown = dropdownGo.GetComponent<Dropdown>();
+            var selectedIndex = System.Array.IndexOf(environments, config.Current);
 
-            var dropdown = dropdownGo.AddComponent<TMP_Dropdown>();
-            dropdown.targetGraphic = dropdownImg;
+            dropdown.onValueChanged.AddListener(i => selectedIndex = i);
 
-            // Caption
-            var captionGo = new GameObject("Label");
-            captionGo.transform.SetParent(dropdownGo.transform, false);
-            var captionRect = captionGo.AddComponent<RectTransform>();
-            captionRect.anchorMin = Vector2.zero;
-            captionRect.anchorMax = Vector2.one;
-            captionRect.offsetMin = new Vector2(10f, 0f);
-            captionRect.offsetMax = new Vector2(-25f, 0f);
-            var captionTmp = captionGo.AddComponent<TextMeshProUGUI>();
-            captionTmp.fontSize = 18;
-            captionTmp.alignment = TextAlignmentOptions.Left;
-            captionTmp.color = Color.white;
-            dropdown.captionText = captionTmp;
+            // Confirm button
+            var btnGo = new GameObject("ConfirmBtn");
+            btnGo.transform.SetParent(panel.transform, false);
+            var btnRect = btnGo.AddComponent<RectTransform>();
+            btnRect.anchorMin = new Vector2(0.5f, 0.5f);
+            btnRect.anchorMax = new Vector2(0.5f, 0.5f);
+            btnRect.sizeDelta = new Vector2(160f, 40f);
+            btnRect.anchoredPosition = new Vector2(0f, -40f);
 
-            // Template
+            var btnImg = btnGo.AddComponent<Image>();
+            btnImg.color = new Color(0.13f, 0.47f, 0.84f, 1f);
+
+            var btn = btnGo.AddComponent<Button>();
+            btn.targetGraphic = btnImg;
+            btn.onClick.AddListener(() => tcs.TrySetResult(environments[selectedIndex]));
+
+            CreateText(btnGo.transform, "Confirm", 20, TextAnchor.MiddleCenter);
+
+            var result = await tcs.Task;
+            Object.Destroy(go);
+            return result;
+        }
+
+        private static GameObject CreateDropdown(Transform parent, ServerEnvironment[] environments, ServerEnvironment current)
+        {
+            var ddGo = new GameObject("Dropdown");
+            ddGo.transform.SetParent(parent, false);
+            ddGo.AddComponent<RectTransform>();
+
+            var ddImg = ddGo.AddComponent<Image>();
+            ddImg.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+
+            var dropdown = ddGo.AddComponent<Dropdown>();
+
+            // Label (shows selected option)
+            var labelGo = CreateText(ddGo.transform, "", 18, TextAnchor.MiddleLeft);
+            var labelRect = labelGo.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = new Vector2(10f, 0f);
+            labelRect.offsetMax = new Vector2(-30f, 0f);
+            dropdown.captionText = labelGo.GetComponent<Text>();
+
+            // Template (dropdown list)
             var templateGo = new GameObject("Template");
-            templateGo.transform.SetParent(dropdownGo.transform, false);
+            templateGo.transform.SetParent(ddGo.transform, false);
             var templateRect = templateGo.AddComponent<RectTransform>();
             templateRect.anchorMin = new Vector2(0f, 0f);
             templateRect.anchorMax = new Vector2(1f, 0f);
             templateRect.pivot = new Vector2(0.5f, 1f);
             templateRect.sizeDelta = new Vector2(0f, 150f);
-            templateGo.AddComponent<Image>().color = new Color(0.15f, 0.15f, 0.15f, 1f);
-            var scrollRect = templateGo.AddComponent<ScrollRect>();
+            templateRect.anchoredPosition = Vector2.zero;
 
+            var templateImg = templateGo.AddComponent<Image>();
+            templateImg.color = new Color(0.15f, 0.15f, 0.15f, 1f);
+
+            templateGo.AddComponent<ScrollRect>();
+            templateGo.SetActive(false);
+
+            // Viewport
             var viewportGo = new GameObject("Viewport");
             viewportGo.transform.SetParent(templateGo.transform, false);
             var viewportRect = viewportGo.AddComponent<RectTransform>();
@@ -96,9 +137,14 @@ namespace ClashUp.Client.AppStarter
             viewportRect.anchorMax = Vector2.one;
             viewportRect.offsetMin = Vector2.zero;
             viewportRect.offsetMax = Vector2.zero;
-            viewportGo.AddComponent<Image>();
-            viewportGo.AddComponent<Mask>().showMaskGraphic = false;
+            viewportGo.AddComponent<Image>().color = Color.clear;
+            var mask = viewportGo.AddComponent<Mask>();
+            mask.showMaskGraphic = false;
 
+            var scrollRect = templateGo.GetComponent<ScrollRect>();
+            scrollRect.viewport = viewportRect;
+
+            // Content
             var contentGo = new GameObject("Content");
             contentGo.transform.SetParent(viewportGo.transform, false);
             var contentRect = contentGo.AddComponent<RectTransform>();
@@ -107,7 +153,6 @@ namespace ClashUp.Client.AppStarter
             contentRect.pivot = new Vector2(0.5f, 1f);
             contentRect.sizeDelta = new Vector2(0f, 40f);
 
-            scrollRect.viewport = viewportRect;
             scrollRect.content = contentRect;
 
             // Item template
@@ -117,71 +162,49 @@ namespace ClashUp.Client.AppStarter
             itemRect.anchorMin = new Vector2(0f, 0.5f);
             itemRect.anchorMax = new Vector2(1f, 0.5f);
             itemRect.sizeDelta = new Vector2(0f, 40f);
-            var itemToggle = itemGo.AddComponent<Toggle>();
 
-            var itemBg = new GameObject("Item Background");
-            itemBg.transform.SetParent(itemGo.transform, false);
-            var itemBgRect = itemBg.AddComponent<RectTransform>();
-            itemBgRect.anchorMin = Vector2.zero;
-            itemBgRect.anchorMax = Vector2.one;
-            itemBgRect.offsetMin = Vector2.zero;
-            itemBgRect.offsetMax = Vector2.zero;
-            itemBg.AddComponent<Image>().color = new Color(0.25f, 0.25f, 0.25f, 1f);
-            itemToggle.targetGraphic = itemBg.GetComponent<Image>();
+            var itemImg = itemGo.AddComponent<Image>();
+            itemImg.color = new Color(0.2f, 0.2f, 0.2f, 1f);
 
-            var itemLabel = new GameObject("Item Label");
-            itemLabel.transform.SetParent(itemGo.transform, false);
-            var itemLabelRect = itemLabel.AddComponent<RectTransform>();
+            var toggle = itemGo.AddComponent<Toggle>();
+            toggle.targetGraphic = itemImg;
+
+            var itemLabelGo = CreateText(itemGo.transform, "", 18, TextAnchor.MiddleLeft);
+            var itemLabelRect = itemLabelGo.GetComponent<RectTransform>();
             itemLabelRect.anchorMin = Vector2.zero;
             itemLabelRect.anchorMax = Vector2.one;
             itemLabelRect.offsetMin = new Vector2(10f, 0f);
             itemLabelRect.offsetMax = Vector2.zero;
-            var itemTmp = itemLabel.AddComponent<TextMeshProUGUI>();
-            itemTmp.fontSize = 18;
-            itemTmp.alignment = TextAlignmentOptions.Left;
-            itemTmp.color = Color.white;
 
-            dropdown.itemText = itemTmp;
-            templateGo.SetActive(false);
+            dropdown.itemText = itemLabelGo.GetComponent<Text>();
+            dropdown.template = templateRect;
 
             // Populate options
-            dropdown.options = environments.Select(e => new TMP_Dropdown.OptionData(e.ToString())).ToList();
-            var currentIndex = System.Array.IndexOf(environments, config.Current);
-            dropdown.value = currentIndex >= 0 ? currentIndex : 0;
+            dropdown.options = environments.Select(e => new Dropdown.OptionData(e.ToString())).ToList();
+            dropdown.value = System.Array.IndexOf(environments, current);
             dropdown.RefreshShownValue();
 
-            // Confirm button
-            var btnGo = new GameObject("ConfirmBtn");
-            btnGo.transform.SetParent(panel.transform, false);
-            var btnRect = btnGo.AddComponent<RectTransform>();
-            btnRect.anchorMin = new Vector2(0.5f, 0.5f);
-            btnRect.anchorMax = new Vector2(0.5f, 0.5f);
-            btnRect.sizeDelta = new Vector2(150f, 40f);
-            btnRect.anchoredPosition = new Vector2(0f, -55f);
+            return ddGo;
+        }
 
-            var btnImg = btnGo.AddComponent<Image>();
-            btnImg.color = new Color(0.13f, 0.47f, 0.84f, 1f);
+        private static GameObject CreateText(Transform parent, string text, int fontSize, TextAnchor alignment)
+        {
+            var go = new GameObject("Text");
+            go.transform.SetParent(parent, false);
+            var rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
 
-            var btn = btnGo.AddComponent<Button>();
-            btn.targetGraphic = btnImg;
-            btn.onClick.AddListener(() => tcs.TrySetResult(environments[dropdown.value]));
+            var txt = go.AddComponent<Text>();
+            txt.text = text;
+            txt.fontSize = fontSize;
+            txt.alignment = alignment;
+            txt.color = Color.white;
+            txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-            var btnLabel = new GameObject("Label");
-            btnLabel.transform.SetParent(btnGo.transform, false);
-            var btnLabelRect = btnLabel.AddComponent<RectTransform>();
-            btnLabelRect.anchorMin = Vector2.zero;
-            btnLabelRect.anchorMax = Vector2.one;
-            btnLabelRect.offsetMin = Vector2.zero;
-            btnLabelRect.offsetMax = Vector2.zero;
-            var btnTmp = btnLabel.AddComponent<TextMeshProUGUI>();
-            btnTmp.text = "Confirm";
-            btnTmp.fontSize = 20;
-            btnTmp.alignment = TextAlignmentOptions.Center;
-            btnTmp.color = Color.white;
-
-            var result = await tcs.Task;
-            Object.Destroy(go);
-            return result;
+            return go;
         }
     }
 }

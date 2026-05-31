@@ -17,6 +17,7 @@ services:
     build:
       context: ../../
       dockerfile: ops/docker/services.Dockerfile
+    pull_policy: build
     container_name: clashup-services
     restart: unless-stopped
     ports:
@@ -24,6 +25,8 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - Mongo__ConnectionString=mongodb://mongo:27017
+      - Jwt__EndUserSigningKey=dev-only-end-user-key-min-32-bytes!!
+      - Jwt__InterTierSigningKey=dev-only-inter-tier-key-min-32-bytes!
     depends_on:
       mongo:
         condition: service_healthy
@@ -32,6 +35,7 @@ services:
     build:
       context: ../../
       dockerfile: ops/docker/gameserver.Dockerfile
+    pull_policy: build
     container_name: clashup-gameserver
     restart: unless-stopped
     ports:
@@ -40,6 +44,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - GameServer__ServicesEndpoint=http://services:5001
       - GameServer__PublicEndpoint=http://localhost:5101
+      - Jwt__EndUserSigningKey=dev-only-end-user-key-min-32-bytes!!
+      - Jwt__InterTierSigningKey=dev-only-inter-tier-key-min-32-bytes!
     depends_on:
       - services
 

@@ -16,6 +16,7 @@ namespace ClashUp.Client.AppStarter
             builder.RegisterInstance(environmentConfig);
             builder.RegisterInstance(new ClashUpEndpoints(environmentConfig));
 
+            builder.Register<IDebugLogger, UnityDebugLogger>(Lifetime.Singleton);
             builder.Register<IDeviceIdStore, PlayerPrefsDeviceIdStore>(Lifetime.Singleton);
             builder.Register<ISceneLoader, UniTaskSceneLoader>(Lifetime.Singleton);
             builder.Register<MagicOnionChannelProvider>(Lifetime.Singleton);

@@ -24,6 +24,7 @@ namespace ClashUp.Client.CoreStarter
         protected override void Configure(IContainerBuilder builder)
         {
             builder.RegisterInstance(SessionHandoff);
+            builder.Register<IDebugLogger, UnityDebugLogger>(Lifetime.Singleton);
 
             // Re-register the shared channel infrastructure for the gameplay tier.
             // (Same singletons live in AppStarter for menu calls; gameplay gets its

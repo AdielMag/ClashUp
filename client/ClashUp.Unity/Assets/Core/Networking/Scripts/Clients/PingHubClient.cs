@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 
+using ClashUp.Client.Core;
 using ClashUp.Shared.Hubs;
 using ClashUp.Shared.MessagePackObjects;
 
@@ -8,22 +9,18 @@ using Cysharp.Threading.Tasks;
 
 using MagicOnion.Client;
 
-using UnityEngine;
-
 namespace ClashUp.Client.Networking
 {
-    /// <summary>
-    /// Connects to IPingHub on the Services host. Used for the L3 bring-up
-    /// smoke test (BootScene → "Pong" within 200 ms).
-    /// </summary>
     public sealed class PingHubClient : IPingHubReceiver, IDisposable
     {
         private readonly MagicOnionChannelProvider _channels;
+        private readonly IDebugLogger _log;
         private IPingHub? _hub;
 
-        public PingHubClient(MagicOnionChannelProvider channels)
+        public PingHubClient(MagicOnionChannelProvider channels, IDebugLogger log)
         {
             _channels = channels;
+            _log = log;
         }
 
         public async UniTask<PongResult> PingAsync(CancellationToken cancellationToken)
@@ -41,7 +38,7 @@ namespace ClashUp.Client.Networking
 
         public void OnHeartbeat(long serverStampMs)
         {
-            Debug.Log($"[PingHub] heartbeat {serverStampMs}");
+            _log.Log($"[PingHub] heartbeat {serverStampMs}");
         }
 
         public void Dispose()

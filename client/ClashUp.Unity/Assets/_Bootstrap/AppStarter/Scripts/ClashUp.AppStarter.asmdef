@@ -8,8 +8,7 @@
         "ClashUp.Shared",
         "UniTask",
         "VContainer",
-        "VContainer.Unity",
-        "Unity.TextMeshPro"
+        "VContainer.Unity"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

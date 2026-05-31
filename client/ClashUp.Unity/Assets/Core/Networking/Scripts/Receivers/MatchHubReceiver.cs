@@ -1,35 +1,37 @@
 using System;
 
+using ClashUp.Client.Core;
 using ClashUp.Shared.Hubs;
 using ClashUp.Shared.MessagePackObjects;
 
-using UnityEngine;
-
 namespace ClashUp.Client.Networking
 {
-    /// <summary>
-    /// Default IMatchHubReceiver. Logs everything; gameplay code subscribes
-    /// to the events for UI/prediction wiring.
-    /// </summary>
     public sealed class MatchHubReceiver : IMatchHubReceiver
     {
+        private readonly IDebugLogger _log;
+
         public event Action<SnapshotPacket>? SnapshotReceived;
         public event Action<PlayerSummary>? PlayerJoined;
         public event Action<PlayerId, LeaveReason>? PlayerLeft;
         public event Action<MatchEvent>? MatchEventOccurred;
         public event Action<MatchResult>? MatchEnded;
 
+        public MatchHubReceiver(IDebugLogger log)
+        {
+            _log = log;
+        }
+
         public void OnSnapshot(SnapshotPacket snapshot) => SnapshotReceived?.Invoke(snapshot);
 
         public void OnPlayerJoined(PlayerSummary player)
         {
-            Debug.Log($"[Match] Player joined: {player.Id} ({player.DisplayName}) team={player.TeamId}");
+            _log.Log($"[Match] Player joined: {player.Id} ({player.DisplayName}) team={player.TeamId}");
             PlayerJoined?.Invoke(player);
         }
 
         public void OnPlayerLeft(PlayerId player, LeaveReason reason)
         {
-            Debug.Log($"[Match] Player left: {player} ({reason})");
+            _log.Log($"[Match] Player left: {player} ({reason})");
             PlayerLeft?.Invoke(player, reason);
         }
 
@@ -37,7 +39,7 @@ namespace ClashUp.Client.Networking
 
         public void OnMatchEnded(MatchResult result)
         {
-            Debug.Log($"[Match] Ended. Winner team {result.WinningTeamId}");
+            _log.Log($"[Match] Ended. Winner team {result.WinningTeamId}");
             MatchEnded?.Invoke(result);
         }
     }

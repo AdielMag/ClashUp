@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 
+using ClashUp.Client.Core;
 using ClashUp.Shared.Hubs;
 using ClashUp.Shared.MessagePackObjects;
 
@@ -10,32 +11,26 @@ using Grpc.Net.Client;
 
 using MagicOnion.Client;
 
-using UnityEngine;
-
 namespace ClashUp.Client.Networking
 {
-    /// <summary>
-    /// Owns the per-match GrpcChannel + IMatchHub connection. Watches for
-    /// hub disconnects and re-runs Connect+Join with the same MatchToken
-    /// (or a fresh handoff via ResolveMatchAsync) so the player snaps back
-    /// to the same GS — see docs/rules/jwt-auth.md (sticky claim).
-    /// </summary>
     public sealed class MatchSession : IDisposable
     {
         private readonly GameServerChannelFactory _channelFactory;
         private readonly MatchHubReceiver _receiver;
         private readonly ResolveMatchClient _resolve;
+        private readonly IDebugLogger _log;
 
         private GrpcChannel? _channel;
         private IMatchHub? _hub;
         private MatchHandoff _handoff;
         private CancellationTokenSource? _reconnectCts;
 
-        public MatchSession(GameServerChannelFactory channelFactory, MatchHubReceiver receiver, ResolveMatchClient resolve)
+        public MatchSession(GameServerChannelFactory channelFactory, MatchHubReceiver receiver, ResolveMatchClient resolve, IDebugLogger log)
         {
             _channelFactory = channelFactory;
             _receiver = receiver;
             _resolve = resolve;
+            _log = log;
         }
 
         public IMatchHub Hub => _hub ?? throw new InvalidOperationException("MatchSession is not connected.");
@@ -89,12 +84,9 @@ namespace ClashUp.Client.Networking
                 return;
             }
 
-            Debug.LogWarning("[Match] Hub disconnected; attempting sticky reconnect.");
+            _log.LogWarning("[Match] Hub disconnected; attempting sticky reconnect.");
             try
             {
-                // First try the same handoff — the GS may have stayed up. If
-                // the GS is gone or the match's location changed, fall back to
-                // ResolveMatchAsync.
                 try
                 {
                     await ConnectInternalAsync(ct);
@@ -111,12 +103,12 @@ namespace ClashUp.Client.Networking
                     };
                     await ConnectInternalAsync(ct);
                 }
-                Debug.Log("[Match] Sticky reconnect succeeded.");
+                _log.Log("[Match] Sticky reconnect succeeded.");
                 WatchForDisconnectAsync(ct).Forget();
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[Match] Sticky reconnect failed: {ex.Message}");
+                _log.LogError($"[Match] Sticky reconnect failed: {ex.Message}");
             }
         }
 
