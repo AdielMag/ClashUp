@@ -19,15 +19,17 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
     private readonly IMatchRegistry _matches;
     private readonly IMatchTokenValidator _tokens;
     private readonly GameServerIdentity _identity;
+    private readonly IServicesRegistryClient _servicesClient;
 
     private MatchContext? _context;
     private MatchTokenClaims _claims;
 
-    public MatchHub(IMatchRegistry matches, IMatchTokenValidator tokens, GameServerIdentity identity)
+    public MatchHub(IMatchRegistry matches, IMatchTokenValidator tokens, GameServerIdentity identity, IServicesRegistryClient servicesClient)
     {
         _matches = matches;
         _tokens = tokens;
         _identity = identity;
+        _servicesClient = servicesClient;
     }
 
     public async Task<JoinResult> JoinAsync(MatchJoinRequest request)
@@ -48,7 +50,12 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
 
         if (!_matches.TryGet(request.MatchId, out var context))
         {
-            throw new InvalidOperationException($"Match {request.MatchId} not hosted on this instance.");
+            // Match was already cleaned up. Re-fire the ended notification so the
+            // Services DB catches up (the original fire-and-forget may not have landed yet).
+            _ = _servicesClient.ReportMatchEndedAsync(
+                new GsMatchEnded { InstanceId = _identity.InstanceId, MatchId = request.MatchId },
+                CancellationToken.None);
+            throw new InvalidOperationException($"Match {request.MatchId} has already ended.");
         }
         _context = context;
 

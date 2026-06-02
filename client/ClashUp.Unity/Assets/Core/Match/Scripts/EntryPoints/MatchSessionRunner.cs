@@ -81,7 +81,7 @@ namespace ClashUp.Client.Match
             catch (Exception ex)
             {
                 _log.LogError($"[Match] Connect/Join failed: {ex.Message}");
-                _matchUI.SetStatus($"Failed: {ex.Message}");
+                _flow.ReturnToLobbyAsync().Forget();
             }
         }
 
