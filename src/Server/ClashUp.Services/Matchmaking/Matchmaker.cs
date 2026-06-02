@@ -20,6 +20,7 @@ public sealed class Matchmaker : BackgroundService
     private readonly IGameServerProvisioner _provisioner;
     private readonly GameServerAdminClientFactory _adminClients;
     private readonly IJwtTokenIssuer _tokens;
+    private readonly MatchConfigProvider _configProvider;
     private readonly MatchmakingOptions _options;
     private readonly ILogger<Matchmaker> _logger;
 
@@ -30,6 +31,7 @@ public sealed class Matchmaker : BackgroundService
         IGameServerProvisioner provisioner,
         GameServerAdminClientFactory adminClients,
         IJwtTokenIssuer tokens,
+        MatchConfigProvider configProvider,
         IOptions<MatchmakingOptions> options,
         ILogger<Matchmaker> logger)
     {
@@ -39,6 +41,7 @@ public sealed class Matchmaker : BackgroundService
         _provisioner = provisioner;
         _adminClients = adminClients;
         _tokens = tokens;
+        _configProvider = configProvider;
         _options = options.Value;
         _logger = logger;
     }
@@ -62,7 +65,11 @@ public sealed class Matchmaker : BackgroundService
 
     private async Task DrainOnceAsync(CancellationToken ct)
     {
-        var batch = _queue.TryDrain(_options.MatchSize);
+        var modeId = "default";
+        var config = await _configProvider.GetAsync(modeId, ct);
+        var matchSize = config.NumberOfTeams * config.TeamSize;
+
+        var batch = _queue.TryDrain(matchSize);
         if (batch is null)
         {
             return;
@@ -82,9 +89,10 @@ public sealed class Matchmaker : BackgroundService
             MatchId = matchId,
             GsInstanceId = gs.InstanceId,
             GsEndpoint = gs.PublicEndpoint,
+            ModeId = modeId,
             State = "Provisioning",
             CreatedAt = DateTime.UtcNow,
-            Players = batch.Select((b, i) => new MatchPlayerDoc { PlayerId = b.PlayerId, TeamId = i % 2 }).ToList(),
+            Players = batch.Select((b, i) => new MatchPlayerDoc { PlayerId = b.PlayerId, TeamId = i % config.NumberOfTeams }).ToList(),
         };
         await _matchRepo.InsertAsync(matchDoc, ct);
 
@@ -92,13 +100,17 @@ public sealed class Matchmaker : BackgroundService
         {
             MatchId = new MatchId(matchId),
             Players = batch.Select(b => new PlayerId(b.PlayerId)).ToList(),
-            ModeId = batch[0].ModeId,
+            ModeId = modeId,
             TickRateHz = _options.DefaultTickRateHz,
+            DurationSeconds = config.DurationSeconds,
         };
 
         try
         {
-            var adminClient = _adminClients.GetOrCreate(gs.PublicEndpoint);
+            var serviceEndpoint = string.IsNullOrWhiteSpace(gs.InternalEndpoint)
+                ? gs.PublicEndpoint
+                : gs.InternalEndpoint;
+            var adminClient = _adminClients.GetOrCreate(serviceEndpoint);
             await adminClient.PrepareMatchAsync(provision);
         }
         catch (Exception ex)

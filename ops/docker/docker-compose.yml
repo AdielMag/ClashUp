@@ -44,6 +44,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - GameServer__ServicesEndpoint=http://services:5001
       - GameServer__PublicEndpoint=http://localhost:5101
+      - GameServer__InternalEndpoint=http://gameserver:5101
       - Jwt__EndUserSigningKey=dev-only-end-user-key-min-32-bytes!!
       - Jwt__InterTierSigningKey=dev-only-inter-tier-key-min-32-bytes!
     depends_on:

@@ -25,10 +25,15 @@ public sealed class GameServerRegistryImpl : ServiceBase<IGameServerRegistry>, I
     public async UnaryResult<GsToken> RegisterAsync(GsRegistration registration)
     {
         var ct = Context.CallContext.CancellationToken;
+        var internalEndpoint = string.IsNullOrWhiteSpace(registration.InternalEndpoint)
+            ? registration.PublicEndpoint
+            : registration.InternalEndpoint;
+
         var doc = new GameServerInstanceDoc
         {
             InstanceId = registration.InstanceId,
             PublicEndpoint = registration.PublicEndpoint,
+            InternalEndpoint = internalEndpoint,
             CapacityMax = registration.CapacityMax,
             CapacityUsed = 0,
             Version = registration.Version,
@@ -36,7 +41,8 @@ public sealed class GameServerRegistryImpl : ServiceBase<IGameServerRegistry>, I
             Status = "Healthy",
         };
         await _repository.UpsertAsync(doc, ct);
-        _logger.LogInformation("GS registered: {InstanceId} at {Endpoint}", registration.InstanceId, registration.PublicEndpoint);
+        await _repository.DrainOthersByEndpointAsync(registration.InstanceId, internalEndpoint, ct);
+        _logger.LogInformation("GS registered: {InstanceId} at {Endpoint} (internal: {InternalEndpoint})", registration.InstanceId, registration.PublicEndpoint, internalEndpoint);
 
         // TODO: mint a real inter-tier JWT here. For now hand back a placeholder.
         return new GsToken

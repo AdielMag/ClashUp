@@ -11,6 +11,8 @@ public sealed class MatchDoc
 
     public string GsEndpoint { get; set; } = string.Empty;
 
+    public string ModeId { get; set; } = "default";
+
     /// <summary>Provisioning | Active | Ended.</summary>
     public string State { get; set; } = "Provisioning";
 

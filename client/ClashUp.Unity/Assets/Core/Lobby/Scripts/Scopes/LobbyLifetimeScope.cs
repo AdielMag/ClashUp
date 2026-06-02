@@ -7,6 +7,7 @@ namespace ClashUp.Client.Lobby
     {
         protected override void Configure(IContainerBuilder builder)
         {
+            builder.RegisterEntryPoint<LobbyEntryPoint>();
         }
     }
 }

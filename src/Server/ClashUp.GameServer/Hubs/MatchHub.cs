@@ -1,3 +1,4 @@
+using System.Linq;
 using ClashUp.Server.Common.Auth;
 using ClashUp.Server.GameServer.Match;
 using ClashUp.Server.GameServer.Registration;
@@ -54,19 +55,33 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
         var group = await Group.AddAsync(context.MatchId.Value);
         context.Group ??= group;
 
-        var summary = new PlayerSummary
+        PlayerSummary summary;
+        if (context.IsPlayerInMatch(_claims.PlayerId))
         {
-            Id = new PlayerId(_claims.PlayerId),
-            DisplayName = $"Player-{_claims.PlayerId[..6]}",
-            TeamId = 0,
-        };
+            context.MarkConnected(_claims.PlayerId);
+            summary = context.GetPlayers().First(p => p.Id.Value == _claims.PlayerId);
+        }
+        else
+        {
+            summary = new PlayerSummary
+            {
+                Id = new PlayerId(_claims.PlayerId),
+                DisplayName = $"Player-{_claims.PlayerId[..6]}",
+                TeamId = 0,
+            };
+            context.AddPlayer(summary);
+        }
+
         context.Group?.All.OnPlayerJoined(summary);
 
         return new JoinResult
         {
             You = summary.Id,
+            Players = context.GetPlayers(),
             TickRateHz = context.Provision.TickRateHz,
             CurrentTick = context.Simulation.CurrentTick,
+            DurationSeconds = context.Provision.DurationSeconds,
+            ElapsedSeconds = context.Clock.ElapsedSeconds,
         };
     }
 
@@ -96,9 +111,12 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
 
     protected override async ValueTask OnDisconnected()
     {
-        if (_context?.Group is not null)
+        if (_context is not null)
         {
-            await _context.Group.RemoveAsync(Context);
+            _context.MarkDisconnected(_claims.PlayerId);
+            _context.Group?.All.OnPlayerLeft(new PlayerId(_claims.PlayerId), LeaveReason.Disconnect);
+            if (_context.Group is not null)
+                await _context.Group.RemoveAsync(Context);
         }
     }
 }

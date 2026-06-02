@@ -3,12 +3,14 @@
     "rootNamespace": "ClashUp.Client.Match",
     "references": [
         "ClashUp.Core",
+        "ClashUp.CoreStarter",
         "ClashUp.Networking",
         "ClashUp.Gameplay",
         "ClashUp.Shared",
         "UniTask",
         "VContainer",
-        "VContainer.Unity"
+        "VContainer.Unity",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

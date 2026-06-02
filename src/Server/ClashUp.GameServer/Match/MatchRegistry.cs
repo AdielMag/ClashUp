@@ -32,6 +32,7 @@ public sealed class MatchRegistry : IMatchRegistry, IDisposable
                 $"Match {provision.MatchId} is already registered on this instance.");
         }
 
+        context.OnMatchEnded = id => Remove(id);
         context.TickLoop = new MatchTickLoop(context, _loggerFactory.CreateLogger<MatchTickLoop>());
         return context;
     }

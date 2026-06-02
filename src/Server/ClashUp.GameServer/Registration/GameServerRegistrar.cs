@@ -34,10 +34,15 @@ public sealed class GameServerRegistrar : IHostedService
             ? Guid.NewGuid().ToString("N")
             : _options.InstanceId;
 
+        var internalEndpoint = string.IsNullOrWhiteSpace(_options.InternalEndpoint)
+            ? _options.PublicEndpoint
+            : _options.InternalEndpoint;
+
         var registration = new GsRegistration
         {
             InstanceId = instanceId,
             PublicEndpoint = _options.PublicEndpoint,
+            InternalEndpoint = internalEndpoint,
             CapacityMax = _options.MaxConcurrentMatches,
             Version = "0.0.1",
         };

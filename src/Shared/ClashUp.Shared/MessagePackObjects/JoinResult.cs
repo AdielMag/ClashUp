@@ -10,5 +10,7 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(1)] public IReadOnlyList<PlayerSummary> Players { get; init; } = System.Array.Empty<PlayerSummary>();
         [Key(2)] public int TickRateHz { get; init; }
         [Key(3)] public int CurrentTick { get; init; }
+        [Key(4)] public int DurationSeconds { get; init; }
+        [Key(5)] public double ElapsedSeconds { get; init; }
     }
 }

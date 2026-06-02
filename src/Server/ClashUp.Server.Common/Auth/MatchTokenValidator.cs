@@ -52,7 +52,10 @@ public sealed class MatchTokenValidator : IMatchTokenValidator
 
     public MatchTokenClaims Validate(string jwt)
     {
-        var handler = new JwtSecurityTokenHandler();
+        var handler = new JwtSecurityTokenHandler
+        {
+            MapInboundClaims = false,
+        };
         var principal = handler.ValidateToken(jwt, _parameters, out _);
 
         var playerId = principal.FindFirst(JwtClaimTypes.Sub)?.Value

@@ -1,3 +1,4 @@
+using ClashUp.Client.CoreStarter;
 using ClashUp.Client.Gameplay;
 using ClashUp.Client.Networking;
 
@@ -15,15 +16,15 @@ namespace ClashUp.Client.Match
     {
         protected override void Configure(IContainerBuilder builder)
         {
+            var flow = Parent.Container.Resolve<GameFlowController>();
+            builder.RegisterInstance(new MatchHandoffHolder { Value = flow.PendingHandoff });
+
             builder.Register<MatchHubReceiver>(Lifetime.Singleton);
             builder.Register<MatchSession>(Lifetime.Singleton);
 
-            // Swap NullClientSimulation for the AetherNet adapter once the
-            // submodule lands under Plugins/AetherNet/.
             builder.Register<IClientSimulation, NullClientSimulation>(Lifetime.Singleton);
             builder.Register<ClientPredictionWorld>(Lifetime.Singleton);
 
-            builder.Register<MatchHandoffHolder>(Lifetime.Singleton);
             builder.RegisterEntryPoint<MatchSessionRunner>();
         }
     }

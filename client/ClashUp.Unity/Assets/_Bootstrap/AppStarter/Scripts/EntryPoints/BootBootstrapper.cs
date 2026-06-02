@@ -20,7 +20,6 @@ namespace ClashUp.Client.AppStarter
         private readonly ISceneLoader _sceneLoader;
         private readonly ClashUpEndpoints _endpoints;
         private readonly EnvironmentConfig _environmentConfig;
-        private readonly LifetimeScope _scope;
 
         public BootBootstrapper(
             IDebugLogger log,
@@ -28,8 +27,7 @@ namespace ClashUp.Client.AppStarter
             PingHubClient pingHub,
             ISceneLoader sceneLoader,
             ClashUpEndpoints endpoints,
-            EnvironmentConfig environmentConfig,
-            LifetimeScope scope)
+            EnvironmentConfig environmentConfig)
         {
             _log = log;
             _deviceIdStore = deviceIdStore;
@@ -37,7 +35,6 @@ namespace ClashUp.Client.AppStarter
             _sceneLoader = sceneLoader;
             _endpoints = endpoints;
             _environmentConfig = environmentConfig;
-            _scope = scope;
         }
 
         public async UniTask StartAsync(CancellationToken cancellation)
@@ -56,6 +53,7 @@ namespace ClashUp.Client.AppStarter
             _endpoints.ServicesAddress = _environmentConfig.GetServicesUrl();
             _log.Log($"[Boot] Environment: {selectedEnv} → {_endpoints.ServicesAddress}");
 #endif
+            ClashUpEndpoints.ResolvedServicesAddress = _endpoints.ServicesAddress;
             loadingScreen.SetProgress(0.2f);
 
             // 3. Identity
@@ -89,17 +87,12 @@ namespace ClashUp.Client.AppStarter
             }
             loadingScreen.SetProgress(0.7f);
 
-            // 5. Load lobby scene
-            loadingScreen.SetStepText("Loading lobby...");
-            using (LifetimeScope.EnqueueParent(_scope))
-            {
-                await _sceneLoader.LoadAdditiveAsync("Lobby", ct: cancellation);
-            }
-            loadingScreen.SetProgress(1f);
+            // 5. Load CoreStarter scene (standalone — not a child of AppStarter)
+            loadingScreen.SetStepText("Loading session...");
+            await _sceneLoader.LoadAdditiveAsync("CoreStarter", ct: cancellation);
+            loadingScreen.SetProgress(0.8f);
 
-            // 6. Wait for progress bar to visually complete, then hide
-            await loadingScreen.WaitForProgressComplete(cancellation);
-            await loadingScreen.HideAsync(cancellation);
+            // GameFlowController in CoreStarter takes over from here (auth, lobby load, hide loading).
         }
 
         public void Dispose() => _pingHub.Dispose();

@@ -11,4 +11,6 @@ public interface IGameServerInstanceRepository
     Task<IReadOnlyList<GameServerInstanceDoc>> ListHealthyAsync(CancellationToken cancellationToken);
 
     Task MarkStatusAsync(string instanceId, string status, CancellationToken cancellationToken);
+
+    Task DrainOthersByEndpointAsync(string excludeInstanceId, string internalEndpoint, CancellationToken cancellationToken);
 }

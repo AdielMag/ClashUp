@@ -1,7 +1,6 @@
 using ClashUp.Client.Core;
 using ClashUp.Client.Networking;
 
-using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
@@ -9,32 +8,27 @@ namespace ClashUp.Client.CoreStarter
 {
     /// <summary>
     /// Root LifetimeScope for the gameplay session. Standalone — NOT a
-    /// child of AppStarter. Data comes across via SessionHandoff. See
-    /// docs/rules/vcontainer-scopes.md.
-    ///
-    /// Match scopes parent under this scope.
+    /// child of AppStarter. Registers all session services.
+    /// Match and Lobby scopes parent under this scope.
     /// </summary>
     public sealed class CoreStarterLifetimeScope : LifetimeScope
     {
-        [SerializeField] private EnvironmentConfig environmentConfig;
-
-        /// <summary>Populated from AppStarter before the scope builds.</summary>
-        public SessionHandoff SessionHandoff { get; set; }
-
         protected override void Configure(IContainerBuilder builder)
         {
-            builder.RegisterInstance(SessionHandoff);
             builder.Register<IDebugLogger, UnityDebugLogger>(Lifetime.Singleton);
 
-            // Re-register the shared channel infrastructure for the gameplay tier.
-            // (Same singletons live in AppStarter for menu calls; gameplay gets its
-            // own copies so the boot scope can be torn down independently.)
-            builder.RegisterInstance(new ClashUpEndpoints(environmentConfig));
+            builder.RegisterInstance(new ClashUpEndpoints());
             builder.Register<MagicOnionChannelProvider>(Lifetime.Singleton);
             builder.Register<SessionTokenStore>(Lifetime.Singleton);
             builder.Register<MatchmakingClient>(Lifetime.Singleton);
             builder.Register<ResolveMatchClient>(Lifetime.Singleton);
             builder.Register<GameServerChannelFactory>(Lifetime.Singleton);
+
+            builder.Register<AuthClient>(Lifetime.Singleton);
+            builder.Register<IDeviceIdStore, PlayerPrefsDeviceIdStore>(Lifetime.Singleton);
+            builder.Register<ISceneLoader, UniTaskSceneLoader>(Lifetime.Singleton);
+
+            builder.RegisterEntryPoint<GameFlowController>().AsSelf();
         }
     }
 }

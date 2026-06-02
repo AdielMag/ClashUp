@@ -40,6 +40,10 @@ builder.Services.AddSingleton<IIndexInitializer, MatchIndexInitializer>();
 builder.Services.AddSingleton<IIndexInitializer, GameServerInstanceIndexInitializer>();
 builder.Services.AddHostedService<IndexBootstrapper>();
 
+builder.Services.AddSingleton<IConfigRepository, ConfigRepository>();
+builder.Services.AddSingleton<MatchConfigProvider>();
+builder.Services.AddHostedService<ConfigSeeder>();
+
 builder.Services.AddSingleton<MatchmakingQueue>();
 builder.Services.AddSingleton<GameServerAdminClientFactory>();
 builder.Services.AddSingleton<IGameServerProvisioner, GameServerProvisionerStub>();

@@ -9,6 +9,8 @@ public sealed class GameServerInstanceDoc
 
     public string PublicEndpoint { get; set; } = string.Empty;
 
+    public string InternalEndpoint { get; set; } = string.Empty;
+
     public int CapacityMax { get; set; }
 
     public int CapacityUsed { get; set; }

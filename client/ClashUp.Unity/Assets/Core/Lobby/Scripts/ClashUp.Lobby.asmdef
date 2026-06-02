@@ -3,6 +3,9 @@
     "rootNamespace": "ClashUp.Client.Lobby",
     "references": [
         "ClashUp.Core",
+        "ClashUp.CoreStarter",
+        "ClashUp.Networking",
+        "ClashUp.Shared",
         "UniTask",
         "VContainer",
         "VContainer.Unity",

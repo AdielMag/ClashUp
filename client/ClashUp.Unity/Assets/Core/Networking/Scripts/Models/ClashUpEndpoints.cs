@@ -7,11 +7,19 @@ namespace ClashUp.Client.Networking
     /// </summary>
     public sealed class ClashUpEndpoints
     {
+        /// <summary>Resolved URL set by AppStarter after env picker, read by CoreStarter.</summary>
+        public static string ResolvedServicesAddress { get; set; } = string.Empty;
+
         public string ServicesAddress { get; set; }
 
         public ClashUpEndpoints(EnvironmentConfig config)
         {
             ServicesAddress = config.GetServicesUrl();
+        }
+
+        public ClashUpEndpoints()
+        {
+            ServicesAddress = ResolvedServicesAddress;
         }
     }
 }

@@ -17,5 +17,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Core/Lobby/Content/Scenes/Lobby.unity
     guid: a22faded62f5a704c8f374d7de9cbb85
+  - enabled: 1
+    path: Assets/Core/Match/Content/Scenes/Match.unity
+    guid: a947bddf8d7a47e6824dc5bc22f6040b
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

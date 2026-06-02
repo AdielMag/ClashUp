@@ -9,6 +9,7 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(1)] public string PublicEndpoint { get; init; } = string.Empty;
         [Key(2)] public int CapacityMax { get; init; }
         [Key(3)] public string Version { get; init; } = string.Empty;
+        [Key(4)] public string InternalEndpoint { get; init; } = string.Empty;
     }
 
     [MessagePackObject]

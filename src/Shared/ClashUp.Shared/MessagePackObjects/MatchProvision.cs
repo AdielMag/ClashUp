@@ -13,6 +13,7 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(1)] public IReadOnlyList<PlayerId> Players { get; init; } = System.Array.Empty<PlayerId>();
         [Key(2)] public string ModeId { get; init; } = "default";
         [Key(3)] public int TickRateHz { get; init; } = 30;
+        [Key(4)] public int DurationSeconds { get; init; } = 120;
     }
 
     [MessagePackObject]

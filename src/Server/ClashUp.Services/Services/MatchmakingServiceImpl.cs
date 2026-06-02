@@ -1,3 +1,4 @@
+using ClashUp.Server.Common.Auth;
 using ClashUp.Server.Services.Matchmaking;
 using ClashUp.Server.Services.Persistence;
 using ClashUp.Shared.MessagePackObjects;
@@ -11,11 +12,22 @@ public sealed class MatchmakingServiceImpl : ServiceBase<IMatchmakingService>, I
 {
     private readonly MatchmakingQueue _queue;
     private readonly IMatchRepository _matchRepo;
+    private readonly IJwtTokenIssuer _tokens;
+    private readonly IGameServerInstanceRepository _gsRepo;
+    private readonly ILogger<MatchmakingServiceImpl> _logger;
 
-    public MatchmakingServiceImpl(MatchmakingQueue queue, IMatchRepository matchRepo)
+    public MatchmakingServiceImpl(
+        MatchmakingQueue queue,
+        IMatchRepository matchRepo,
+        IJwtTokenIssuer tokens,
+        IGameServerInstanceRepository gsRepo,
+        ILogger<MatchmakingServiceImpl> logger)
     {
         _queue = queue;
         _matchRepo = matchRepo;
+        _tokens = tokens;
+        _gsRepo = gsRepo;
+        _logger = logger;
     }
 
     public UnaryResult<QueueTicket> EnqueueAsync(QueueRequest request)
@@ -49,6 +61,46 @@ public sealed class MatchmakingServiceImpl : ServiceBase<IMatchmakingService>, I
             Handoff = entry.Handoff,
             FailureReason = entry.FailureReason,
         });
+    }
+
+    public async UnaryResult<TicketPoll> CheckActiveMatchAsync()
+    {
+        var ct = Context.CallContext.CancellationToken;
+        var playerId = ResolveCurrentPlayerId();
+        _logger.LogInformation("CheckActiveMatch for player {PlayerId}", playerId);
+
+        var match = await _matchRepo.FindActiveForPlayerAsync(playerId, ct);
+        if (match is null)
+        {
+            _logger.LogInformation("No active match found for player {PlayerId}", playerId);
+            return new TicketPoll { Status = TicketStatus.Queued };
+        }
+
+        _logger.LogInformation("Found active match {MatchId} on GS {GsInstanceId} for player {PlayerId}",
+            match.MatchId, match.GsInstanceId, playerId);
+
+        var gs = await _gsRepo.GetByIdAsync(match.GsInstanceId, ct);
+        if (gs is null || gs.Status != "Healthy")
+        {
+            _logger.LogWarning("GS {GsInstanceId} for match {MatchId} is gone/unhealthy — ending orphaned match",
+                match.GsInstanceId, match.MatchId);
+            await _matchRepo.SetStateAsync(match.MatchId, "Ended", ct);
+            return new TicketPoll { Status = TicketStatus.Queued };
+        }
+
+        var token = _tokens.IssueMatchToken(playerId, match.MatchId, match.GsInstanceId);
+        _logger.LogInformation("Issuing reconnect token for player {PlayerId} to match {MatchId}", playerId, match.MatchId);
+        return new TicketPoll
+        {
+            Status = TicketStatus.Matched,
+            Handoff = new MatchHandoff
+            {
+                MatchId = new MatchId(match.MatchId),
+                GsEndpoint = gs.PublicEndpoint,
+                MatchToken = token.Jwt,
+                MatchTokenExpiresAtMs = new DateTimeOffset(token.ExpiresAt).ToUnixTimeMilliseconds(),
+            },
+        };
     }
 
     public async UnaryResult<MatchHandoff> ResolveMatchAsync(MatchId matchId)

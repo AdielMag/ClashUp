@@ -13,5 +13,8 @@ namespace ClashUp.Shared.Services
 
         /// <summary>Sticky-reconnect lookup: returns the GS that owns this match.</summary>
         UnaryResult<MatchHandoff> ResolveMatchAsync(MatchId matchId);
+
+        /// <summary>Returns a handoff if the player has an active match, or null if not.</summary>
+        UnaryResult<TicketPoll> CheckActiveMatchAsync();
     }
 }

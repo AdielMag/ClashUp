@@ -1,0 +1,19 @@
+{
+    "name": "ClashUp.Matchmaking",
+    "rootNamespace": "ClashUp.Client.Matchmaking",
+    "references": [
+        "ClashUp.Core",
+        "ClashUp.Networking",
+        "ClashUp.CoreStarter",
+        "ClashUp.Shared",
+        "UniTask",
+        "VContainer",
+        "VContainer.Unity",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "autoReferenced": true,
+    "noEngineReferences": false
+}

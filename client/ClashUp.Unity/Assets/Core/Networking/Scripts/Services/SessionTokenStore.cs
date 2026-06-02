@@ -8,14 +8,17 @@ namespace ClashUp.Client.Networking
     /// </summary>
     public sealed class SessionTokenStore
     {
+        public string PlayerId { get; private set; } = string.Empty;
+
         public string EndUserJwt { get; private set; } = string.Empty;
         public DateTimeOffset EndUserExpiresAt { get; private set; }
 
         public string MatchToken { get; private set; } = string.Empty;
         public DateTimeOffset MatchTokenExpiresAt { get; private set; }
 
-        public void UpdateEndUser(string jwt, long expiresAtMs)
+        public void UpdateEndUser(string playerId, string jwt, long expiresAtMs)
         {
+            PlayerId = playerId;
             EndUserJwt = jwt;
             EndUserExpiresAt = DateTimeOffset.FromUnixTimeMilliseconds(expiresAtMs);
         }

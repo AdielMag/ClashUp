@@ -46,4 +46,13 @@ public sealed class GameServerInstanceRepository : IGameServerInstanceRepository
         var update = Builders<GameServerInstanceDoc>.Update.Set(x => x.Status, status);
         return _collection.UpdateOneAsync(x => x.InstanceId == instanceId, update, cancellationToken: cancellationToken);
     }
+
+    public Task DrainOthersByEndpointAsync(string excludeInstanceId, string internalEndpoint, CancellationToken cancellationToken)
+    {
+        var filter = Builders<GameServerInstanceDoc>.Filter.And(
+            Builders<GameServerInstanceDoc>.Filter.Ne(x => x.InstanceId, excludeInstanceId),
+            Builders<GameServerInstanceDoc>.Filter.Eq(x => x.InternalEndpoint, internalEndpoint));
+        var update = Builders<GameServerInstanceDoc>.Update.Set(x => x.Status, "Draining");
+        return _collection.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
+    }
 }

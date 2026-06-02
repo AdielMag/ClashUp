@@ -168,6 +168,11 @@ namespace ClashUp.Client.AppStarter
 
             var toggle = itemGo.AddComponent<Toggle>();
             toggle.targetGraphic = itemImg;
+            var toggleColors = toggle.colors;
+            toggleColors.normalColor = new Color(0.2f, 0.2f, 0.2f, 1f);
+            toggleColors.highlightedColor = new Color(0.35f, 0.35f, 0.35f, 1f);
+            toggleColors.selectedColor = new Color(0.3f, 0.3f, 0.3f, 1f);
+            toggle.colors = toggleColors;
 
             var itemLabelGo = CreateText(itemGo.transform, "", 18, TextAnchor.MiddleLeft);
             var itemLabelRect = itemLabelGo.GetComponent<RectTransform>();
@@ -202,7 +207,8 @@ namespace ClashUp.Client.AppStarter
             txt.fontSize = fontSize;
             txt.alignment = alignment;
             txt.color = Color.white;
-            txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
+                       ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
 
             return go;
         }

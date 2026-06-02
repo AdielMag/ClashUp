@@ -24,7 +24,7 @@ namespace ClashUp.Client.Networking
         {
             var client = MagicOnionClient.Create<IAuthService>(_channels.Services);
             var result = await client.LoginWithDeviceIdAsync(new LoginRequest { DeviceId = deviceId });
-            _tokens.UpdateEndUser(result.Jwt, result.ExpiresAtMs);
+            _tokens.UpdateEndUser(result.PlayerId.Value, result.Jwt, result.ExpiresAtMs);
             return result;
         }
     }

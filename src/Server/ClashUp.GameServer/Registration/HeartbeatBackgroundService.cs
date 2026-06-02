@@ -43,6 +43,34 @@ public sealed class HeartbeatBackgroundService : BackgroundService
                 continue;
             }
 
+            // Retry registration if the initial attempt failed
+            if (string.IsNullOrEmpty(_identity.BearerJwt))
+            {
+                try
+                {
+                    var internalEndpoint = string.IsNullOrWhiteSpace(_options.InternalEndpoint)
+                        ? _options.PublicEndpoint
+                        : _options.InternalEndpoint;
+                    var token = await _registry.RegisterAsync(
+                        new GsRegistration
+                        {
+                            InstanceId = _identity.InstanceId,
+                            PublicEndpoint = _options.PublicEndpoint,
+                            InternalEndpoint = internalEndpoint,
+                            CapacityMax = _options.MaxConcurrentMatches,
+                            Version = "0.0.1",
+                        },
+                        stoppingToken);
+                    _identity.BearerJwt = token.BearerJwt;
+                    _logger.LogInformation("Retry registration succeeded as {InstanceId}", token.InstanceId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Retry registration failed; will try again next tick");
+                    continue;
+                }
+            }
+
             try
             {
                 await _registry.HeartbeatAsync(

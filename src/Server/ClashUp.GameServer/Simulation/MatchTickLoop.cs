@@ -34,6 +34,7 @@ public sealed class MatchTickLoop : IDisposable
     private async Task RunAsync()
     {
         var tickIntervalMs = Math.Max(1, 1000 / _context.Provision.TickRateHz);
+        var durationSeconds = _context.Provision.DurationSeconds;
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(tickIntervalMs));
 
         try
@@ -43,6 +44,12 @@ public sealed class MatchTickLoop : IDisposable
                 Drain();
                 _context.Simulation.Step(tickIntervalMs / 1000.0);
                 await BroadcastAsync();
+
+                if (durationSeconds > 0 && _context.Clock.ElapsedSeconds >= durationSeconds)
+                {
+                    await EndMatchAsync();
+                    break;
+                }
             }
         }
         catch (OperationCanceledException)
@@ -53,6 +60,21 @@ public sealed class MatchTickLoop : IDisposable
         {
             _logger.LogError(ex, "Tick loop failed for match {MatchId}", _context.MatchId);
         }
+    }
+
+    private Task EndMatchAsync()
+    {
+        var result = new MatchResult
+        {
+            MatchId = _context.MatchId,
+            WinningTeamId = 0,
+            EndedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+        };
+
+        _context.Group?.All.OnMatchEnded(result);
+        _logger.LogInformation("Match {MatchId} ended (timer expired)", _context.MatchId);
+        _context.OnMatchEnded?.Invoke(_context.MatchId);
+        return Task.CompletedTask;
     }
 
     private void Drain()

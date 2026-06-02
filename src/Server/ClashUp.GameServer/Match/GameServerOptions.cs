@@ -10,6 +10,9 @@ public sealed class GameServerOptions
     /// <summary>Public address clients reach this host on (used in MatchHandoff).</summary>
     public string PublicEndpoint { get; init; } = "http://localhost:5101";
 
+    /// <summary>Address the Services tier uses to call this GS (e.g. Docker service name). Defaults to PublicEndpoint if empty.</summary>
+    public string InternalEndpoint { get; init; } = string.Empty;
+
     public int MaxConcurrentMatches { get; init; } = 8;
 
     public int DefaultTickRateHz { get; init; } = 30;
