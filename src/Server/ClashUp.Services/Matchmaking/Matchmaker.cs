@@ -91,6 +91,7 @@ public sealed class Matchmaker : BackgroundService
             GsEndpoint = gs.PublicEndpoint,
             ModeId = modeId,
             State = "Provisioning",
+            DurationSeconds = config.DurationSeconds,
             CreatedAt = DateTime.UtcNow,
             Players = batch.Select((b, i) => new MatchPlayerDoc { PlayerId = b.PlayerId, TeamId = i % config.NumberOfTeams }).ToList(),
         };

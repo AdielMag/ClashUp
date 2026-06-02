@@ -79,6 +79,19 @@ public sealed class MatchmakingServiceImpl : ServiceBase<IMatchmakingService>, I
         _logger.LogInformation("Found active match {MatchId} on GS {GsInstanceId} for player {PlayerId}",
             match.MatchId, match.GsInstanceId, playerId);
 
+        if (match.DurationSeconds > 0)
+        {
+            var elapsed = (DateTime.UtcNow - match.CreatedAt).TotalSeconds;
+            var remaining = match.DurationSeconds - elapsed;
+            if (remaining < 10)
+            {
+                _logger.LogInformation("Match {MatchId} has {Remaining:F1}s remaining — treating as ended for player {PlayerId}",
+                    match.MatchId, remaining, playerId);
+                await _matchRepo.SetStateAsync(match.MatchId, "Ended", ct);
+                return new TicketPoll { Status = TicketStatus.Queued };
+            }
+        }
+
         var gs = await _gsRepo.GetByIdAsync(match.GsInstanceId, ct);
         if (gs is null || gs.Status != "Healthy")
         {

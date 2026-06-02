@@ -18,6 +18,8 @@ public sealed class MatchDoc
 
     public List<MatchPlayerDoc> Players { get; set; } = new();
 
+    public int DurationSeconds { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime? EndedAt { get; set; }
 }
