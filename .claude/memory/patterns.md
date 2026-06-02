@@ -8,6 +8,63 @@
 - **Usage**: Inject via constructor, never use `UnityEngine.Debug.Log` directly in DI-managed classes
 - **Editor scripts**: Can still use `Debug.Log` directly (not DI-managed)
 
+## Runtime World Setup (IStartable + IDisposable Services)
+
+Plain C# VContainer services (not MonoBehaviours) that spawn world content at match start and tear it down on scope dispose:
+- Implement `IStartable` (VContainer lifecycle) + `IDisposable`
+- Register with `builder.RegisterEntryPoint<T>().AsSelf()` if other services inject it by concrete type
+- Spawn GameObjects in `Start()`, destroy them in `Dispose()`
+- Expose outputs (e.g. `Transform PlayerTransform`) for downstream services
+
+Examples: `PlayerSpawner`, `MatchCameraRig`, `JoystickInputProvider`
+
+## MonoBehaviour Initialize() Pattern
+
+When a MonoBehaviour is created programmatically via `AddComponent<T>()`, `Awake()` fires before you can set any fields. Never rely on `Awake()` for initialization:
+- Expose `internal void Initialize(params...)` and call it immediately after `AddComponent`
+- `Awake()` stays empty (or omitted)
+- Example: `Joystick.Initialize(zone, background, handle, radius)`, `PlayerMovement.Initialize(input, speed)`
+
+## Input Gate Pattern (MatchInputGate)
+
+A simple service that controls whether gameplay input is accepted:
+- `MatchInputGate` has `bool IsEnabled`, `event Action<bool> OnChanged`, `Enable()`, `Disable()`
+- Controlled by `MatchSessionRunner`: `Enable()` after `ConnectAndJoinAsync` succeeds, `Disable()` in `OnMatchEnded`
+- Consumed by `JoystickInputProvider`: checks `_gate.IsEnabled` in `Value` getter; subscribes to `OnChanged` to toggle `InputEnabled` on the `Joystick` MonoBehaviour
+- Registered as `builder.Register<MatchInputGate>(Lifetime.Singleton)` in `MatchLifetimeScope`
+- Lives in `ClashUp.Gameplay` so both Gameplay and Match assemblies can reference it
+
+## Cinemachine 3.x (com.unity.cinemachine 3.1.6)
+
+- Namespace: `using Unity.Cinemachine;` — NOT the old `Cinemachine` namespace
+- Virtual camera component: `CinemachineCamera` (not `CinemachineVirtualCamera`)
+- `BindingMode` enum lives in `Unity.Cinemachine.TargetTracking` — add `using Unity.Cinemachine.TargetTracking;`
+- Follow behavior: `CinemachineFollow` component (position) + `CinemachineRotationComposer` (aim)
+- `CinemachineFollow.TrackerSettings.PositionDamping` is a `Vector3` (per-axis damping)
+- Fixed-rotation follow camera (no aim): set `vcamGo.transform.rotation = Quaternion.LookRotation(-followOffset)`, use `BindingMode.WorldSpace`, add NO rotation component
+- `CinemachineBrain` goes on the main Camera GameObject
+
+## Procedural Circle Sprite
+
+```csharp
+private static Sprite CreateCircleSprite(int diameter)
+{
+    var tex = new Texture2D(diameter, diameter, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+    float center = (diameter - 1) * 0.5f;
+    var pixels = new Color32[diameter * diameter];
+    for (int y = 0; y < diameter; y++)
+        for (int x = 0; x < diameter; x++) {
+            float dist = Mathf.Sqrt((x-center)*(x-center) + (y-center)*(y-center));
+            byte a = (byte)(Mathf.Clamp01(center - dist + 0.5f) * 255);
+            pixels[y * diameter + x] = new Color32(255, 255, 255, a);
+        }
+    tex.SetPixels32(pixels); tex.Apply();
+    return Sprite.Create(tex, new Rect(0,0,diameter,diameter), new Vector2(0.5f,0.5f), diameter);
+}
+```
+
+Anti-aliased edge via `center - dist + 0.5f` clamp. Used for joystick background and knob.
+
 ## Canvas Scaler Convention
 - All code-generated canvases use `matchWidthOrHeight = 1f` (match height, not width)
 

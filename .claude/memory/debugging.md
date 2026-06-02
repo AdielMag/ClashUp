@@ -127,6 +127,35 @@ There are three distinct root causes, each fixed separately:
 
 **Rule**: The client is dumb — it never synthesizes match-end on its own. The server must always deliver `OnMatchEnded`. `SessionResetHandler` handles the pause case separately (full boot reset on unpause).
 
+## Unity Input System — Cross-Platform Pitfalls
+
+### InputSystemUIInputModule vs StandaloneInputModule
+- **DO NOT** swap `StandaloneInputModule` for `InputSystemUIInputModule` programmatically without confirming Unity Player Settings Active Input Handling = "Input System Package (New)"
+- `InputSystemUIInputModule` requires an `InputActionAsset` wired up; without it clicks/touches silently fail
+- The safe default: keep `StandaloneInputModule` for UI buttons (Back to Lobby, etc.) and use raw Input System polling (`Touchscreen.current`, `Mouse.current`) for custom controls like joysticks
+- Player Settings → Active Input Handling should be **"Both"** for projects mixing legacy UI with new Input System
+
+### Keyboard.current — Never #if UNITY_EDITOR
+- `Keyboard.current` is part of `UnityEngine.InputSystem` and works in all builds — never guard it with `#if UNITY_EDITOR`
+- Wrapping keyboard input in `#if UNITY_EDITOR` silently strips it from all builds; WASD won't work in standalone
+
+### EventSystem created early in boot (EnvironmentPickerUI)
+- `EnvironmentPickerUI` (`#if DEVELOPMENT_BUILD || UNITY_EDITOR`) creates an EventSystem with `StandaloneInputModule` and calls `DontDestroyOnLoad` early in boot
+- Any later `EnsureEventSystem` check sees `EventSystem.current != null` and skips — the `StandaloneInputModule` EventSystem persists for the whole session
+- This is fine; joystick should use raw polling (not UI events) so it doesn't depend on the module type
+
+### Raw Input System polling for joystick
+- Use `Touchscreen.current` + `Mouse.current` directly in `MonoBehaviour.Update()` — zero EventSystem dependency
+- Check `wasPressedThisFrame` for drag start (not `isPressed`) to avoid activating when finger slides in from outside the zone
+- `RectTransformUtility.RectangleContainsScreenPoint(zoneRect, screenPos, null)` works for Screen Space Overlay with null camera
+
+## Unity RectTransform Anchor vs Canvas Coordinate Mismatch
+
+- `ScreenPointToLocalPointInRectangle(canvas, screenPos, null, out pos)` returns coordinates in the canvas's **local space** — (0,0) = canvas center when pivot is (0.5, 0.5)
+- If the child RectTransform has `anchorMin = anchorMax = Vector2.zero` (bottom-left), `anchoredPosition = (0,0)` = bottom-left, NOT canvas center
+- **Mismatch symptom**: UI element appears at bottom-left regardless of where you tap (or flies off-screen)
+- **Fix**: Set `anchorMin = anchorMax = new Vector2(0.5f, 0.5f)` so `anchoredPosition` coordinates match the canvas local space origin
+
 ## Unity Time.time Pauses on Focus Loss
 - `Time.time` stops when Unity Editor loses focus (OnApplicationPause)
 - For timers that should keep ticking (match countdown), use `DateTimeOffset.UtcNow` instead

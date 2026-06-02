@@ -22,11 +22,17 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 | ClashUp.Core | ClashUp.Client.Core | Core/Scripts/ |
 | ClashUp.UI | ClashUp.Client.UI | Core/UI/Scripts/ |
 | ClashUp.Networking | ClashUp.Client.Networking | Core/Networking/Scripts/ |
-| ClashUp.Gameplay | ClashUp.Client.Gameplay | Core/Gameplay/Scripts/ |
+| ClashUp.Gameplay | ClashUp.Client.Gameplay | Core/Gameplay/Scripts/ — subfolders: Interfaces/, Services/, Input/, Player/, Camera/ |
 | ClashUp.Match | ClashUp.Client.Match | Core/Match/Scripts/ |
 | ClashUp.CoreStarter | ClashUp.Client.CoreStarter | Core/CoreStarter/Scripts/ |
 | ClashUp.Lobby | ClashUp.Client.Lobby | Core/Lobby/Scripts/ |
 | ClashUp.Matchmaking | ClashUp.Client.Matchmaking | Core/Matchmaking/Scripts/ |
+
+## Unity Package Versions (manifest.json)
+- `com.unity.cinemachine`: 3.1.6 — namespace `Unity.Cinemachine`; `BindingMode` in `Unity.Cinemachine.TargetTracking`
+- `com.unity.inputsystem`: 1.19.0 — use `Keyboard.current`, `Touchscreen.current`, `Mouse.current` for raw polling
+- Player Settings → Active Input Handling: must be **"Both"** for new Input System + legacy UGUI to coexist
+- `ClashUp.Gameplay.asmdef` references: `Unity.Cinemachine`, `Unity.InputSystem`
 
 ## Server Package Versions (Directory.Packages.props)
 - MagicOnion: 7.10.0 (7.10.1 does NOT exist on NuGet)
