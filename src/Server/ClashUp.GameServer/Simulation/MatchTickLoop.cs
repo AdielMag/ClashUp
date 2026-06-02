@@ -47,7 +47,13 @@ public sealed class MatchTickLoop : IDisposable
 
                 if (durationSeconds > 0 && _context.Clock.ElapsedSeconds >= durationSeconds)
                 {
-                    await EndMatchAsync();
+                    var result = BuildMatchResult();
+                    _context.Group?.All.OnMatchEnded(result);
+                    _logger.LogInformation("Match {MatchId} ended (timer expired)", _context.MatchId);
+
+                    await RebroadcastEndAsync(result);
+
+                    _context.OnMatchEnded?.Invoke(_context.MatchId);
                     break;
                 }
             }
@@ -62,19 +68,32 @@ public sealed class MatchTickLoop : IDisposable
         }
     }
 
-    private Task EndMatchAsync()
+    /// <summary>
+    /// Re-broadcasts OnMatchEnded every 2 seconds for 30 seconds so clients
+    /// that were unfocused/paused receive the notification when they return.
+    /// </summary>
+    private async Task RebroadcastEndAsync(MatchResult result)
     {
-        var result = new MatchResult
+        const int intervalMs = 2000;
+        const int durationMs = 30_000;
+        var elapsed = 0;
+
+        while (elapsed < durationMs && !_cts.Token.IsCancellationRequested)
+        {
+            await Task.Delay(intervalMs, _cts.Token);
+            elapsed += intervalMs;
+            _context.Group?.All.OnMatchEnded(result);
+        }
+    }
+
+    private MatchResult BuildMatchResult()
+    {
+        return new MatchResult
         {
             MatchId = _context.MatchId,
             WinningTeamId = 0,
             EndedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
         };
-
-        _context.Group?.All.OnMatchEnded(result);
-        _logger.LogInformation("Match {MatchId} ended (timer expired)", _context.MatchId);
-        _context.OnMatchEnded?.Invoke(_context.MatchId);
-        return Task.CompletedTask;
     }
 
     private void Drain()

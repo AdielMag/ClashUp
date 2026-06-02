@@ -129,16 +129,11 @@ namespace ClashUp.Client.Match
             _statusLabel.text = text;
         }
 
-        public void ShowBackToLobby()
-        {
-            _backButtonObj.SetActive(true);
-        }
-
         public void ShowMatchEnded(MatchResult result)
         {
             _statusLabel.text = "Match Over";
             _timerLabel.text = "00:00";
-            ShowBackToLobby();
+            _backButtonObj.SetActive(true);
         }
 
         public void Destroy()

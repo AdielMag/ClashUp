@@ -95,16 +95,7 @@ namespace ClashUp.Client.Match
                 _matchUI.SetTimeRemaining((float)remaining);
 
                 if (remaining <= 0.0)
-                {
-                    if (!_matchEnded)
-                    {
-                        _matchEnded = true;
-                        _matchUI.SetStatus("Match Over");
-                        _matchUI.ShowBackToLobby();
-                        _log.Log("[Match] Timer expired locally.");
-                    }
                     break;
-                }
 
                 await UniTask.Yield(ct);
             }
@@ -126,6 +117,7 @@ namespace ClashUp.Client.Match
 
         private void OnMatchEnded(MatchResult result)
         {
+            if (_matchEnded) return;
             _matchEnded = true;
             _timerCts?.Cancel();
             _matchUI?.ShowMatchEnded(result);
