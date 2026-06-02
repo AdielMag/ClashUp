@@ -20,5 +20,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Core/Match/Content/Scenes/Match.unity
     guid: a947bddf8d7a47e6824dc5bc22f6040b
+  - enabled: 1
+    path: Assets/Core/Matchmaking/Content/Scenes/Matchmaking.unity
+    guid: a0e0d58facc8e4745bde80449cf1c3d7
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

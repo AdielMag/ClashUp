@@ -42,7 +42,9 @@
       "Bash(docker run:*)",
       "Bash(docker exec:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npx unity-mcp-cli:*)",
+      "Bash(\"/c/Program Files/dotnet/dotnet.exe\":*)"
     ]
   },
   "enableAllProjectMcpServers": true,
