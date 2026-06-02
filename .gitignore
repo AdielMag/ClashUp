@@ -70,3 +70,6 @@ tools/cert/*.key
 tools/cert/*.pem
 .env
 .env.local
+
+# Local MCP config
+client/ClashUp.Unity/.mcp.json
