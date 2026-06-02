@@ -67,6 +67,13 @@ public sealed class MatchContext : IDisposable
     /// <summary>Invoked when the match ends (timer expired). Registry wires this to Remove.</summary>
     public Action<MatchId>? OnMatchEnded { get; set; }
 
+    /// <summary>
+    /// Set to true (and EndResult populated) the moment the tick loop broadcasts OnMatchEnded.
+    /// Used by JoinAsync to replay the result to clients that reconnect during the 2-second grace window.
+    /// </summary>
+    public bool IsEnded { get; set; }
+    public MatchResult? EndResult { get; set; }
+
     public void Dispose()
     {
         TickLoop?.Dispose();

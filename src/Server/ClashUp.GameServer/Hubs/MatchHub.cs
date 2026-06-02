@@ -74,6 +74,11 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
 
         context.Group?.All.OnPlayerJoined(summary);
 
+        // If the match already ended (client reconnected during the 2-second grace window),
+        // replay OnMatchEnded directly to this client so it doesn't get stuck at 00:00.
+        if (context.IsEnded && context.EndResult is { } endResult)
+            Client.OnMatchEnded(endResult);
+
         return new JoinResult
         {
             You = summary.Id,

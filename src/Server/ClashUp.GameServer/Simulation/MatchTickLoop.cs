@@ -48,6 +48,8 @@ public sealed class MatchTickLoop : IDisposable
                 if (durationSeconds > 0 && _context.Clock.ElapsedSeconds >= durationSeconds)
                 {
                     var result = BuildMatchResult();
+                    _context.IsEnded = true;
+                    _context.EndResult = result;
                     _context.Group?.All.OnMatchEnded(result);
                     _logger.LogInformation("Match {MatchId} ended (timer expired)", _context.MatchId);
 
