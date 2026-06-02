@@ -64,7 +64,14 @@ public sealed class MatchContext : IDisposable
     }
     public List<PlayerSummary> GetPlayers() => _players.Values.ToList();
 
-    /// <summary>Invoked when the match ends (timer expired). Registry wires this to Remove.</summary>
+    /// <summary>
+    /// Invoked immediately when the match ends — before the 2-second client broadcast window.
+    /// Registry uses this to fire the Services notification early so the DB is updated
+    /// before any client can loop back through CheckActiveMatchAsync.
+    /// </summary>
+    public Action<MatchId>? OnMatchEndedEarly { get; set; }
+
+    /// <summary>Invoked after the 2-second broadcast window to remove the match from the registry.</summary>
     public Action<MatchId>? OnMatchEnded { get; set; }
 
     /// <summary>

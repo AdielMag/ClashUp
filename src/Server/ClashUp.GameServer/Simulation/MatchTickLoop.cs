@@ -50,11 +50,15 @@ public sealed class MatchTickLoop : IDisposable
                     var result = BuildMatchResult();
                     _context.IsEnded = true;
                     _context.EndResult = result;
+
+                    // Notify Services immediately so the DB is updated before any client
+                    // can loop back through CheckActiveMatchAsync (which takes ~2s via lobby reload).
+                    _context.OnMatchEndedEarly?.Invoke(_context.MatchId);
+
                     _context.Group?.All.OnMatchEnded(result);
                     _logger.LogInformation("Match {MatchId} ended (timer expired)", _context.MatchId);
 
-                    // Give the broadcast time to flush before the registry
-                    // disposes the context and tears down connections.
+                    // Give the broadcast time to flush before tearing down connections.
                     await Task.Delay(2000, CancellationToken.None);
 
                     _context.OnMatchEnded?.Invoke(_context.MatchId);

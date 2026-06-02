@@ -41,7 +41,8 @@ public sealed class MatchRegistry : IMatchRegistry, IDisposable
                 $"Match {provision.MatchId} is already registered on this instance.");
         }
 
-        context.OnMatchEnded = id => Remove(id);
+        context.OnMatchEndedEarly = id => _ = NotifyMatchEndedAsync(id);
+        context.OnMatchEnded = id => RemoveAndDispose(id);
         context.TickLoop = new MatchTickLoop(context, _loggerFactory.CreateLogger<MatchTickLoop>());
         return context;
     }
@@ -53,6 +54,12 @@ public sealed class MatchRegistry : IMatchRegistry, IDisposable
             ctx.Dispose();
             _ = NotifyMatchEndedAsync(matchId);
         }
+    }
+
+    private void RemoveAndDispose(MatchId matchId)
+    {
+        if (_matches.TryRemove(matchId, out var ctx))
+            ctx.Dispose();
     }
 
     private async Task NotifyMatchEndedAsync(MatchId matchId)
