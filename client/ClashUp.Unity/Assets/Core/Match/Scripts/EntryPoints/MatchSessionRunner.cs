@@ -21,6 +21,7 @@ namespace ClashUp.Client.Match
         private readonly MatchHandoffHolder _handoff;
         private readonly ClientPredictionWorld _prediction;
         private readonly GameFlowController _flow;
+        private readonly MatchInputGate _inputGate;
 
         private MatchUI _matchUI;
         private int _durationSeconds;
@@ -35,13 +36,15 @@ namespace ClashUp.Client.Match
             MatchSession session,
             MatchHandoffHolder handoff,
             ClientPredictionWorld prediction,
-            GameFlowController flow)
+            GameFlowController flow,
+            MatchInputGate inputGate)
         {
             _log = log;
             _session = session;
             _handoff = handoff;
             _prediction = prediction;
             _flow = flow;
+            _inputGate = inputGate;
         }
 
         public async UniTask StartAsync(CancellationToken cancellation)
@@ -72,6 +75,7 @@ namespace ClashUp.Client.Match
 
                 _matchUI.SetStatus("Match in progress");
                 _matchUI.SetPlayerCount(_playerCount);
+                _inputGate.Enable();
 
                 _log.Log($"[Match] Joined match {_handoff.Value.MatchId}. tickRate={join.TickRateHz}Hz duration={_durationSeconds}s");
 
@@ -119,6 +123,7 @@ namespace ClashUp.Client.Match
         {
             if (_matchEnded) return;
             _matchEnded = true;
+            _inputGate.Disable();
             _timerCts?.Cancel();
             _matchUI?.ShowMatchEnded(result);
             _log.Log($"[Match] Match ended. Winner team={result.WinningTeamId}");

@@ -62,23 +62,29 @@ namespace ClashUp.Client.Match
             statusLabel.alignment = TextAlignmentOptions.Center;
             statusLabel.color = Color.white;
 
-            // Timer label (center)
+            // Timer label (below status)
             var timerObj = new GameObject("TimerLabel");
             timerObj.transform.SetParent(root.transform, false);
             var timerRect = timerObj.AddComponent<RectTransform>();
-            timerRect.anchoredPosition = new Vector2(0f, 60f);
-            timerRect.sizeDelta = new Vector2(300f, 60f);
+            timerRect.anchorMin = new Vector2(0.5f, 1f);
+            timerRect.anchorMax = new Vector2(0.5f, 1f);
+            timerRect.pivot = new Vector2(0.5f, 1f);
+            timerRect.anchoredPosition = new Vector2(0f, -100f);
+            timerRect.sizeDelta = new Vector2(300f, 65f);
             var timerLabel = timerObj.AddComponent<TextMeshProUGUI>();
             timerLabel.text = "--:--";
             timerLabel.fontSize = 48;
             timerLabel.alignment = TextAlignmentOptions.Center;
             timerLabel.color = Color.white;
 
-            // Player count label
+            // Player count label (below timer)
             var playerObj = new GameObject("PlayerCountLabel");
             playerObj.transform.SetParent(root.transform, false);
             var playerRect = playerObj.AddComponent<RectTransform>();
-            playerRect.anchoredPosition = new Vector2(0f, -20f);
+            playerRect.anchorMin = new Vector2(0.5f, 1f);
+            playerRect.anchorMax = new Vector2(0.5f, 1f);
+            playerRect.pivot = new Vector2(0.5f, 1f);
+            playerRect.anchoredPosition = new Vector2(0f, -175f);
             playerRect.sizeDelta = new Vector2(300f, 40f);
             var playerCountLabel = playerObj.AddComponent<TextMeshProUGUI>();
             playerCountLabel.text = "Players: 0";

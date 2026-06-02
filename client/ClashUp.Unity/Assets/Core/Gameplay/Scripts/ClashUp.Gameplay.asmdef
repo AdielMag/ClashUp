@@ -6,7 +6,9 @@
         "ClashUp.Shared",
         "UniTask",
         "VContainer",
-        "VContainer.Unity"
+        "VContainer.Unity",
+        "Unity.Cinemachine",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

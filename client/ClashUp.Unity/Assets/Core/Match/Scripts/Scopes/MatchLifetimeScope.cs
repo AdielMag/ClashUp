@@ -22,8 +22,14 @@ namespace ClashUp.Client.Match
             builder.Register<MatchHubReceiver>(Lifetime.Singleton);
             builder.Register<MatchSession>(Lifetime.Singleton);
 
+            builder.Register<MatchInputGate>(Lifetime.Singleton);
+
             builder.Register<IClientSimulation, NullClientSimulation>(Lifetime.Singleton);
             builder.Register<ClientPredictionWorld>(Lifetime.Singleton);
+
+            builder.RegisterEntryPoint<JoystickInputProvider>().As<IMovementInput>();
+            builder.RegisterEntryPoint<PlayerSpawner>().AsSelf();
+            builder.RegisterEntryPoint<MatchCameraRig>();
 
             builder.RegisterEntryPoint<MatchSessionRunner>();
         }

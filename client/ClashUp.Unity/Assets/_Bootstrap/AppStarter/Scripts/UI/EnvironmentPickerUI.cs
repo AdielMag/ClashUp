@@ -16,7 +16,7 @@ namespace ClashUp.Client.AppStarter
             var tcs = new UniTaskCompletionSource<ServerEnvironment>();
             var environments = config.GetAllEnvironments();
 
-            // Ensure EventSystem exists
+            // Ensure EventSystem exists with the new Input System module
             if (EventSystem.current == null)
             {
                 var esGo = new GameObject("EventSystem");

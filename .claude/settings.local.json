@@ -46,7 +46,9 @@
       "Bash(npx unity-mcp-cli:*)",
       "Bash(\"/c/Program Files/dotnet/dotnet.exe\":*)",
       "Bash(git rm *)",
-      "mcp__ai-game-developer__assets-refresh"
+      "mcp__ai-game-developer__assets-refresh",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\client\\\\ClashUp.Unity\\\\Assets\\\\Core\" -Directory)",
+      "Bash(Select-Object Name)"
     ]
   },
   "enableAllProjectMcpServers": true,
