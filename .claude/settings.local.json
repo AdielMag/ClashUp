@@ -39,7 +39,14 @@
       "Bash(python:*)",
       "Bash(\"C:/Users/Adiel/Documents/ClashUp/client/ClashUp.Unity/Assets/Core/Scripts/Services/UnityDebugLogger.cs.meta\":*)",
       "Bash(docker compose:*)",
-      "Bash(docker run:*)"
+      "Bash(docker run:*)",
+      "Bash(docker exec:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "ai-game-developer"
+  ]
 }
