@@ -27,5 +27,8 @@ public sealed class ServicesRegistryClient : IServicesRegistryClient, IDisposabl
     public async Task MarkDrainingAsync(string instanceId, CancellationToken cancellationToken) =>
         await _client.MarkDrainingAsync(instanceId);
 
+    public async Task ReportMatchEndedAsync(GsMatchEnded notice, CancellationToken cancellationToken) =>
+        await _client.ReportMatchEndedAsync(notice);
+
     public void Dispose() => _channel.Dispose();
 }

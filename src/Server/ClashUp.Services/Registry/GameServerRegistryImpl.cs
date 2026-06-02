@@ -14,11 +14,16 @@ namespace ClashUp.Server.Services.Registry;
 public sealed class GameServerRegistryImpl : ServiceBase<IGameServerRegistry>, IGameServerRegistry
 {
     private readonly IGameServerInstanceRepository _repository;
+    private readonly IMatchRepository _matchRepo;
     private readonly ILogger<GameServerRegistryImpl> _logger;
 
-    public GameServerRegistryImpl(IGameServerInstanceRepository repository, ILogger<GameServerRegistryImpl> logger)
+    public GameServerRegistryImpl(
+        IGameServerInstanceRepository repository,
+        IMatchRepository matchRepo,
+        ILogger<GameServerRegistryImpl> logger)
     {
         _repository = repository;
+        _matchRepo = matchRepo;
         _logger = logger;
     }
 
@@ -67,10 +72,11 @@ public sealed class GameServerRegistryImpl : ServiceBase<IGameServerRegistry>, I
         return default;
     }
 
-    public UnaryResult ReportMatchEndedAsync(GsMatchEnded notice)
+    public async UnaryResult ReportMatchEndedAsync(GsMatchEnded notice)
     {
+        var ct = Context.CallContext.CancellationToken;
+        await _matchRepo.SetStateAsync(notice.MatchId.Value, "Ended", ct);
         _logger.LogInformation("Match ended: {MatchId} on {InstanceId}", notice.MatchId, notice.InstanceId);
-        return default;
     }
 
     public async UnaryResult MarkDrainingAsync(string instanceId)

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using ClashUp.Server.GameServer.Registration;
 using ClashUp.Server.GameServer.Simulation;
 using ClashUp.Shared.MessagePackObjects;
 
@@ -9,11 +10,19 @@ public sealed class MatchRegistry : IMatchRegistry, IDisposable
     private readonly ConcurrentDictionary<MatchId, MatchContext> _matches = new();
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly IServicesRegistryClient _servicesClient;
+    private readonly GameServerIdentity _identity;
 
-    public MatchRegistry(IServiceScopeFactory scopeFactory, ILoggerFactory loggerFactory)
+    public MatchRegistry(
+        IServiceScopeFactory scopeFactory,
+        ILoggerFactory loggerFactory,
+        IServicesRegistryClient servicesClient,
+        GameServerIdentity identity)
     {
         _scopeFactory = scopeFactory;
         _loggerFactory = loggerFactory;
+        _servicesClient = servicesClient;
+        _identity = identity;
     }
 
     public int Count => _matches.Count;
@@ -42,6 +51,26 @@ public sealed class MatchRegistry : IMatchRegistry, IDisposable
         if (_matches.TryRemove(matchId, out var ctx))
         {
             ctx.Dispose();
+            _ = NotifyMatchEndedAsync(matchId);
+        }
+    }
+
+    private async Task NotifyMatchEndedAsync(MatchId matchId)
+    {
+        try
+        {
+            await _servicesClient.ReportMatchEndedAsync(
+                new GsMatchEnded
+                {
+                    InstanceId = _identity.InstanceId,
+                    MatchId = matchId,
+                },
+                CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _loggerFactory.CreateLogger<MatchRegistry>()
+                .LogWarning(ex, "Failed to report match {MatchId} ended to Services", matchId);
         }
     }
 

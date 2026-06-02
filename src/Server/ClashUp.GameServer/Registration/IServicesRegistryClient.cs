@@ -11,4 +11,5 @@ public interface IServicesRegistryClient
     Task<GsToken> RegisterAsync(GsRegistration registration, CancellationToken cancellationToken);
     Task HeartbeatAsync(GsHeartbeat heartbeat, CancellationToken cancellationToken);
     Task MarkDrainingAsync(string instanceId, CancellationToken cancellationToken);
+    Task ReportMatchEndedAsync(GsMatchEnded notice, CancellationToken cancellationToken);
 }
