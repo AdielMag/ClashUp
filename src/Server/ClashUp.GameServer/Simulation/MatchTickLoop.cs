@@ -50,6 +50,11 @@ public sealed class MatchTickLoop : IDisposable
                     var result = BuildMatchResult();
                     _context.Group?.All.OnMatchEnded(result);
                     _logger.LogInformation("Match {MatchId} ended (timer expired)", _context.MatchId);
+
+                    // Give the broadcast time to flush before the registry
+                    // disposes the context and tears down connections.
+                    await Task.Delay(2000, CancellationToken.None);
+
                     _context.OnMatchEnded?.Invoke(_context.MatchId);
                     break;
                 }
