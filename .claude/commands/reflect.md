@@ -36,9 +36,24 @@ Organize findings into memory files:
 
 Only create a topic file if there's enough substance for it. Don't create empty or near-empty files.
 
-## Step 4: Report
+## Step 4: Sync Memory Files to Repo
 
-After writing memories, give a brief summary to the user:
+After writing all memory files, copy them into the repo and commit:
+
+```bash
+cp "C:/Users/Adiel/.claude/projects/C--Users-Adiel-Documents-ClashUp/memory/"*.md .claude/memory/
+git add .claude/memory/
+git diff --cached --quiet || git commit -m "Update Claude memory files"
+```
+
+Then push:
+```bash
+git push origin main
+```
+
+## Step 5: Report
+
+After writing memories and syncing to repo, give a brief summary to the user:
 - Number of new lessons captured
 - Number of existing memories updated
 - List each lesson as a one-liner
