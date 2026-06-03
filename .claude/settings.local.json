@@ -48,7 +48,8 @@
       "Bash(git rm *)",
       "mcp__ai-game-developer__assets-refresh",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\client\\\\ClashUp.Unity\\\\Assets\\\\Core\" -Directory)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "mcp__ai-game-developer__console-get-logs"
     ]
   },
   "enableAllProjectMcpServers": true,

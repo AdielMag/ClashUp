@@ -112,6 +112,8 @@ namespace ClashUp.Client.Networking
             }
         }
 
+        public UniTask SubmitInputAsync(InputCommand command) => Hub.SubmitInputAsync(command).AsUniTask();
+
         public async UniTask LeaveAsync()
         {
             if (_hub is null)

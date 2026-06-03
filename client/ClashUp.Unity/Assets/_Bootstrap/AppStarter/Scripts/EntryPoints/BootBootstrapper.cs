@@ -47,7 +47,7 @@ namespace ClashUp.Client.AppStarter
             loadingScreen.SetProgress(0.1f);
 
             // 2. Environment picker (dev only)
-#if DEVELOPMENT_BUILD || UNITY_EDITOR
+#if CLASHUP_DEV || UNITY_EDITOR
             var selectedEnv = await EnvironmentPickerUI.ShowAndWaitAsync(_environmentConfig);
             _environmentConfig.SetCurrent(selectedEnv);
             _endpoints.ServicesAddress = _environmentConfig.GetServicesUrl();

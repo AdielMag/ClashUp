@@ -2,6 +2,7 @@ using System.Linq;
 using ClashUp.Server.Common.Auth;
 using ClashUp.Server.GameServer.Match;
 using ClashUp.Server.GameServer.Registration;
+using ClashUp.Server.GameServer.Simulation;
 using ClashUp.Shared.Hubs;
 using ClashUp.Shared.MessagePackObjects;
 using MagicOnion.Server.Hubs;
@@ -75,6 +76,7 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
                 Id = new PlayerId(_claims.PlayerId),
                 DisplayName = $"Player-{_claims.PlayerId[..6]}",
                 TeamId = 0,
+                ColorSlot = context.GetPlayers().Count,
             };
             context.AddPlayer(summary);
         }
@@ -107,7 +109,7 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
 
     public Task SubmitInputAsync(InputCommand command)
     {
-        _context?.Inputs.Enqueue(command);
+        _context?.Inputs.Enqueue(new PlayerInput(new PlayerId(_claims.PlayerId), command));
         return Task.CompletedTask;
     }
 

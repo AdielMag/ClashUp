@@ -88,9 +88,12 @@ public sealed class MatchTickLoop : IDisposable
 
     private void Drain()
     {
-        while (_context.Inputs.TryDequeue(out var command))
+        foreach (var p in _context.GetPlayers())
+            _context.Simulation.EnsurePlayer(p.Id, p.ColorSlot);
+
+        while (_context.Inputs.TryDequeue(out var input))
         {
-            _context.Simulation.ApplyInput(command);
+            _context.Simulation.ApplyInput(input.Player, input.Command);
         }
     }
 

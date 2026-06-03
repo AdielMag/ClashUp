@@ -6,28 +6,17 @@ namespace ClashUp.Client.Gameplay
 {
     public sealed class PlayerSpawner : IStartable, IDisposable
     {
-        private readonly IMovementInput _movementInput;
-        private GameObject _playerGo;
         private GameObject _groundGo;
         private GameObject _lightGo;
-
-        public Transform PlayerTransform { get; private set; }
-
-        public PlayerSpawner(IMovementInput movementInput)
-        {
-            _movementInput = movementInput;
-        }
 
         public void Start()
         {
             SpawnLight();
             SpawnGround();
-            SpawnPlayer();
         }
 
         public void Dispose()
         {
-            if (_playerGo != null) UnityEngine.Object.Destroy(_playerGo);
             if (_groundGo != null) UnityEngine.Object.Destroy(_groundGo);
             if (_lightGo != null) UnityEngine.Object.Destroy(_lightGo);
         }
@@ -74,20 +63,6 @@ namespace ClashUp.Client.Gameplay
             tex.SetPixels(pixels);
             tex.Apply();
             return tex;
-        }
-
-        private void SpawnPlayer()
-        {
-            _playerGo = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            _playerGo.name = "Player";
-            _playerGo.transform.position = new Vector3(0f, 1f, 0f);
-
-            _playerGo.AddComponent<CharacterController>();
-
-            var movement = _playerGo.AddComponent<PlayerMovement>();
-            movement.Initialize(_movementInput);
-
-            PlayerTransform = _playerGo.transform;
         }
     }
 }

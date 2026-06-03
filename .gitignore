@@ -74,3 +74,4 @@ tools/cert/*.pem
 # Local MCP config
 client/ClashUp.Unity/.mcp.json
 Builds
+client/ClashUp.Unity/.utmp

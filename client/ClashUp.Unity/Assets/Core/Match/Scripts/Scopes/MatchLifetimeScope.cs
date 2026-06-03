@@ -7,11 +7,6 @@ using VContainer.Unity;
 
 namespace ClashUp.Client.Match
 {
-    /// <summary>
-    /// Child of CoreStarterLifetimeScope. Created on match join, disposed on
-    /// match end. Owns the MatchSession, hub receiver, and the client-side
-    /// prediction world.
-    /// </summary>
     public sealed class MatchLifetimeScope : LifetimeScope
     {
         protected override void Configure(IContainerBuilder builder)
@@ -24,12 +19,16 @@ namespace ClashUp.Client.Match
 
             builder.Register<MatchInputGate>(Lifetime.Singleton);
 
-            builder.Register<IClientSimulation, NullClientSimulation>(Lifetime.Singleton);
+            builder.Register<MovementClientSimulation>(Lifetime.Singleton);
+            builder.Register<IClientSimulation>(
+                c => c.Resolve<MovementClientSimulation>(), Lifetime.Singleton);
             builder.Register<ClientPredictionWorld>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<JoystickInputProvider>().As<IMovementInput>();
-            builder.RegisterEntryPoint<PlayerSpawner>().AsSelf();
+            builder.RegisterEntryPoint<PlayerSpawner>();
+            builder.RegisterEntryPoint<PlayerViewSystem>().AsSelf();
             builder.RegisterEntryPoint<MatchCameraRig>();
+            builder.RegisterEntryPoint<LocalInputPublisher>().AsSelf();
 
             builder.RegisterEntryPoint<MatchSessionRunner>();
         }

@@ -5,6 +5,7 @@ namespace ClashUp.Client.Networking
     public enum ServerEnvironment
     {
         Local,
+        Tailscale,
         Dev
     }
 
@@ -16,6 +17,7 @@ namespace ClashUp.Client.Networking
         [SerializeField] private SerializedDictionary<ServerEnvironment, string> servicesUrls = new()
         {
             { ServerEnvironment.Local, "http://localhost:5001" },
+            { ServerEnvironment.Tailscale, "http://100.68.118.109:5001" },
             { ServerEnvironment.Dev, "https://dev.clashup.example.com" }
         };
 

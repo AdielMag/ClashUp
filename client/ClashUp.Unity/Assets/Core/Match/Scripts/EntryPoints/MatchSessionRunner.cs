@@ -22,6 +22,9 @@ namespace ClashUp.Client.Match
         private readonly ClientPredictionWorld _prediction;
         private readonly GameFlowController _flow;
         private readonly MatchInputGate _inputGate;
+        private readonly MovementClientSimulation _sim;
+        private readonly PlayerViewSystem _viewSystem;
+        private readonly LocalInputPublisher _inputPublisher;
 
         private MatchUI _matchUI;
         private int _durationSeconds;
@@ -37,7 +40,10 @@ namespace ClashUp.Client.Match
             MatchHandoffHolder handoff,
             ClientPredictionWorld prediction,
             GameFlowController flow,
-            MatchInputGate inputGate)
+            MatchInputGate inputGate,
+            MovementClientSimulation sim,
+            PlayerViewSystem viewSystem,
+            LocalInputPublisher inputPublisher)
         {
             _log = log;
             _session = session;
@@ -45,6 +51,9 @@ namespace ClashUp.Client.Match
             _prediction = prediction;
             _flow = flow;
             _inputGate = inputGate;
+            _sim = sim;
+            _viewSystem = viewSystem;
+            _inputPublisher = inputPublisher;
         }
 
         public async UniTask StartAsync(CancellationToken cancellation)
@@ -72,6 +81,14 @@ namespace ClashUp.Client.Match
                 _joinWallClock = DateTimeOffset.UtcNow;
                 _playerCount = join.Players.Count;
                 _matchEnded = false;
+
+                _sim.SetLocalPlayer(join.You);
+                _prediction.Configure(join.TickRateHz);
+
+                foreach (var player in join.Players)
+                    _viewSystem.RegisterPlayer(player);
+
+                _inputPublisher.Configure(join.CurrentTick, join.TickRateHz);
 
                 _matchUI.SetStatus("Match in progress");
                 _matchUI.SetPlayerCount(_playerCount);
@@ -111,12 +128,14 @@ namespace ClashUp.Client.Match
         {
             _playerCount++;
             _matchUI?.SetPlayerCount(_playerCount);
+            _viewSystem.RegisterPlayer(player);
         }
 
         private void OnPlayerLeft(PlayerId player, LeaveReason reason)
         {
             _playerCount = Math.Max(0, _playerCount - 1);
             _matchUI?.SetPlayerCount(_playerCount);
+            _viewSystem.UnregisterPlayer(player);
         }
 
         private void OnMatchEnded(MatchResult result)

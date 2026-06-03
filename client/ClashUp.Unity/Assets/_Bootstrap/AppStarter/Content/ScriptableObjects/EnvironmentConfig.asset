@@ -18,5 +18,7 @@ MonoBehaviour:
     - key: 0
       value: http://localhost:5001
     - key: 1
+      value: http://100.68.118.109:5001
+    - key: 2
       value: https://dev.clashup.example.com
     error: 0

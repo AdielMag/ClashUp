@@ -673,7 +673,7 @@ PlayerSettings:
   webGLCloseOnQuit: 0
   webWasm2023: 0
   scriptingDefineSymbols:
-    Android: UNITY_MCP_READY
+    Android: UNITY_MCP_READY;CLASHUP_DEV
     EmbeddedLinux: UNITY_MCP_READY
     GameCoreScarlett: UNITY_MCP_READY
     GameCoreXboxOne: UNITY_MCP_READY
@@ -685,12 +685,12 @@ PlayerSettings:
     PS5: UNITY_MCP_READY
     QNX: UNITY_MCP_READY
     Server: UNITY_MCP_READY
-    Standalone: UNITY_MCP_READY
+    Standalone: UNITY_MCP_READY;CLASHUP_DEV
     VisionOS: UNITY_MCP_READY
     WebGL: UNITY_MCP_READY
     Windows Store Apps: UNITY_MCP_READY
     XboxOne: UNITY_MCP_READY
-    iPhone: UNITY_MCP_READY
+    iPhone: UNITY_MCP_READY;CLASHUP_DEV
     tvOS: UNITY_MCP_READY
   additionalCompilerArguments: {}
   platformArchitecture: {}

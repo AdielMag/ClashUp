@@ -8,5 +8,6 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(0)] public PlayerId Id { get; init; }
         [Key(1)] public string DisplayName { get; init; } = string.Empty;
         [Key(2)] public int TeamId { get; init; }
+        [Key(3)] public int ColorSlot { get; init; }
     }
 }

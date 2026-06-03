@@ -26,10 +26,8 @@ builder.Services.AddSingleton<IJwtKeyProvider, JwtKeyProvider>();
 builder.Services.AddSingleton<IMatchTokenValidator, MatchTokenValidator>();
 builder.Services.AddSingleton<IMatchRegistry, MatchRegistry>();
 
-// Per-match scoped simulation pieces. Resolved via MatchContext's
-// IServiceScope. Swap NullServerSimulation for the AetherNet adapter
-// once external/AetherNet/ is on disk.
-builder.Services.AddScoped<IServerSimulation, NullServerSimulation>();
+// Per-match scoped simulation pieces. Resolved via MatchContext's IServiceScope.
+builder.Services.AddScoped<IServerSimulation, MovementServerSimulation>();
 builder.Services.AddScoped<InputBuffer>();
 builder.Services.AddScoped<MatchClock>();
 
