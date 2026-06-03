@@ -12,6 +12,10 @@ namespace ClashUp.Client.Lobby
 {
     public sealed class LobbyEntryPoint : IAsyncStartable
     {
+        private static int _reconnectFailures;
+
+        public static void ResetReconnectFailures() => _reconnectFailures = 0;
+
         private readonly GameFlowController _flow;
         private readonly MatchmakingClient _matchmaking;
         private readonly IDebugLogger _log;
@@ -25,21 +29,33 @@ namespace ClashUp.Client.Lobby
 
         public async UniTask StartAsync(CancellationToken cancellation)
         {
+            const int maxReconnectAttempts = 3;
+
             // Check if player has an active match to reconnect to
-            try
+            if (_reconnectFailures < maxReconnectAttempts)
             {
-                var activeHandoff = await _matchmaking.CheckActiveMatchAsync(cancellation);
-                if (activeHandoff != null)
+                try
                 {
-                    _log.Log($"[Lobby] Active match found: {activeHandoff.MatchId}. Reconnecting...");
-                    _flow.EnterMatchFromLobby(activeHandoff);
-                    return;
+                    var activeHandoff = await _matchmaking.CheckActiveMatchAsync(cancellation);
+                    if (activeHandoff != null)
+                    {
+                        _log.Log($"[Lobby] Active match found: {activeHandoff.MatchId}. Reconnecting... (attempt {_reconnectFailures + 1}/{maxReconnectAttempts})");
+                        _reconnectFailures++;
+                        _flow.EnterMatchFromLobby(activeHandoff);
+                        return;
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    _log.LogWarning($"[Lobby] Active match check failed: {ex.Message}");
                 }
             }
-            catch (System.Exception ex)
+            else
             {
-                _log.LogWarning($"[Lobby] Active match check failed: {ex.Message}");
+                _log.LogWarning($"[Lobby] Skipping reconnect — failed {_reconnectFailures} times. Staying in lobby.");
             }
+
+            _reconnectFailures = 0;
 
             var ui = LobbyUI.Create();
 

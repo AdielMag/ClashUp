@@ -6,6 +6,7 @@
         "ClashUp.CoreStarter",
         "ClashUp.Networking",
         "ClashUp.Gameplay",
+        "ClashUp.Lobby",
         "ClashUp.Shared",
         "UniTask",
         "VContainer",

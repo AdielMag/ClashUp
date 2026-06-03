@@ -4,6 +4,7 @@ using System.Threading;
 using ClashUp.Client.Core;
 using ClashUp.Client.CoreStarter;
 using ClashUp.Client.Gameplay;
+using ClashUp.Client.Lobby;
 using ClashUp.Client.Networking;
 using ClashUp.Shared.MessagePackObjects;
 
@@ -90,6 +91,7 @@ namespace ClashUp.Client.Match
 
                 _inputPublisher.Configure(join.CurrentTick, join.TickRateHz);
 
+                LobbyEntryPoint.ResetReconnectFailures();
                 _matchUI.SetStatus("Match in progress");
                 _matchUI.SetPlayerCount(_playerCount);
                 _inputGate.Enable();

@@ -47,13 +47,14 @@ public sealed class MatchmakingQueue
     public List<TicketEntry>? TryDrain(int batchSize)
     {
         var batch = new List<TicketEntry>(batchSize);
+        var playerIds = new HashSet<string>(batchSize);
         while (batch.Count < batchSize && _queue.TryPeek(out var head))
         {
             if (!_queue.TryDequeue(out var entry))
             {
                 break;
             }
-            if (entry.Status == TicketStatus.Queued)
+            if (entry.Status == TicketStatus.Queued && playerIds.Add(entry.PlayerId))
             {
                 batch.Add(entry);
             }
