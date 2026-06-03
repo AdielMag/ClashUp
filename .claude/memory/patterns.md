@@ -75,7 +75,10 @@ Anti-aliased edge via `center - dist + 0.5f` clamp. Used for joystick background
 - Show retry feedback in loading screen ("Connection failed. Retrying...")
 
 ## Environment Picker
-- Uses legacy `UnityEngine.UI.Dropdown` (NOT TMP_Dropdown — too complex to code-generate template)
+- **Prefab-based** with TMP_Dropdown (NOT code-generated legacy UI): `Assets/_Bootstrap/AppStarter/Content/Resources/EnvironmentPickerUI.prefab`
+- Loaded via `Resources.Load<GameObject>("EnvironmentPickerUI")` at runtime
+- Uses `TextMeshProUGUI` + `TMP_Dropdown` — legacy `UnityEngine.UI.Text` fonts broken in Unity 6
+- `ClashUp.AppStarter.asmdef` references `Unity.TextMeshPro`
 - Confirm button triggers `UniTaskCompletionSource.TrySetResult`
 - Must ensure `EventSystem` exists (check + create if null)
 - Sort order 200 (above loading screen at 100)

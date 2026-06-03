@@ -190,6 +190,29 @@ $p = [Environment]::GetEnvironmentVariable("Path","Machine")
 
 **Key API**: `UnityEditor.Android.AndroidExternalToolsSettings` (public type); `UnityEditor.Android.AndroidSDKTools` (internal, use reflection).
 
+## Unity 6 — Legacy UI.Text Fonts Broken
+
+**Symptom**: `UnityEngine.UI.Text` components render invisible — no text shown anywhere.
+
+**Root cause**: In Unity 6, `Resources.GetBuiltinResource<Font>("Arial.ttf")` **throws an exception** (not null). `Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")` returns null in some contexts. The `??` fallback chain crashes before reaching any working fallback.
+
+**Fix**: Don't use legacy `UnityEngine.UI.Text` for code-generated UI. Use `TextMeshProUGUI` + `TMP_Dropdown` instead, with a proper prefab that serializes font references.
+
+**Key details**:
+- `LegacyRuntime.ttf` works in editor script-execute but may fail at runtime
+- `Arial.ttf` throws `"Arial.ttf is no longer a valid built in font. Please use LegacyRuntime.ttf"` — this is an exception, NOT a null return
+- `Font.CreateDynamicFontFromOSFont("Arial", size)` didn't render visibly either
+- The reliable path: prefab with `TextMeshProUGUI` using `LiberationSans SDF` TMP_FontAsset (at `Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset`)
+- When creating prefabs via editor scripts, `AssetDatabase.FindAssets("t:TMP_FontAsset")` may return the Fallback font first — use `TMP_Settings.defaultFontAsset` or load by explicit path
+
+## Unity UI Mask + Alpha Gotcha
+
+**Symptom**: Dropdown items (or any masked content) are invisible even though text, font, and structure are correct.
+
+**Root cause**: `Mask` component requires an `Image` with alpha > 0 to define the clipping region. Setting `Image.color = Color.clear` (alpha 0) makes the mask clip everything to nothing. `showMaskGraphic = false` hides the mask's visual but the alpha still matters for clipping.
+
+**Fix**: Set the Viewport `Image` color to `new Color(1, 1, 1, 1)` (or any alpha > 0), then use `showMaskGraphic = false` to hide it visually.
+
 ## Server JWT Configuration
 - `JwtKeyProvider` requires `Jwt:EndUserSigningKey` and `Jwt:InterTierSigningKey` (min 32 bytes each)
 - Dev keys are in `appsettings.Development.json` for both Services and GameServer
