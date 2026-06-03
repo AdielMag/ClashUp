@@ -34,8 +34,15 @@ namespace ClashUp.Client.AppStarter
             if (_hasPaused && !_resetting)
             {
                 _hasPaused = false;
-                ShowResetPopup();
+                if (!IsOnlyBootSceneLoaded())
+                    ShowResetPopup();
             }
+        }
+
+        private static bool IsOnlyBootSceneLoaded()
+        {
+            if (SceneManager.sceneCount != 1) return false;
+            return SceneManager.GetSceneAt(0).buildIndex == 0;
         }
 
         private void ShowResetPopup()
