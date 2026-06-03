@@ -161,6 +161,34 @@ There are three distinct root causes, each fixed separately:
 - For timers that should keep ticking (match countdown), use `DateTimeOffset.UtcNow` instead
 - Pattern: store `_joinWallClock = DateTimeOffset.UtcNow` at start, compute elapsed as `(UtcNow - _joinWallClock).TotalSeconds`
 
+## Unity Android Build — "latest installed SDK on the system is 0"
+
+**Symptom**: Build fails with "Minimum SDK of AndroidApiLevel23 but the latest installed SDK on the system is 0" even though SDK platforms are installed.
+
+**Root cause**: `C:\Windows\System32` was missing from Unity's process PATH. Unity's `AndroidSDKTools.ListTargetPlatforms()` shells out to external tools (and `powershell` for sdkmanager) that need System32 binaries like `findstr.exe`. Without System32 in PATH, platform detection returns 0.
+
+**Secondary issue**: Platform directories also lacked `package.xml` files (had `android.jar` and `source.properties` but not `package.xml`). These can be created manually but require admin access to `C:\Program Files\Unity\...`.
+
+**Diagnosis steps**:
+1. Check `AndroidExternalToolsSettings.sdkRootPath` — is it set?
+2. Check `EditorPrefs.GetBool("SdkUseEmbedded")` — should be true for Unity Hub installs
+3. Check `System.Environment.GetEnvironmentVariable("PATH")` inside Unity — does it include `C:\Windows\System32`?
+4. Use reflection: `AndroidSDKTools.CreateAndroidSDKTools(sdkRoot)` then `ListTargetPlatforms()` to test detection
+
+**Runtime fix** (process-level, lost on restart):
+```csharp
+var path = System.Environment.GetEnvironmentVariable("PATH");
+System.Environment.SetEnvironmentVariable("PATH", @"C:\Windows\System32;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows;" + path);
+```
+
+**Permanent fix**: Add `C:\Windows\System32` back to the system PATH via admin PowerShell:
+```powershell
+$p = [Environment]::GetEnvironmentVariable("Path","Machine")
+[Environment]::SetEnvironmentVariable("Path","C:\Windows\System32;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows;$p","Machine")
+```
+
+**Key API**: `UnityEditor.Android.AndroidExternalToolsSettings` (public type); `UnityEditor.Android.AndroidSDKTools` (internal, use reflection).
+
 ## Server JWT Configuration
 - `JwtKeyProvider` requires `Jwt:EndUserSigningKey` and `Jwt:InterTierSigningKey` (min 32 bytes each)
 - Dev keys are in `appsettings.Development.json` for both Services and GameServer
