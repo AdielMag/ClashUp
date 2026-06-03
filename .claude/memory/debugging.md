@@ -32,6 +32,7 @@
 - `.asset` files CANNOT be created from CLI — they contain serialized GUIDs and binary references
 - Must be created in Unity Editor via CreateAssetMenu
 - When designing ScriptableObject-based config, flag upfront that the user needs to create the asset in Unity
+- **Enum-keyed dictionaries in .asset files**: `SerializedDictionary<SomeEnum, T>` serializes enum values as integers (`key: 0`, `key: 1`). Inserting a new enum value in the middle shifts all subsequent keys — must update the `.asset` YAML in sync or values get mismatched.
 
 ## Unity asmdef References
 - When a script uses types from a package (e.g. `SerializedDictionary` from editor-toolbox), the asmdef must reference that package's runtime asmdef
@@ -140,7 +141,7 @@ There are three distinct root causes, each fixed separately:
 - Wrapping keyboard input in `#if UNITY_EDITOR` silently strips it from all builds; WASD won't work in standalone
 
 ### EventSystem created early in boot (EnvironmentPickerUI)
-- `EnvironmentPickerUI` (`#if DEVELOPMENT_BUILD || UNITY_EDITOR`) creates an EventSystem with `StandaloneInputModule` and calls `DontDestroyOnLoad` early in boot
+- `EnvironmentPickerUI` (`#if CLASHUP_DEV || UNITY_EDITOR`) creates an EventSystem with `StandaloneInputModule` and calls `DontDestroyOnLoad` early in boot
 - Any later `EnsureEventSystem` check sees `EventSystem.current != null` and skips — the `StandaloneInputModule` EventSystem persists for the whole session
 - This is fine; joystick should use raw polling (not UI events) so it doesn't depend on the module type
 

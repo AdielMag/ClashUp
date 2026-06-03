@@ -73,7 +73,8 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Scene loading**: `ISceneLoader` / `UniTaskSceneLoader` — additive load/unload via UniTask
 - **Loading screen**: `LoadingScreenPresenter` in `PersistentUI` scene (Core/UI) — not DI-registered, found via `FindAnyObjectByType` after scene load
 - **Lobby**: child scope of AppStarter via `LifetimeScope.EnqueueParent`
-- **Environment picker**: code-generated UI (no prefab), `#if DEVELOPMENT_BUILD || UNITY_EDITOR`
+- **Environment picker**: code-generated UI (no prefab), `#if CLASHUP_DEV || UNITY_EDITOR`
+- **Environments**: Local (`localhost:5001`), Tailscale (`100.68.118.109:5001`), Dev (remote). Tailscale for phone→local-server testing.
 - **Critical**: Server ping must block & retry — never proceed to lobby on failure
 - **Boot sequence**: load PersistentUI → show loading → env picker (dev) → identity → ping → load lobby → hide loading
 - **Game flow**: Lobby → (Play) → Matchmaking scene → (matched) → Match scene → (end) → Lobby
@@ -91,3 +92,4 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - [debugging.md](debugging.md) — Common pitfalls and solutions (incl. full match-end freeze sequence)
 - [feedback-client-authority.md](feedback-client-authority.md) — Never synthesize server state on the client
 - [unity-mcp.md](unity-mcp.md) — Unity MCP CLI usage patterns and gotchas
+- [dev-environment.md](dev-environment.md) — CLASHUP_DEV define, Tailscale phone testing, ServerEnvironment enum
