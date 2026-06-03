@@ -27,4 +27,24 @@ User has Tailscale installed on PC (IP: `100.68.118.109`) and phone. The `Server
 
 **How to apply:** When the user mentions phone testing or mobile builds connecting locally, the Tailscale environment is already set up. The server must bind to `0.0.0.0:5001` (not just localhost) for Tailscale connections to work.
 
+## Android Emulator Testing
+
+Emulators do NOT share the host's Tailscale VPN. Use `adb reverse` instead:
+
+```bash
+adb reverse tcp:5001 tcp:5001   # Services
+adb reverse tcp:5101 tcp:5101   # GameServer
+```
+
+Then use the **Local** environment (`localhost:5001`). Must re-run after each emulator restart.
+
+**adb path**: `C:\Users\Adiel\AppData\Local\Android\Sdk\platform-tools\adb.exe`  
+**Package name**: `com.DefaultCompany.ClashUp.Unity`
+
+## Android Build Gotchas
+
+- **MagicOnion Source Generator**: Required for IL2CPP builds — `[MagicOnionClientGeneration]` attribute in Networking assembly. See [[debugging]].
+- **Shader stripping**: `CreatePrimitive()` uses Standard shader which gets stripped. Add `fileID: 46` to `AlwaysIncludedShaders`.
+- **Custom AndroidManifest.xml**: Do NOT add one unless necessary — it can break the launcher activity. Unity already generates `usesCleartextTraffic="true"`.
+
 Related: [[debugging]], [[patterns]]

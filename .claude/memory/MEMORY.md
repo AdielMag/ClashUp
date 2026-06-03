@@ -74,7 +74,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Loading screen**: `LoadingScreenPresenter` in `PersistentUI` scene (Core/UI) — not DI-registered, found via `FindAnyObjectByType` after scene load
 - **Lobby**: child scope of AppStarter via `LifetimeScope.EnqueueParent`
 - **Environment picker**: prefab-based TMP UI loaded via `Resources.Load`, `#if CLASHUP_DEV || UNITY_EDITOR`
-- **Environments**: Local (`localhost:5001`), Tailscale (`100.68.118.109:5001`), Dev (remote). Tailscale for phone→local-server testing.
+- **Environments**: Local (`localhost:5001`), Tailscale (`100.68.118.109:5001`), Dev (remote). Tailscale for phone→local-server testing. Emulator uses `adb reverse` + Local.
 - **Critical**: Server ping must block & retry — never proceed to lobby on failure
 - **Boot sequence**: load PersistentUI → show loading → env picker (dev) → identity → ping → load lobby → hide loading
 - **Game flow**: Lobby → (Play) → Matchmaking scene → (matched) → Match scene → (end) → Lobby
@@ -83,6 +83,15 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Pause handling**: `SessionResetHandler` (AppStarter, DontDestroyOnLoad) shows popup on app unpause → user confirms → full boot reset.
 - **Client is dumb**: NEVER synthesize match-end on the client. Server always delivers `OnMatchEnded`. See [feedback-client-authority.md](feedback-client-authority.md).
 - **Near-end guard**: `CheckActiveMatchAsync` rejects reconnects to matches with <10s remaining — marks Ended, returns Queued.
+- **Reconnect loop guard**: `LobbyEntryPoint` limits reconnect attempts (static counter, max 3). Reset on successful match join.
+
+## Android / IL2CPP Build Requirements
+- **MagicOnion Source Generator**: `[MagicOnionClientGeneration(...)]` attribute required in `ClashUp.Networking` for IL2CPP. See `MagicOnionGeneratedClientInitializer.cs`.
+- **Standard shader**: Must be in `AlwaysIncludedShaders` (fileID: 46) — `CreatePrimitive()` uses it but nothing else references it.
+- **Custom AndroidManifest.xml**: Do NOT add one — Unity generates it correctly. Adding a minimal one strips the launcher activity.
+- **Emulator ports**: `adb reverse tcp:5001 tcp:5001` AND `tcp:5101 tcp:5101` (Services + GameServer).
+- **Package name**: `com.DefaultCompany.ClashUp.Unity`
+- **adb path**: `C:\Users\Adiel\AppData\Local\Android\Sdk\platform-tools\adb.exe`
 
 ## See Also
 - [project-structure.md](project-structure.md) — Detailed architecture notes

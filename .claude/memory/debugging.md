@@ -213,6 +213,99 @@ $p = [Environment]::GetEnvironmentVariable("Path","Machine")
 
 **Fix**: Set the Viewport `Image` color to `new Color(1, 1, 1, 1)` (or any alpha > 0), then use `showMaskGraphic = false` to hide it visually.
 
+## MagicOnion IL2CPP / AOT — Source Generator Required
+
+**Symptom**: App works in Unity Editor but fails on Android/iOS with: `Unable to find a client factory of type 'X'. If the application is running on IL2CPP or AOT, the runtime and MagicOnion do not support dynamic code generation. Please use pre-generated code with Source Generator instead`
+
+**Root cause**: MagicOnion uses runtime code generation (reflection emit) for hub/service clients. IL2CPP strips this capability. The Source Generator DLL ships with the NuGet package but needs an explicit trigger.
+
+**Fix**: Add a file in the Networking assembly with `[MagicOnionClientGeneration]` listing all hub/service interfaces:
+```csharp
+[MagicOnionClientGeneration(typeof(IPingHub), typeof(IMatchHub), typeof(IMatchmakingService), typeof(IAuthService))]
+internal static partial class MagicOnionGeneratedClientInitializer { }
+```
+
+**Key details**:
+- The attribute is **class-level** (not assembly-level) — `CS0592` error if placed on assembly
+- The class must be `partial` — the Source Generator fills in the generated code
+- The Source Generator DLL (`MagicOnion.Client.SourceGenerator.dll`) must have the `RoslynAnalyzer` label in its `.meta` file
+- File: `Assets/Core/Networking/Scripts/MagicOnionGeneratedClientInitializer.cs`
+- When adding new hubs/services, add their interface types to this attribute
+
+## Android Emulator Networking
+
+**Symptom**: App connects from Unity Editor but not from Android emulator.
+
+**Root cause**: Android emulator has its own isolated network stack — it does NOT share the host machine's VPN (Tailscale) or localhost.
+
+**Fix**: Use `adb reverse` to forward ports from emulator to host:
+```bash
+adb reverse tcp:5001 tcp:5001   # Services
+adb reverse tcp:5101 tcp:5101   # GameServer
+```
+Then connect to `localhost:5001` / `localhost:5101` from the app (use the "Local" environment).
+
+**Key details**:
+- Must forward ALL server ports (Services AND GameServer) — forgetting GameServer causes match connect failures
+- `adb reverse` must be re-run after each emulator restart
+- `adb reverse --list` to verify active forwards
+- `10.0.2.2` is the emulator's alias for the host, but `adb reverse` + localhost is cleaner
+- Tailscale IP does NOT work from emulator (no Tailscale client running inside it)
+- Android 9+ blocks cleartext HTTP by default, BUT Unity already generates `usesCleartextTraffic="true"` in the manifest
+
+## Custom AndroidManifest.xml — Launcher Activity Pitfall
+
+**Symptom**: APK installs but app doesn't appear in the app drawer. `adb shell monkey -p <pkg> -c LAUNCHER 1` says "No activities found".
+
+**Root cause**: Adding a custom `Assets/Plugins/Android/AndroidManifest.xml` overrides Unity's generated manifest. If the custom manifest is missing the launcher `<activity>` entry, the app has no entry point.
+
+**Rule**: Do NOT add a custom AndroidManifest.xml unless absolutely necessary. Unity's generated manifest already includes `usesCleartextTraffic="true"` and the launcher activity. If you must customize, start from Unity's full generated manifest (found in `Library/Bee/Android/Prj/IL2CPP/Gradle/`).
+
+## Standard Shader Stripped on Android Builds
+
+**Symptom**: Objects created via `GameObject.CreatePrimitive()` appear magenta on Android but look fine in Editor.
+
+**Root cause**: The `Standard` shader is not referenced by any material asset in the project — Unity's shader stripping removes it from the build. `CreatePrimitive()` assigns a default material using `Standard`, which is missing at runtime.
+
+**Fix**: Add the Standard shader (fileID: 46) to `AlwaysIncludedShaders` in `ProjectSettings/GraphicsSettings.asset`:
+```yaml
+- {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}
+```
+
+**Alternative**: Create explicit material assets referencing the shaders you need — this is more robust than relying on always-included shaders.
+
+## Reconnect Loop — Match Fail → Lobby → Match → Infinite
+
+**Symptom**: Client rapidly loops between Match and Lobby scenes (~500ms per cycle).
+
+**Root cause**: Match connect fails → `ReturnToLobbyAsync()` → `LobbyEntryPoint.CheckActiveMatchAsync()` finds active match on server → `EnterMatchFromLobby()` → match connect fails again → infinite loop.
+
+**Fix**: `LobbyEntryPoint` tracks consecutive reconnect failures via static counter. After 3 failures, stays in lobby. Counter resets on successful match connect (called from `MatchSessionRunner`).
+
+**Key files**: `LobbyEntryPoint.cs` (static `_reconnectFailures` + `ResetReconnectFailures()`), `MatchSessionRunner.cs` (calls reset after successful join).
+
+## PlayerPrefs Shared Between Editor and Builds on Same Machine
+
+**Symptom**: Two clients on the same machine (Unity Editor + simulator/standalone build) can't enter the same match — matchmaker pairs the same player with itself.
+
+**Root cause**: `PlayerPrefs` storage is shared between Editor and player builds on the same machine. `PlayerPrefsDeviceIdStore` stores `clashup.deviceId` once and reuses it — both instances get the same device ID → same player identity on the server → matchmaker creates a match with the same player in both slots.
+
+**Secondary issue**: `MatchmakingQueue.TryDrain()` had no duplicate-player detection, so two tickets with the same `PlayerId` could fill a batch.
+
+**Fix (client)**: Use `#if UNITY_EDITOR` to separate the PlayerPrefs key — editor uses `clashup.deviceId.editor`, builds use `clashup.deviceId`. File: `PlayerPrefsDeviceIdStore.cs`.
+
+**Fix (server)**: `TryDrain()` uses a `HashSet<string>` to skip duplicate `PlayerId` entries in the same batch. File: `MatchmakingQueue.cs`.
+
+**Side effect**: This also caused wrong player colors on reconnect — both clients had the same `ColorSlot` because they were the same player. `PlayerViewSystem` assigns colors via `PlayerSummary.ColorSlot`, which is set once on first join (`context.GetPlayers().Count`) and preserved on reconnect.
+
+## Docker Volume Persistence
+
+**Symptom**: Changed MongoDB config but the change didn't take effect after container restart.
+
+**Root cause**: Docker volumes (`clashup-mongo-data`) persist data across container restarts. `docker compose restart` or `up` reuses the existing volume.
+
+**Fix**: `docker compose down -v` removes volumes, then `docker compose up -d` starts fresh. Warning: this deletes all stored data.
+
 ## Server JWT Configuration
 - `JwtKeyProvider` requires `Jwt:EndUserSigningKey` and `Jwt:InterTierSigningKey` (min 32 bytes each)
 - Dev keys are in `appsettings.Development.json` for both Services and GameServer
