@@ -38,6 +38,8 @@ adb reverse tcp:5101 tcp:5101   # GameServer
 
 Then use the **Local** environment (`localhost:5001`). Must re-run after each emulator restart.
 
+**Warning**: The Tailscale environment does NOT work for emulators even if Services is reachable — the `MatchHandoff` URL uses Docker's `PublicEndpoint` (`localhost:5101`), which the emulator can't reach over Tailscale. Always use `adb reverse` + Local for emulators.
+
 **adb path**: `C:\Users\Adiel\AppData\Local\Android\Sdk\platform-tools\adb.exe`  
 **Package name**: `com.DefaultCompany.ClashUp.Unity`
 

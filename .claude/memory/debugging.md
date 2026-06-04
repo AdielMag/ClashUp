@@ -250,6 +250,7 @@ Then connect to `localhost:5001` / `localhost:5101` from the app (use the "Local
 - `adb reverse` must be re-run after each emulator restart
 - `adb reverse --list` to verify active forwards
 - `10.0.2.2` is the emulator's alias for the host, but `adb reverse` + localhost is cleaner
+- Tailscale IP does NOT work from emulator for GameServer — even if Services is reachable via Tailscale, the MatchHandoff URL uses Docker's `PublicEndpoint` (`localhost:5101`) which the emulator can't reach
 - Tailscale IP does NOT work from emulator (no Tailscale client running inside it)
 - Android 9+ blocks cleartext HTTP by default, BUT Unity already generates `usesCleartextTraffic="true"` in the manifest
 
@@ -297,6 +298,32 @@ Then connect to `localhost:5001` / `localhost:5101` from the app (use the "Local
 **Fix (server)**: `TryDrain()` uses a `HashSet<string>` to skip duplicate `PlayerId` entries in the same batch. File: `MatchmakingQueue.cs`.
 
 **Side effect**: This also caused wrong player colors on reconnect — both clients had the same `ColorSlot` because they were the same player. `PlayerViewSystem` assigns colors via `PlayerSummary.ColorSlot`, which is set once on first join (`context.GetPlayers().Count`) and preserved on reconnect.
+
+## PlayerViewSystem Color Race on Reconnect
+
+**Symptom**: After reconnect (or late join), a player's capsule appears with the wrong color (always slot 0 / blue).
+
+**Root cause**: `PlayerViewSystem.Tick()` (VContainer `ITickable`) runs every frame. When a client joins, it's added to the MagicOnion group and starts receiving snapshots *before* `JoinResult` returns. `ReconcileTo` adds players to `_sim.Players` from snapshot data. `Tick()` sees them, calls `SpawnCapsule()`, but `_colorSlots` is empty (not yet filled by `RegisterPlayer` from `JoinResult.Players`). The fallback `_colorSlots.TryGetValue(...) ? s : 0` gives slot 0. Color is baked into the material at spawn time and never updated.
+
+**Fix**: `RegisterPlayer` now checks if a capsule already exists for that player and retroactively updates its material color. File: `PlayerViewSystem.cs`.
+
+**Also**: Don't clear `_colorSlots` in `UnregisterPlayer` — the server keeps sending snapshots for disconnected players, and `Tick()` will respawn the capsule from sim data. Without the color slot, it gets the wrong color.
+
+## Emulator GameServer Connection Refused via Tailscale
+
+**Symptom**: Emulator connects to Services (matchmaking, login) via Tailscale IP but fails with "Connection refused (os error 111)" when trying to join a match on the GameServer.
+
+**Root cause**: The Docker `GameServer__PublicEndpoint` is `http://localhost:5101`. This URL is embedded in the `MatchHandoff` that Services returns to the client. The editor on the host machine can reach `localhost:5101` (Docker port mapping), but the emulator's `localhost` is itself — not the host. So the emulator can reach Services via Tailscale but not the GameServer because the handoff URL says `localhost`.
+
+**Fix**: Use `adb reverse tcp:5101 tcp:5101` (in addition to `tcp:5001`) and switch the emulator to the **Local** environment. Both ports then route through `adb reverse` to the host's Docker containers.
+
+**Key insight**: Tailscale only works for the initial Services connection (client chooses the URL). The GameServer URL comes from the server's `PublicEndpoint` config, which is always `localhost:5101` in Docker. So Tailscale environment + Docker = broken GameServer connection for emulators.
+
+## SessionResetHandler — Skip Reset on Boot Scene
+
+**Symptom**: `SessionResetHandler` shows the reset popup even when the app is already on the AppStarter scene (nothing to reset).
+
+**Fix**: Check `SceneManager.sceneCount == 1 && GetSceneAt(0).buildIndex == 0` before showing the popup. If only the boot scene is loaded, skip the reset. File: `SessionResetHandler.cs`.
 
 ## Docker Volume Persistence
 
