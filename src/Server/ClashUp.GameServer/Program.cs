@@ -27,7 +27,7 @@ builder.Services.AddSingleton<IMatchTokenValidator, MatchTokenValidator>();
 builder.Services.AddSingleton<IMatchRegistry, MatchRegistry>();
 
 // Per-match scoped simulation pieces. Resolved via MatchContext's IServiceScope.
-builder.Services.AddScoped<IServerSimulation, MovementServerSimulation>();
+builder.Services.AddScoped<IServerSimulation, AetherServerSimulation>();
 builder.Services.AddScoped<InputBuffer>();
 builder.Services.AddScoped<MatchClock>();
 

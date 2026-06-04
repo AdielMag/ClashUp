@@ -5,6 +5,7 @@ namespace ClashUp.Shared.Simulation
     public static class MovementModel
     {
         public const float MoveSpeed = 5f;
+        public const float SpawnSpacing = 3f;
         private const float AxisScale = 32767f;
 
         public static short EncodeAxis(float value)

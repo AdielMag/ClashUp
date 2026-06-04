@@ -11,6 +11,8 @@
     <NoWarn>$(NoWarn);MsgPack017</NoWarn>
   </PropertyGroup>
 
+  <Import Project="..\..\..\AetherNet.refs.props" />
+
   <ItemGroup>
     <PackageReference Include="MagicOnion.Shared" />
     <PackageReference Include="MessagePack" />

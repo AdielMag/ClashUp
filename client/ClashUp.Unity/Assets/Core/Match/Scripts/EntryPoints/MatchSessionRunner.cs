@@ -23,7 +23,7 @@ namespace ClashUp.Client.Match
         private readonly ClientPredictionWorld _prediction;
         private readonly GameFlowController _flow;
         private readonly MatchInputGate _inputGate;
-        private readonly MovementClientSimulation _sim;
+        private readonly IClientSimulation _sim;
         private readonly PlayerViewSystem _viewSystem;
         private readonly LocalInputPublisher _inputPublisher;
 
@@ -42,7 +42,7 @@ namespace ClashUp.Client.Match
             ClientPredictionWorld prediction,
             GameFlowController flow,
             MatchInputGate inputGate,
-            MovementClientSimulation sim,
+            IClientSimulation sim,
             PlayerViewSystem viewSystem,
             LocalInputPublisher inputPublisher)
         {

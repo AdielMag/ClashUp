@@ -6,6 +6,8 @@
     <UserSecretsId>clashup-gameserver-dev</UserSecretsId>
   </PropertyGroup>
 
+  <Import Project="..\..\..\AetherNet.refs.props" />
+
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\ClashUp.Shared\ClashUp.Shared.csproj" />
     <ProjectReference Include="..\ClashUp.Server.Common\ClashUp.Server.Common.csproj" />

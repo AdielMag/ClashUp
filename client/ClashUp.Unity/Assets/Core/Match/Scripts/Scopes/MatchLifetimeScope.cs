@@ -19,9 +19,9 @@ namespace ClashUp.Client.Match
 
             builder.Register<MatchInputGate>(Lifetime.Singleton);
 
-            builder.Register<MovementClientSimulation>(Lifetime.Singleton);
+            builder.Register<AetherClientSimulation>(Lifetime.Singleton);
             builder.Register<IClientSimulation>(
-                c => c.Resolve<MovementClientSimulation>(), Lifetime.Singleton);
+                c => c.Resolve<AetherClientSimulation>(), Lifetime.Singleton);
             builder.Register<ClientPredictionWorld>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<JoystickInputProvider>().As<IMovementInput>();

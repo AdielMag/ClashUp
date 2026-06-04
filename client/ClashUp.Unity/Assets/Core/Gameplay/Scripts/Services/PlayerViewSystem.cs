@@ -20,13 +20,13 @@ namespace ClashUp.Client.Gameplay
             new(0.9f, 0.4f, 0.7f),
         };
 
-        private readonly MovementClientSimulation _sim;
+        private readonly IClientSimulation _sim;
         private readonly Dictionary<string, GameObject> _capsules = new();
         private readonly Dictionary<string, int> _colorSlots = new();
 
         public Transform LocalPlayerTransform { get; private set; }
 
-        public PlayerViewSystem(MovementClientSimulation sim)
+        public PlayerViewSystem(IClientSimulation sim)
         {
             _sim = sim;
         }
@@ -34,11 +34,18 @@ namespace ClashUp.Client.Gameplay
         public void RegisterPlayer(PlayerSummary player)
         {
             _colorSlots[player.Id.Value] = player.ColorSlot;
+
+            // If the capsule was already spawned (by Tick before color info arrived),
+            // fix its material color now.
+            if (_capsules.TryGetValue(player.Id.Value, out var go) && go != null)
+            {
+                var color = Palette[player.ColorSlot % Palette.Length];
+                go.GetComponent<Renderer>().material.color = color;
+            }
         }
 
         public void UnregisterPlayer(PlayerId id)
         {
-            _colorSlots.Remove(id.Value);
             if (_capsules.Remove(id.Value, out var go))
                 UnityEngine.Object.Destroy(go);
             if (LocalPlayerTransform != null && id.Equals(_sim.LocalId))

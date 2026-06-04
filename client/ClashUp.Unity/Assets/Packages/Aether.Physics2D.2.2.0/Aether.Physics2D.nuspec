@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>Aether.Physics2D</id>
+    <version>2.2.0</version>
+    <authors>Kastellanos Nikolaos</authors>
+    <license type="expression">MS-PL</license>
+    <licenseUrl>https://licenses.nuget.org/MS-PL</licenseUrl>
+    <icon>icon.png</icon>
+    <readme>README.md</readme>
+    <projectUrl>https://nkast.github.io/Aether.Physics2D/</projectUrl>
+    <description>Aether.Physics2D is a 2D collision detection system.</description>
+    <copyright>Copyright © Kastellanos Nikolaos 2015-2024</copyright>
+    <tags>C# Physics 2D game box2d farseerPhysics farseer</tags>
+    <repository type="git" url="https://github.com/nkast/Aether.Physics2D" commit="8f522b5b6d2c1edd427de2692bc627c6d38411c3" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.0" />
+      <group targetFramework="net8.0" />
+      <group targetFramework=".NETStandard2.0" />
+    </dependencies>
+  </metadata>
+</package>

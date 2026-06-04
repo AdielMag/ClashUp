@@ -1,16 +1,23 @@
 using System;
+using System.Collections.Generic;
 using ClashUp.Shared.MessagePackObjects;
 
 namespace ClashUp.Client.Gameplay
 {
     /// <summary>
-    /// Client-side counterpart of IServerSimulation. AetherNet plugs in
-    /// here for prediction. NullClientSimulation ships as the phase-1
-    /// placeholder so the surrounding plumbing compiles and runs.
+    /// Client-side simulation contract. AetherClientSimulation is the live implementation;
+    /// NullClientSimulation and MovementClientSimulation are placeholders / fallbacks.
     /// </summary>
     public interface IClientSimulation : IDisposable
     {
         int CurrentTick { get; }
+
+        /// <summary>All known players, keyed by PlayerId.Value. Read by PlayerViewSystem.</summary>
+        IReadOnlyDictionary<string, PlayerRenderState> Players { get; }
+
+        PlayerId LocalId { get; }
+
+        void SetLocalPlayer(PlayerId id);
 
         void ApplyLocalInput(InputCommand command);
 

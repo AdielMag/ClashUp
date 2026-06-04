@@ -71,6 +71,9 @@ tools/cert/*.pem
 .env
 .env.local
 
+# AetherNet vendor clone (local source dependency; run tools/setup-aethernet.ps1 after clone)
+external/AetherNet/
+
 # Local MCP config
 client/ClashUp.Unity/.mcp.json
 Builds

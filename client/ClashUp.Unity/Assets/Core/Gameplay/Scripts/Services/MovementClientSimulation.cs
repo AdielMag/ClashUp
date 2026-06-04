@@ -6,14 +6,6 @@ using MessagePack;
 
 namespace ClashUp.Client.Gameplay
 {
-    public sealed class PlayerRenderState
-    {
-        public PlayerId Id;
-        public float X;
-        public float Z;
-        public float Yaw;
-    }
-
     public sealed class MovementClientSimulation : IClientSimulation
     {
         private readonly Dictionary<string, PlayerRenderState> _players = new();

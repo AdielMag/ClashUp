@@ -7,7 +7,7 @@ WORKDIR /src
 
 # Copy the centralized build config first so each subsequent COPY can
 # benefit from layer caching.
-COPY global.json Directory.Build.props Directory.Packages.props ./
+COPY global.json Directory.Build.props Directory.Packages.props AetherNet.refs.props ./
 COPY ClashUp.sln ./
 
 COPY src/Shared/ClashUp.Shared/*.csproj src/Shared/ClashUp.Shared/

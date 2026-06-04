@@ -49,7 +49,11 @@
       "mcp__ai-game-developer__assets-refresh",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\client\\\\ClashUp.Unity\\\\Assets\\\\Core\" -Directory)",
       "Bash(Select-Object Name)",
-      "mcp__ai-game-developer__console-get-logs"
+      "mcp__ai-game-developer__console-get-logs",
+      "Bash(\"C:\\\\Users\\\\Adiel\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" logcat *)",
+      "Bash(\"C:\\\\Users\\\\Adiel\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" shell *)",
+      "Bash(cp \"C:/Users/Adiel/.claude/projects/C--Users-Adiel-Documents-ClashUp/memory/\"*.md *)",
+      "WebFetch(domain:github.com)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -1,0 +1,23 @@
+<Project>
+  <!--
+    Automatic AetherNet.Shared reference switch.
+    Local clone (external/AetherNet) → live ProjectReference so you can edit the source.
+    Clone absent (CI / fresh checkout without setup-aethernet.ps1) → NuGet release.
+    Run tools/setup-aethernet.ps1 once to create the clone.
+  -->
+  <PropertyGroup>
+    <_AetherNetSharedSrc>$(MSBuildThisFileDirectory)external\AetherNet\src\AetherNet.Shared\AetherNet.Shared.csproj</_AetherNetSharedSrc>
+  </PropertyGroup>
+  <Choose>
+    <When Condition="Exists('$(_AetherNetSharedSrc)')">
+      <ItemGroup>
+        <ProjectReference Include="$(_AetherNetSharedSrc)" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <PackageReference Include="AetherNet.Shared" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+</Project>
