@@ -11,6 +11,7 @@ Unity multiplayer game with C# server backend (ASP.NET Core 8 + MagicOnion 7.10.
 - **Docker**: `ops/docker/docker-compose.yml` (mongo + services + gameserver)
 - **Build artifacts**: `.artifacts/` (redirected from bin/obj via Directory.Build.props)
 - **Dotnet path (Windows)**: `"/c/Program Files/dotnet/dotnet.exe"`
+- **AetherNet vendor clone**: `external/AetherNet/` (gitignored, run `tools/setup-aethernet.ps1` after cloning)
 
 ## Client Folder Structure (Unity Assets)
 Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Config/, Scopes/, EntryPoints/, Presenters/, UI/, Receivers/). See [folder-conventions.md](folder-conventions.md).
@@ -39,6 +40,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - MessagePack: 3.1.4
 - Grpc: 2.71.0
 - MongoDB.Driver: 3.1.0
+- AetherNet.Shared: 0.1.0 (fallback NuGet version, normally uses local clone ProjectReference)
 
 ## GUID Generation
 - Use `python tools/generate-guid.py [count]` for Unity-style GUIDs (32 hex, no dashes)
@@ -48,6 +50,19 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 ## Architecture Rules
 - **Dumb client**: The client is a thin display layer. NEVER put game logic, state decisions, or authoritative behavior on the client. All game state transitions (match start, match end, scoring, etc.) must come from the server. The client only renders what the server tells it.
 - **Server-authoritative**: The server is the single source of truth for all game state.
+
+## Physics / AetherNet Architecture
+- **Library**: AetherNet (`external/AetherNet/` gitignored clone) — GC-free deterministic 2D physics over Aether.Physics2D (Box2D port)
+- **Simulation seam**: `IClientSimulation` (client) / `IServerSimulation` (server) — AetherNet implementations are `AetherClientSimulation` / `AetherServerSimulation`
+- **Shared world**: `MatchPhysicsWorld` in `ClashUp.Shared/Simulation/` — same code runs on client (prediction) and server (authority)
+- **Coordinate mapping**: game (X, Z) ↔ Aether (x, y); gravity = zero for top-down
+- **Player bodies**: dynamic circles, velocity set from input each tick (kinematic move-and-slide style)
+- **Wire protocol**: unchanged — `InputCommand` up, `SnapshotPacket → WorldStatePacket → PlayerStateDto{X,Z,Yaw}` down
+- **Unity DLL wiring**: `AetherNet.Shared.dll` (netstandard2.0) committed in `Assets/Packages/AetherNet.Shared.0.1.0/`; rebuild via `tools/setup-aethernet.ps1`. `Aether.Physics2D.dll` installed via NuGetForUnity. Both listed in `ClashUp.Shared.Unity.asmdef` precompiledReferences.
+- **Server DLL wiring**: conditional MSBuild in `AetherNet.refs.props` (repo root) — `ProjectReference` when clone exists, `PackageReference` fallback
+- **AetherNet uses C# 10** (file-scoped namespaces) — Unity can't compile from source; always use the pre-built DLL approach
+- **Determinism watch**: Aether.Physics2D is float-based; monitor for rubber-banding jitter between x86 server and ARM client
+- **Fixes to AetherNet**: must be generic/non-specific (upstreamable). Key fix already in: `external/AetherNet/Directory.Packages.props` disables CPM inheritance
 
 ## Important Conventions
 - Central package management via `Directory.Packages.props`

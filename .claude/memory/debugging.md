@@ -1,5 +1,14 @@
 # Debugging & Common Pitfalls
 
+## Where to Check Errors — Always Ask First
+
+Before pulling logs, confirm which context the error is in:
+- **Unity Editor play mode** → `console-get-logs` MCP tool
+- **Unity Device Simulator** (Window → General → Device Simulator, runs inside the editor) → also `console-get-logs`
+- **Android Emulator** (separate emulator process running the APK) → `adb logcat` or user pastes the error
+
+Never assume editor console has the relevant errors when the user says "simulator" or "emulator" — always ask if it's ambiguous.
+
 ## dotnet CLI on Windows/bash
 - `dotnet` is NOT on PATH in the bash shell
 - Always use: `"/c/Program Files/dotnet/dotnet.exe"`
@@ -34,6 +43,53 @@
 - When designing ScriptableObject-based config, flag upfront that the user needs to create the asset in Unity
 - **Enum-keyed dictionaries in .asset files**: `SerializedDictionary<SomeEnum, T>` serializes enum values as integers (`key: 0`, `key: 1`). Inserting a new enum value in the middle shifts all subsequent keys — must update the `.asset` YAML in sync or values get mismatched.
 
+## Precompiled DLL .meta File — Must Have Full PluginImporter Block
+
+**Symptom**: `CS0246: The type or namespace name 'X' could not be found` for types in a DLL that is physically present in `Assets/Packages/` and listed in an asmdef's `precompiledReferences`.
+
+**Root cause**: Unity auto-generates a minimal `.meta` file for a DLL it first sees (just `fileFormatVersion` + `guid`, no `PluginImporter`). Without the `PluginImporter` block, Unity does not treat the file as a plugin and the assembly is never loaded.
+
+**Fix**: The `.meta` file for every precompiled DLL must have a full `PluginImporter` section:
+```yaml
+PluginImporter:
+  externalObjects: {}
+  serializedVersion: 3
+  iconMap: {}
+  executionOrder: {}
+  defineConstraints: []
+  isPreloaded: 0
+  isOverridable: 0
+  isExplicitlyReferenced: 0
+  validateReferences: 1
+  platformData:
+    Any:
+      enabled: 1
+      settings: {}
+    Editor:
+      enabled: 0
+      settings:
+        DefaultValueInitialized: true
+    WindowsStoreApps:
+      enabled: 0
+      settings:
+        CPU: AnyCPU
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+```
+
+**Prevention**: When committing a new DLL to the repo, always check its `.meta` has this block — not just a bare guid line.
+
+## VContainer Interface Migration — Search All Consumers
+
+When replacing a concrete type registration with an interface (e.g. `MovementClientSimulation` → `IClientSimulation`), search **all** files for the old concrete type, not just the DI scope file. Constructor-injected dependencies in other classes (e.g. `MatchSessionRunner`) will keep the old concrete type and cause a VContainer "No such registration" error at runtime.
+
+**Fix pattern**:
+```bash
+grep -rn "ConcreteTypeName" --include="*.cs"
+```
+Update every hit that isn't the class definition itself.
+
 ## Unity asmdef References
 - When a script uses types from a package (e.g. `SerializedDictionary` from editor-toolbox), the asmdef must reference that package's runtime asmdef
 - Toolbox package runtime asmdef name: `Toolbox`
@@ -61,6 +117,14 @@
 - Any `new GameObject()` created after this is automatically placed in that scene
 - `SceneManager.MoveGameObjectToScene()` is unnecessary and causes namespace ambiguity with `UnityEditor.SceneManagement`
 - Always create one-time editor setup scripts (menu items) instead of leaving manual steps for the user
+
+## Docker Dockerfiles — Must COPY All Root-Level MSBuild Props Files
+
+When adding a new root-level MSBuild props file (e.g. `AetherNet.refs.props`), it must be added to the COPY line in **both** `ops/docker/services.Dockerfile` and `ops/docker/gameserver.Dockerfile`:
+```dockerfile
+COPY global.json Directory.Build.props Directory.Packages.props AetherNet.refs.props ./
+```
+Without this, the file doesn't exist in the Docker build context and `<Import Project="...">` fails with MSB4019.
 
 ## Docker + Directory.Build.props
 - `Directory.Build.props` redirects output to `.artifacts/` using `$(MSBuildThisFileDirectory)` absolute paths
@@ -231,6 +295,14 @@ internal static partial class MagicOnionGeneratedClientInitializer { }
 - The Source Generator DLL (`MagicOnion.Client.SourceGenerator.dll`) must have the `RoslynAnalyzer` label in its `.meta` file
 - File: `Assets/Core/Networking/Scripts/MagicOnionGeneratedClientInitializer.cs`
 - When adding new hubs/services, add their interface types to this attribute
+
+## Android Emulator — Getting Unity Errors via adb
+
+To pull Unity errors from a running emulator build in one shot:
+```bash
+"C:\Users\Adiel\AppData\Local\Android\Sdk\platform-tools\adb.exe" logcat -s Unity:E -d
+```
+`-s Unity:E` filters to Unity error tag only. `-d` dumps and exits (no tail).
 
 ## Android Emulator Networking
 
