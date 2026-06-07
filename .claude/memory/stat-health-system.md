@@ -1,0 +1,63 @@
+---
+name: stat-health-system
+description: "Character stats, health tracking, and deterministic RNG architecture for combat prediction"
+metadata: 
+  node_type: memory
+  type: project
+  originSessionId: ed44a8ee-8136-4a5b-85f8-0d83e840934d
+---
+
+# Stat & Health System Architecture
+
+## Character Definitions (Shared)
+
+Files in `src/Shared/ClashUp.Shared/Characters/`:
+- `CharacterId` — string-backed struct, MessagePack-serializable, same pattern as `PlayerId`
+- `StatBlock` — plain C# class: `MaxHealth` (100f), `Damage` (10f). NOT MessagePack (static config)
+- `CharacterDefinition` — `CharacterId Id`, `string DisplayName`, `StatBlock BaseStats`
+- `CharacterRegistry` — static lookup. `Default` = "Brawler". `Get(id)`, `All`
+
+**Why:** Both client and server need identical stat values. Hardcoded in Shared guarantees this.
+
+## Health Tracking
+
+`HealthTable` in `ClashUp.Shared/Simulation/` — `Dictionary<string, float>` wrapper.
+- `Initialize(playerId, maxHealth)` — set starting health
+- `ApplyDamage(playerId, amount)` → new health (clamped to 0)
+- `ApplyHeal(playerId, amount, maxHealth)` → new health (clamped to max)
+- `SnapHealth(playerId, health)` — server reconciliation override
+
+Owned by both `AetherServerSimulation` and `AetherClientSimulation` as sibling to `MatchPhysicsWorld`.
+
+## Wire Protocol Keys
+
+| DTO | Key | Field | Added |
+|-----|-----|-------|-------|
+| PlayerStateDto | 4 | `float Health` | stat system |
+| JoinResult | 6 | `uint RandomSeed` | stat system |
+| PlayerSummary | 4 | `CharacterId CharacterId` | stat system |
+
+**How to apply:** When adding new fields to these DTOs, use the next available Key index. Never reuse or change existing keys (MessagePack binary compat).
+
+## Deterministic RNG
+
+`DeterministicRng` in `ClashUp.Shared/Simulation/` — Xorshift32 PRNG.
+- Constructor: `DeterministicRng(uint seed)` (seed=0 auto-corrects to 1)
+- `Next()`, `NextFloat()` (0..1), `NextRange(min, max)`
+- `ForTick(baseSeed, tick)` — per-tick re-seeding via `baseSeed ^ (uint)tick`
+
+**Why per-tick re-seeding:** If client mispredicts tick N (different RNG call count), tick N+1 still produces correct random values because each tick is independently seeded. Critical for reconciliation — replaying ticks reproduces exact random sequences.
+
+Server generates seed at `AetherServerSimulation` construction. Sent to client via `JoinResult.RandomSeed`.
+
+## Integration Points
+
+- **Server `EnsurePlayer`**: Initializes health from `CharacterRegistry.Default.BaseStats.MaxHealth`
+- **Server `EncodeDelta`**: Includes `Health` from `HealthTable` in each `PlayerStateDto`
+- **Client `ReconcileTo`**: Snaps health from server's `PlayerStateDto.Health`
+- **Client `SyncRenderStates`**: Copies health into `PlayerRenderState.Health` / `.MaxHealth`
+- **`MatchHub.JoinAsync`**: Sends `RandomSeed` and `CharacterId` in join result/summary
+
+## Status
+
+Infrastructure only — no combat mechanics. `HealthTable` API exists but nothing calls `ApplyDamage` yet. Health stays at 100 for all players.

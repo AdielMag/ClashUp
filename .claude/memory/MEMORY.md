@@ -33,7 +33,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - `com.unity.cinemachine`: 3.1.6 — namespace `Unity.Cinemachine`; `BindingMode` in `Unity.Cinemachine.TargetTracking`
 - `com.unity.inputsystem`: 1.19.0 — use `Keyboard.current`, `Touchscreen.current`, `Mouse.current` for raw polling
 - Player Settings → Active Input Handling: must be **"Both"** for new Input System + legacy UGUI to coexist
-- `ClashUp.Gameplay.asmdef` references: `Unity.Cinemachine`, `Unity.InputSystem`
+- `ClashUp.Gameplay.asmdef` references: `Unity.Cinemachine`, `Unity.InputSystem`, `AetherNet.Unity`; precompiledReferences includes `AetherNet.Shared.dll`
 
 ## Server Package Versions (Directory.Packages.props)
 - MagicOnion: 7.10.0 (7.10.1 does NOT exist on NuGet)
@@ -57,12 +57,27 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Shared world**: `MatchPhysicsWorld` in `ClashUp.Shared/Simulation/` — same code runs on client (prediction) and server (authority)
 - **Coordinate mapping**: game (X, Z) ↔ Aether (x, y); gravity = zero for top-down
 - **Player bodies**: dynamic circles, velocity set from input each tick (kinematic move-and-slide style)
-- **Wire protocol**: unchanged — `InputCommand` up, `SnapshotPacket → WorldStatePacket → PlayerStateDto{X,Z,Yaw}` down
-- **Unity DLL wiring**: `AetherNet.Shared.dll` (netstandard2.0) committed in `Assets/Packages/AetherNet.Shared.0.1.0/`; rebuild via `tools/setup-aethernet.ps1`. `Aether.Physics2D.dll` installed via NuGetForUnity. Both listed in `ClashUp.Shared.Unity.asmdef` precompiledReferences.
+- **Player radius**: `MatchPhysicsWorld` constructor parameter (default `0.4f`). Client reads from prefab's `AetherCircleCollider.Radius`. Server uses default.
+- **Wire protocol**: `InputCommand` up, `SnapshotPacket → WorldStatePacket → PlayerStateDto{X,Z,Yaw,Health}` down
+- **AetherNet.Shared**: `AetherNet.Shared.dll` (netstandard2.0, C# 10) committed in `Assets/Packages/AetherNet.Shared.0.1.0/`. Uses pre-built DLL — Unity can't compile C# 10 file-scoped namespaces.
+- **AetherNet.Unity**: Source-only package copied to `Assets/Packages/AetherNet.Unity/` by `setup-aethernet.ps1`. These files ARE C# 9 compatible (block-scoped namespaces). Has Runtime + Editor asmdefs. `AetherSceneBaker.cs` excluded (depends on `AetherNet.Server`).
+- **AetherNet.Unity asmdefs**: `AetherNet.Unity` (Runtime, unsafe, precompiled refs: AetherNet.Shared.dll + Aether.Physics2D.dll) and `AetherNet.Unity.Editor` (Editor-only, refs AetherNet.Unity)
+- `Aether.Physics2D.dll` installed via NuGetForUnity. Both DLLs listed in `ClashUp.Shared.Unity.asmdef` precompiledReferences.
 - **Server DLL wiring**: conditional MSBuild in `AetherNet.refs.props` (repo root) — `ProjectReference` when clone exists, `PackageReference` fallback
-- **AetherNet uses C# 10** (file-scoped namespaces) — Unity can't compile from source; always use the pre-built DLL approach
+- **AetherNetSettings**: ScriptableObject at `Assets/Resources/AetherNetSettings.asset` — configures `SimulationPlane` (XZ) and `PixelsPerMeter` (1). Auto-applies in both editor (`[InitializeOnLoadMethod]`) and runtime (`[RuntimeInitializeOnLoadMethod]`).
 - **Determinism watch**: Aether.Physics2D is float-based; monitor for rubber-banding jitter between x86 server and ARM client
-- **Fixes to AetherNet**: must be generic/non-specific (upstreamable). Key fix already in: `external/AetherNet/Directory.Packages.props` disables CPM inheritance
+- **Fixes to AetherNet**: must be generic/non-specific (upstreamable). Key fixes: `Directory.Packages.props` CPM opt-out, `SimulationPlane` enum, configurable `PixelsPerMeter`, `#nullable enable` on Unity files, `using` aliases for type ambiguities (RaycastHit, Vector2)
+
+## Character / Stat / Health System
+- **Characters**: `CharacterId` (string struct like PlayerId), `CharacterDefinition`, `CharacterRegistry` (static, in `ClashUp.Shared/Characters/`)
+- **Stats**: `StatBlock` — `MaxHealth` (100), `Damage` (10). Plain C# class, not MessagePack (static config, not networked)
+- **Default character**: "Brawler" via `CharacterRegistry.Default`. Single character for now, everyone gets the same.
+- **Health**: `HealthTable` in `ClashUp.Shared/Simulation/` — `Initialize`, `ApplyDamage`, `ApplyHeal`, `SnapHealth`. Owned by both `AetherServerSimulation` and `AetherClientSimulation`.
+- **Health in snapshots**: `PlayerStateDto.Health` (Key 4) — sent every tick, client reconciles against it
+- **Random seed**: `DeterministicRng` (Xorshift32) in Shared. Per-tick re-seeding via `ForTick(baseSeed, tick)` to avoid drift. Seed generated server-side, sent in `JoinResult.RandomSeed` (Key 6).
+- **PlayerSummary.CharacterId** (Key 4) — sent on join
+- **PlayerRenderState**: has `Health` and `MaxHealth` fields, synced from `HealthTable` in `SyncRenderStates()`
+- **No combat yet**: HealthTable API exists but nothing deals damage. Infrastructure only.
 
 ## Important Conventions
 - Central package management via `Directory.Packages.props`
@@ -82,6 +97,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - Uses custom commands and subagents — see `.claude/commands/` and `.claude/agents/`
 - Doesn't want manual rebuild steps — automate everything (e.g. `pull_policy: build` in docker-compose)
 - Prefers quick iterative fixes over lengthy exploration/planning when the problem is clear
+- **Fix vendored packages at the source** — never create project-side workarounds for issues in vendored packages (AetherNet, etc.). Fix the package itself so it works correctly.
 
 ## Boot Flow Architecture
 - **UniTask + VContainer** are core client frameworks (async + DI)
@@ -102,7 +118,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 
 ## Android / IL2CPP Build Requirements
 - **MagicOnion Source Generator**: `[MagicOnionClientGeneration(...)]` attribute required in `ClashUp.Networking` for IL2CPP. See `MagicOnionGeneratedClientInitializer.cs`.
-- **Standard shader**: Must be in `AlwaysIncludedShaders` (fileID: 46) — `CreatePrimitive()` uses it but nothing else references it.
+- **Standard shader**: Must be in `AlwaysIncludedShaders` (fileID: 46) — player materials use it; `PlayerSpawner` still uses `CreatePrimitive()` for ground plane.
 - **Custom AndroidManifest.xml**: Do NOT add one — Unity generates it correctly. Adding a minimal one strips the launcher activity.
 - **Emulator ports**: `adb reverse tcp:5001 tcp:5001` AND `tcp:5101 tcp:5101` (Services + GameServer).
 - **Package name**: `com.DefaultCompany.ClashUp.Unity`
@@ -117,3 +133,4 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - [feedback-client-authority.md](feedback-client-authority.md) — Never synthesize server state on the client
 - [unity-mcp.md](unity-mcp.md) — Unity MCP CLI usage patterns and gotchas
 - [dev-environment.md](dev-environment.md) — CLASHUP_DEV define, Tailscale phone testing, ServerEnvironment enum
+- [stat-health-system.md](stat-health-system.md) — Character stats, health table, deterministic RNG architecture

@@ -117,6 +117,15 @@ Anti-aliased edge via `center - dist + 0.5f` clamp. Used for joystick background
 - `ConfigSeeder` always upserts (no skip-if-exists) so config values take effect on server restart without manual DB cleanup.
 - Current match config: `{"NumberOfTeams":1,"TeamSize":1,"DurationSeconds":20,"ObjectiveType":"survival"}`
 
+## Player Visual Setup
+
+- **Player prefab**: `Assets/Core/Gameplay/Art/Prefabs/Player.prefab` — capsule with `MeshRenderer` + `AetherCircleCollider` (radius 0.4, gizmo visible in Scene view)
+- **Materials**: 8 color-indexed materials in `Assets/Core/Gameplay/Art/Materials/PlayerColor_0..7.mat`
+- **PlayerMaterialMap**: ScriptableObject at `Assets/Core/Gameplay/Art/Config/PlayerMaterialMap.asset` — maps color slot index to material. `Get(int colorSlot)` with modulo wrapping.
+- **DI wiring**: `MatchLifetimeScope` has serialized `_playerPrefab` (GameObject) and `_playerMaterialMap` (PlayerMaterialMap), registered as instances
+- **PlayerViewSystem**: Instantiates prefab, assigns material from map based on player's `ColorSlot`
+- **AetherClientSimulation**: Reads `AetherCircleCollider.Radius` from the prefab to construct `MatchPhysicsWorld` with matching radius — single source of truth
+
 ## Match Reconnection Pattern
 - Server: `MatchContext` tracks players as connected/disconnected (not removed on disconnect)
 - Server: `OnDisconnected` → `MarkDisconnected` + broadcast `OnPlayerLeft(Disconnect)`, keep in player list
