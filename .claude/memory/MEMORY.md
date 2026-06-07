@@ -134,3 +134,4 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - [unity-mcp.md](unity-mcp.md) — Unity MCP CLI usage patterns and gotchas
 - [dev-environment.md](dev-environment.md) — CLASHUP_DEV define, Tailscale phone testing, ServerEnvironment enum
 - [stat-health-system.md](stat-health-system.md) — Character stats, health table, deterministic RNG architecture
+- [feedback-scope-narrowing.md](feedback-scope-narrowing.md) — Start with minimum fields, ask before over-designing
