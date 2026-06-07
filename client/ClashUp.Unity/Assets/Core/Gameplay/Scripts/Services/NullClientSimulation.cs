@@ -19,6 +19,7 @@ namespace ClashUp.Client.Gameplay
         public PlayerId LocalId { get; private set; }
 
         public void SetLocalPlayer(PlayerId id) => LocalId = id;
+        public void SetRandomSeed(uint seed) { }
         public void ApplyLocalInput(InputCommand command) { }
         public void Step(double deltaSeconds) => CurrentTick++;
 

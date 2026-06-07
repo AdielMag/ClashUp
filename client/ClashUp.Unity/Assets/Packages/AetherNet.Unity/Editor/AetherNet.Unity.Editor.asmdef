@@ -1,0 +1,20 @@
+{
+    "name": "AetherNet.Unity.Editor",
+    "rootNamespace": "AetherNet.Editor",
+    "references": [
+        "AetherNet.Unity"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "AetherNet.Shared.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

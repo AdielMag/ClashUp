@@ -12,5 +12,6 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(3)] public int CurrentTick { get; init; }
         [Key(4)] public int DurationSeconds { get; init; }
         [Key(5)] public double ElapsedSeconds { get; init; }
+        [Key(6)] public uint RandomSeed { get; init; }
     }
 }

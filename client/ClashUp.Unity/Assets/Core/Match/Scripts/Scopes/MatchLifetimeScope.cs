@@ -1,7 +1,7 @@
 using ClashUp.Client.CoreStarter;
 using ClashUp.Client.Gameplay;
 using ClashUp.Client.Networking;
-
+using UnityEngine;
 using VContainer;
 using VContainer.Unity;
 
@@ -9,8 +9,13 @@ namespace ClashUp.Client.Match
 {
     public sealed class MatchLifetimeScope : LifetimeScope
     {
+        [SerializeField] private GameObject _playerPrefab;
+        [SerializeField] private PlayerMaterialMap _playerMaterialMap;
+
         protected override void Configure(IContainerBuilder builder)
         {
+            builder.RegisterInstance(_playerPrefab);
+            builder.RegisterInstance(_playerMaterialMap);
             var flow = Parent.Container.Resolve<GameFlowController>();
             builder.RegisterInstance(new MatchHandoffHolder { Value = flow.PendingHandoff });
 

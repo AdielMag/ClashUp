@@ -1,0 +1,17 @@
+{
+    "name": "AetherNet.Unity",
+    "rootNamespace": "AetherNet",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "AetherNet.Shared.dll",
+        "Aether.Physics2D.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

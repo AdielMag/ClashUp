@@ -53,7 +53,17 @@
       "Bash(\"C:\\\\Users\\\\Adiel\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" logcat *)",
       "Bash(\"C:\\\\Users\\\\Adiel\\\\AppData\\\\Local\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" shell *)",
       "Bash(cp \"C:/Users/Adiel/.claude/projects/C--Users-Adiel-Documents-ClashUp/memory/\"*.md *)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(gh pr create --title 'feat: disable CPM inheritance and add Unity UPM package support' --body ' *)",
+      "Bash(unset GITHUB_TOKEN)",
+      "mcp__ai-game-developer__scene-open",
+      "mcp__ai-game-developer__gameobject-find",
+      "mcp__ai-game-developer__script-execute",
+      "Bash(powershell -File \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\tools\\\\setup-aethernet.ps1\")",
+      "PowerShell(dotnet build \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\external\\\\AetherNet\\\\src\\\\AetherNet.Shared\\\\AetherNet.Shared.csproj\" -c Debug --nologo -v quiet)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\src\\\\Shared\\\\ClashUp.Shared\" -Recurse -File)",
+      "Bash(Select-Object FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\client\\\\ClashUp.Unity\\\\Assets\\\\Core\\\\Gameplay\\\\\" -Recurse -File | Select-Object FullName)"
     ]
   },
   "enableAllProjectMcpServers": true,

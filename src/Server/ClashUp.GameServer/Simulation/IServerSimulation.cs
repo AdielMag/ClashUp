@@ -6,6 +6,8 @@ public interface IServerSimulation : IDisposable
 {
     int CurrentTick { get; }
 
+    uint RandomSeed { get; }
+
     void EnsurePlayer(PlayerId player, int colorSlot);
 
     void ApplyInput(PlayerId player, InputCommand command);

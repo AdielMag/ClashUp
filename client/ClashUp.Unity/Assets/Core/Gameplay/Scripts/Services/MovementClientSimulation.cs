@@ -17,6 +17,7 @@ namespace ClashUp.Client.Gameplay
         public IReadOnlyDictionary<string, PlayerRenderState> Players => _players;
 
         public void SetLocalPlayer(PlayerId id) => LocalId = id;
+        public void SetRandomSeed(uint seed) { }
 
         public void ApplyLocalInput(InputCommand command)
         {

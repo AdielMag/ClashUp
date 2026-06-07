@@ -66,5 +66,27 @@ New-Item -ItemType Directory -Force $DllDest | Out-Null
 Copy-Item $DllSrc $DllDest -Force
 Write-Host "[aethernet] Copied AetherNet.Shared.dll -> $DllDest" -ForegroundColor Green
 
+# ── 5. Copy AetherNet.Unity source files to Assets/Packages ──────────────────
+# AetherNet.Unity is a source-only package — .cs files compile inside Unity.
+$UnitySrc  = Join-Path $CloneDir 'src\AetherNet.Unity'
+$UnityDest = Join-Path $RepoRoot 'client\ClashUp.Unity\Assets\Packages\AetherNet.Unity'
+
+# Clean previous copy to avoid stale files
+if (Test-Path $UnityDest) { Remove-Item $UnityDest -Recurse -Force }
+
+$dirs = @('Runtime\Components', 'Runtime\Core', 'Runtime\Network', 'Runtime\Physics', 'Runtime\Queries', 'Editor', 'Editor\Gizmos')
+foreach ($d in $dirs) {
+    $srcDir = Join-Path $UnitySrc $d
+    $dstDir = Join-Path $UnityDest $d
+    if (Test-Path $srcDir) {
+        New-Item -ItemType Directory -Force $dstDir | Out-Null
+        # Exclude AetherSceneBaker — depends on AetherNet.Server types not available in Unity
+        Get-ChildItem $srcDir -Filter '*.cs' -File |
+            Where-Object { $_.Name -ne 'AetherSceneBaker.cs' } |
+            Copy-Item -Destination $dstDir
+    }
+}
+Write-Host "[aethernet] Copied AetherNet.Unity sources -> $UnityDest" -ForegroundColor Green
+
 Write-Host ""
 Write-Host "[aethernet] Setup complete. Open Unity Editor and let it recompile." -ForegroundColor Green

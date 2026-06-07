@@ -8,5 +8,7 @@ namespace ClashUp.Client.Gameplay
         public float X;
         public float Z;
         public float Yaw;
+        public float Health;
+        public float MaxHealth;
     }
 }

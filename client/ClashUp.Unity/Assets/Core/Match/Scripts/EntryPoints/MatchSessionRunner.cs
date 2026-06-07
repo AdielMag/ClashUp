@@ -85,6 +85,7 @@ namespace ClashUp.Client.Match
 
                 _sim.SetLocalPlayer(join.You);
                 _prediction.Configure(join.TickRateHz);
+                _prediction.SetRandomSeed(join.RandomSeed);
 
                 foreach (var player in join.Players)
                     _viewSystem.RegisterPlayer(player);

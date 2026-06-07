@@ -4,6 +4,7 @@
     "references": [
         "ClashUp.Core",
         "ClashUp.Shared",
+        "AetherNet.Unity",
         "UniTask",
         "VContainer",
         "VContainer.Unity",
@@ -16,7 +17,8 @@
     "overrideReferences": true,
     "precompiledReferences": [
         "MessagePack.dll",
-        "MessagePack.Annotations.dll"
+        "MessagePack.Annotations.dll",
+        "AetherNet.Shared.dll"
     ],
     "autoReferenced": true,
     "noEngineReferences": false

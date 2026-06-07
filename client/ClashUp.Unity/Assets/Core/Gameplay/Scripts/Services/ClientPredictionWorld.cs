@@ -21,6 +21,8 @@ namespace ClashUp.Client.Gameplay
             _tickInterval = 1.0 / tickRateHz;
         }
 
+        public void SetRandomSeed(uint seed) => _sim.SetRandomSeed(seed);
+
         public void Predict(InputCommand command)
         {
             _sim.ApplyLocalInput(command);

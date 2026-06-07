@@ -1,3 +1,4 @@
+using ClashUp.Shared.Characters;
 using ClashUp.Shared.MessagePackObjects;
 using ClashUp.Shared.Simulation;
 using MessagePack;
@@ -17,8 +18,10 @@ public sealed class MovementServerSimulation : IServerSimulation
     }
 
     private readonly Dictionary<string, PlayerState> _players = new();
+    private readonly HealthTable _health = new();
 
     public int CurrentTick { get; private set; }
+    public uint RandomSeed { get; } = (uint)System.Random.Shared.Next(1, int.MaxValue);
 
     public void EnsurePlayer(PlayerId player, int colorSlot)
     {
@@ -32,6 +35,7 @@ public sealed class MovementServerSimulation : IServerSimulation
             Z = 0f,
             Yaw = 0f,
         };
+        _health.Initialize(player.Value, CharacterRegistry.Default.BaseStats.MaxHealth);
     }
 
     public void ApplyInput(PlayerId player, InputCommand command)
@@ -62,6 +66,7 @@ public sealed class MovementServerSimulation : IServerSimulation
                 X = state.X,
                 Z = state.Z,
                 Yaw = state.Yaw,
+                Health = _health.GetHealth(state.Id.Value),
             };
         }
         return MessagePackSerializer.Serialize(new WorldStatePacket { Players = dtos });

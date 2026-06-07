@@ -8,40 +8,27 @@ namespace ClashUp.Client.Gameplay
 {
     public sealed class PlayerViewSystem : ITickable, IDisposable
     {
-        private static readonly Color[] Palette =
-        {
-            new(0.2f, 0.6f, 1.0f),
-            new(1.0f, 0.3f, 0.3f),
-            new(0.3f, 1.0f, 0.3f),
-            new(1.0f, 0.85f, 0.2f),
-            new(0.8f, 0.3f, 1.0f),
-            new(1.0f, 0.55f, 0.1f),
-            new(0.1f, 0.9f, 0.9f),
-            new(0.9f, 0.4f, 0.7f),
-        };
-
         private readonly IClientSimulation _sim;
+        private readonly GameObject _playerPrefab;
+        private readonly PlayerMaterialMap _materialMap;
         private readonly Dictionary<string, GameObject> _capsules = new();
         private readonly Dictionary<string, int> _colorSlots = new();
 
         public Transform LocalPlayerTransform { get; private set; }
 
-        public PlayerViewSystem(IClientSimulation sim)
+        public PlayerViewSystem(IClientSimulation sim, GameObject playerPrefab, PlayerMaterialMap materialMap)
         {
             _sim = sim;
+            _playerPrefab = playerPrefab;
+            _materialMap = materialMap;
         }
 
         public void RegisterPlayer(PlayerSummary player)
         {
             _colorSlots[player.Id.Value] = player.ColorSlot;
 
-            // If the capsule was already spawned (by Tick before color info arrived),
-            // fix its material color now.
             if (_capsules.TryGetValue(player.Id.Value, out var go) && go != null)
-            {
-                var color = Palette[player.ColorSlot % Palette.Length];
-                go.GetComponent<Renderer>().material.color = color;
-            }
+                go.GetComponent<Renderer>().material = _materialMap.Get(player.ColorSlot);
         }
 
         public void UnregisterPlayer(PlayerId id)
@@ -61,7 +48,7 @@ namespace ClashUp.Client.Gameplay
 
                 if (!_capsules.TryGetValue(id, out var go))
                 {
-                    go = SpawnCapsule(id);
+                    go = SpawnPlayer(id);
                     _capsules[id] = go;
 
                     if (state.Id.Equals(_sim.LocalId))
@@ -85,15 +72,14 @@ namespace ClashUp.Client.Gameplay
             }
         }
 
-        private GameObject SpawnCapsule(string playerId)
+        private GameObject SpawnPlayer(string playerId)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            var go = UnityEngine.Object.Instantiate(_playerPrefab);
             go.name = $"Player_{playerId[..Math.Min(6, playerId.Length)]}";
             go.transform.position = new Vector3(0f, 1f, 0f);
 
             var slot = _colorSlots.TryGetValue(playerId, out var s) ? s : 0;
-            var color = Palette[slot % Palette.Length];
-            go.GetComponent<Renderer>().material.color = color;
+            go.GetComponent<Renderer>().material = _materialMap.Get(slot);
 
             return go;
         }

@@ -14,15 +14,20 @@ namespace ClashUp.Shared.Simulation
     /// </summary>
     public sealed class MatchPhysicsWorld : IDisposable
     {
-        public const float PlayerRadius = 0.4f;
+        /// <summary>Fallback radius when none is provided.</summary>
+        public const float DefaultPlayerRadius = 0.4f;
 
         private readonly PhysicsWorldManager _world;
+        private readonly float _playerRadius;
         private readonly Dictionary<string, int> _playerIds = new();
         private readonly Dictionary<string, Vector2> _pendingVel = new();
         private int _nextId;
 
-        public MatchPhysicsWorld()
+        public float PlayerRadius => _playerRadius;
+
+        public MatchPhysicsWorld(float playerRadius = DefaultPlayerRadius)
         {
+            _playerRadius = playerRadius;
             _world = new PhysicsWorldManager(new WorldConfig
             {
                 Gravity = Vector2.Zero,
@@ -46,7 +51,7 @@ namespace ClashUp.Shared.Simulation
                 LinearDamping = 0f,
             };
             var body = _world.CreateBody(def, id);
-            body.CreateCircle(PlayerRadius, 1f);
+            body.CreateCircle(_playerRadius, 1f);
             _playerIds[playerId] = id;
         }
 

@@ -15,5 +15,6 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(1)] public float X { get; init; }
         [Key(2)] public float Z { get; init; }
         [Key(3)] public float Yaw { get; init; }
+        [Key(4)] public float Health { get; init; }
     }
 }
