@@ -13,7 +13,7 @@ metadata:
 
 Files in `src/Shared/ClashUp.Shared/Characters/`:
 - `CharacterId` — string-backed struct, MessagePack-serializable, same pattern as `PlayerId`
-- `StatBlock` — plain C# class: `MaxHealth` (100f), `Damage` (10f). NOT MessagePack (static config)
+- `StatBlock` — plain C# class: `MaxHealth` (100f), `Damage` (10f), `MoveSpeed` (5f). NOT MessagePack (static config)
 - `CharacterDefinition` — `CharacterId Id`, `string DisplayName`, `StatBlock BaseStats`
 - `CharacterRegistry` — static lookup. `Default` = "Brawler". `Get(id)`, `All`
 
@@ -50,9 +50,17 @@ Owned by both `AetherServerSimulation` and `AetherClientSimulation` as sibling t
 
 Server generates seed at `AetherServerSimulation` construction. Sent to client via `JoinResult.RandomSeed`.
 
+## Movement Speed Integration
+
+`MoveSpeed` flows from `StatBlock` through to physics:
+- `MovementModel.Step()` accepts optional `float moveSpeed` param (defaults to `MoveSpeed` const for backward compat)
+- `MatchPhysicsWorld.EnsurePlayer()` accepts optional `float moveSpeed` param, stores in `_playerMoveSpeeds` dictionary
+- `MatchPhysicsWorld.Step()` reads per-player speed from `_playerMoveSpeeds` instead of hardcoded `MovementModel.MoveSpeed`
+- Server/client simulations pass `stats.MoveSpeed` to `_world.EnsurePlayer()`
+
 ## Integration Points
 
-- **Server `EnsurePlayer`**: Initializes health from `CharacterRegistry.Default.BaseStats.MaxHealth`
+- **Server `EnsurePlayer`**: Initializes health and passes move speed from `CharacterRegistry.Default.BaseStats`
 - **Server `EncodeDelta`**: Includes `Health` from `HealthTable` in each `PlayerStateDto`
 - **Client `ReconcileTo`**: Snaps health from server's `PlayerStateDto.Health`
 - **Client `SyncRenderStates`**: Copies health into `PlayerRenderState.Health` / `.MaxHealth`

@@ -70,7 +70,8 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 
 ## Character / Stat / Health System
 - **Characters**: `CharacterId` (string struct like PlayerId), `CharacterDefinition`, `CharacterRegistry` (static, in `ClashUp.Shared/Characters/`)
-- **Stats**: `StatBlock` — `MaxHealth` (100), `Damage` (10). Plain C# class, not MessagePack (static config, not networked)
+- **Stats**: `StatBlock` — `MaxHealth` (100), `Damage` (10), `MoveSpeed` (5). Plain C# class, not MessagePack (static config, not networked)
+- **Per-player move speed**: `MatchPhysicsWorld.EnsurePlayer` accepts `moveSpeed` param, stores per-player speeds. `MovementModel.Step` also accepts optional `moveSpeed` param.
 - **Default character**: "Brawler" via `CharacterRegistry.Default`. Single character for now, everyone gets the same.
 - **Health**: `HealthTable` in `ClashUp.Shared/Simulation/` — `Initialize`, `ApplyDamage`, `ApplyHeal`, `SnapHealth`. Owned by both `AetherServerSimulation` and `AetherClientSimulation`.
 - **Health in snapshots**: `PlayerStateDto.Health` (Key 4) — sent every tick, client reconciles against it
