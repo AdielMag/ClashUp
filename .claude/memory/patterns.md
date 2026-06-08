@@ -83,6 +83,18 @@ Anti-aliased edge via `center - dist + 0.5f` clamp. Used for joystick background
 - Must ensure `EventSystem` exists (check + create if null)
 - Sort order 200 (above loading screen at 100)
 
+## Camera Service (ICameraService / CameraService)
+
+- **Interface**: `ICameraService` — `ActiveCamera`, `Register(camera, isMatchCamera)`, `Unregister(camera)`
+- **Implementation**: `CameraService` — static lazy singleton (`_instance ??= new CameraService()`), lives in `ClashUp.Gameplay`
+- **Files**: `Core/Gameplay/Scripts/Interfaces/ICameraService.cs`, `Core/Gameplay/Scripts/Services/CameraService.cs`
+- **Access pattern**: `CameraService.Instance.ActiveCamera` — works from any MonoBehaviour without DI injection
+- **Behaviour**: When a match camera registers (`isMatchCamera=true`), all other registered cameras are disabled. When it unregisters (destroyed), they re-enable. `ActiveCamera` falls back to `Camera.main` when no match camera is registered.
+- **CameraRegistrant** MonoBehaviour: `[RequireComponent(Camera)]`, `IsMatchCamera` property, registers in `Start()`, unregisters in `OnDestroy()`. Location: `Core/Gameplay/Scripts/Camera/CameraRegistrant.cs`
+- **Match camera**: `MatchCameraRig.BuildMainCamera()` adds `CameraRegistrant` with `IsMatchCamera = true` programmatically (set after `AddComponent` returns, before `Start()` fires)
+- **Non-match cameras**: `CameraRegistrant` (IsMatchCamera=false) added via MCP to Lobby, CoreStarter, Matchmaking scene cameras
+- **BillboardLabel**: uses `CameraService.Instance.ActiveCamera` — always faces the correct camera regardless of scene
+
 ## Camera Ownership
 - Main Camera lives in Lobby scene (Core), NOT AppStarter
 - AppStarter scene is bootstrap-only — no visual/rendering objects
@@ -145,8 +157,8 @@ Two separate rendering paths for local vs remote players:
 - **DI wiring**: `MatchLifetimeScope` has serialized `_playerPrefab` (GameObject) and `_characterPrefabMap` (CharacterPrefabMap), registered as instances
 - **PlayerViewSystem**: Instantiates `_playerPrefab` (root), then instantiates character prefab as child via `_characterMap.Get(characterId)`. Also sets world-space TMP name label from `PlayerSummary.DisplayName`.
 - **AetherClientSimulation**: Reads `AetherCircleCollider.Radius` from the prefab to construct `MatchPhysicsWorld` with matching radius — single source of truth
-- **Billboard name labels**: `Player.prefab` has a `NameLabel` child (world-space Canvas, scale 0.01) with `BillboardLabel` MonoBehaviour + `TextMeshProUGUI` grandchild. `BillboardLabel` faces `Camera.main` in `LateUpdate`.
-- **Camera.main**: `MatchCameraRig.BuildMainCamera()` tags the camera as `MainCamera` so `Camera.main` resolves for billboard labels.
+- **Billboard name labels**: `Player.prefab` has a `NameLabel` child (world-space Canvas, scale 0.01) with `BillboardLabel` MonoBehaviour + `TextMeshProUGUI` grandchild. `BillboardLabel` faces `CameraService.Instance.ActiveCamera` in `LateUpdate` — uses the match camera during gameplay, `Camera.main` fallback otherwise.
+- **Camera.main**: `MatchCameraRig.BuildMainCamera()` tags the camera as `MainCamera`. During match, `CameraService.ActiveCamera` returns the match camera directly (no Camera.main lookup needed).
 - **Old PlayerMaterialMap (deprecated)**: Still exists in codebase but no longer wired into DI. Color tinting was dropped in favor of character-specific prefabs.
 
 ## Match Reconnection Pattern

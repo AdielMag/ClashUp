@@ -18,7 +18,7 @@
 
 ## Tool Parameter Gotchas
 - `gameobject-component-add`: parameter is `componentNames` (not `componentTypes`)
-- `scene-open`: unreliable for reopening scenes — use `script-execute` with `EditorSceneManager.OpenScene()` instead
+- `scene-open`: works reliably with `assetPath` (e.g. `"Assets/Core/Lobby/Content/Scenes/Lobby.unity"`). Use `script-execute` fallback only if it fails.
 - `scene-set-active`: can fail on scenes that are already active/only scene — use script-execute fallback
 - `scene-create`: `setupMode: "EmptyScene"` creates a truly empty scene (no camera/light)
 - `assets-create-folder`: can fail with null ref if parent doesn't exist — verify parent folders first
@@ -59,3 +59,4 @@ AssetDatabase.SaveAssets();
 - **MCP first**: For one-time setup tasks (creating scenes, modifying build settings, adding components)
 - **Editor scripts**: Only when the setup needs to be repeatable by other team members without MCP
 - User explicitly prefers MCP over manual steps — never tell user to run a menu item if MCP can do it
+- **Proactive component wiring**: After introducing a new MonoBehaviour component, immediately use MCP to add it to all relevant existing scene GameObjects — don't wait for the user to ask. This is part of "automate everything".
