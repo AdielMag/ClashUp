@@ -30,6 +30,21 @@ Place assets (scenes, prefabs, scripts) under the domain that matches their life
 | `Match` | Core/Match | 4 | GameFlowController (additive) | When match ends |
 | `Matchmaking` | Core/Matchmaking | 5 | GameFlowController (additive) | When match found or cancelled |
 
+## Active Scene Management (Critical)
+
+With additive scene loading, `new GameObject()` and `Object.Instantiate()` place objects into the **active scene** — which defaults to scene 0 (AppStarter). This causes match objects (map visuals, cameras, lights, joystick UI) to appear under AppStarter instead of their owning scene.
+
+**Fix**: `GameFlowController` calls `SceneManager.SetActiveScene(handle.Scene)` immediately after every `LoadAdditiveAsync` call. This ensures all runtime-created GameObjects go into the correct scene automatically — no per-callsite `MoveGameObjectToScene` needed.
+
+**Pattern**: Every additive scene load in `GameFlowController` follows this structure:
+```csharp
+using (LifetimeScope.EnqueueParent(_scope))
+{
+    _handle = await _sceneLoader.LoadAdditiveAsync("SceneName");
+}
+SceneManager.SetActiveScene(_handle.Scene);
+```
+
 ## Rule of Thumb
 
 > If more than one scope/feature will ever use it, it doesn't belong to any single scope — it belongs to Core.

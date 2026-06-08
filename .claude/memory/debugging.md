@@ -350,6 +350,23 @@ Then connect to `localhost:5001` / `localhost:5101` from the app (use the "Local
 
 **Rule**: Do NOT add a custom AndroidManifest.xml unless absolutely necessary. Unity's generated manifest already includes `usesCleartextTraffic="true"` and the launcher activity. If you must customize, start from Unity's full generated manifest (found in `Library/Bee/Android/Prj/IL2CPP/Gradle/`).
 
+## Magenta Materials on Prefabs Created via MCP/Scripts
+
+**Symptom**: All meshes in a prefab render magenta (pink).
+
+**Root cause**: Prefab was created programmatically without assigning materials. MeshRenderer's `m_Materials` contains `{fileID: 0}` (null) for every slot.
+
+**Fix**: After creating a prefab with MeshRenderers, assign materials. Use `script-execute` with `PrefabUtility.LoadPrefabContents` / `SaveAsPrefabAsset` / `UnloadPrefabContents`:
+```csharp
+var prefab = PrefabUtility.LoadPrefabContents(prefabPath);
+foreach (var r in prefab.GetComponentsInChildren<MeshRenderer>(true))
+    r.sharedMaterial = myMaterial;
+PrefabUtility.SaveAsPrefabAsset(prefab, prefabPath);
+PrefabUtility.UnloadPrefabContents(prefab);
+```
+
+**Prevention**: When creating prefabs with renderers, always create and assign materials in the same step. Use `assets-material-create` MCP tool + `script-execute` to set colors/properties.
+
 ## Standard Shader Stripped on Android Builds
 
 **Symptom**: Objects created via `GameObject.CreatePrimitive()` appear magenta on Android but look fine in Editor.

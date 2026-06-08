@@ -7,13 +7,25 @@
 - Working dir should be `client/ClashUp.Unity/` when running CLI
 
 ## script-execute (Dynamic C# Execution)
-- **Must** have a class named `Script` with a method named `Main()`
-- NOT `Run()`, NOT body-only, NOT arbitrary class names
-- Return type is `string` for simple results
-- Can use `UnityEditor` namespace for editor operations
+
+Two modes:
+
+**Full code mode** (default, `isMethodBody=false`):
+- Must define a complete class with a static method
+- Default class: `Script`, default method: `Main()` — override with `className`/`methodName` params
+- Can use `UnityEditor` namespace
 - Example:
-  ```csharp
-  {"csharpCode": "using UnityEditor;\npublic class Script\n{\n    public static string Main()\n    {\n        // your code here\n        return \"result\";\n    }\n}"}
+  ```json
+  {"csharpCode": "using UnityEditor;\npublic class MyTool\n{\n    public static void Run()\n    {\n        Debug.Log(\"done\");\n    }\n}", "className": "MyTool", "methodName": "Run"}
+  ```
+
+**Body-only mode** (`isMethodBody=true`):
+- Provide only the method body — tool auto-generates usings, class, and method
+- Standard usings (System, UnityEngine, UnityEditor, etc.) are included automatically
+- Simpler for quick one-off scripts
+- Example:
+  ```json
+  {"csharpCode": "var mat = AssetDatabase.LoadAssetAtPath<Material>(\"Assets/Foo.mat\");\nmat.color = Color.red;\nEditorUtility.SetDirty(mat);", "isMethodBody": true}
   ```
 
 ## Tool Parameter Gotchas

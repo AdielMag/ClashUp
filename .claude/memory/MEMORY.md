@@ -85,6 +85,18 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **PlayerRenderState**: has `Health`, `MaxHealth`, and `Prev{X,Z,Yaw}` fields. Local player synced from `HealthTable` in `SyncRenderStates()`; remote health comes from `RemotePlayerInterpolator`.
 - **No combat yet**: HealthTable API exists but nothing deals damage. Infrastructure only.
 
+## Map System
+- **Shared POCOs**: `MapData`, `BakedEntityDef`, `BakedFixtureDef`, `SpawnArea` in `ClashUp.Shared/Maps/`
+- **SpawnResolver**: Static `GetSpawnPosition(MapData?, teamId, slotIndex)` in Shared — falls back to linear layout when no map
+- **Server**: `ServerMapStore` singleton loads `Maps/Data/*.json` (System.Text.Json). `AetherServerSimulation.LoadMap()` + spawn via `SpawnResolver`
+- **Client**: `MapDefinition` SO (mapId, displayName, TextAsset json, visual prefab) + `MapRegistry` SO (`SerializedDictionary<string, MapDefinition>`)
+- **Client deserialization**: `MapDataDeserializer` uses Newtonsoft.Json (not System.Text.Json — netstandard2.1)
+- **Wire protocol**: `MapId` field on `MatchConfig` (Key 4), `MatchProvision` (Key 5), `JoinResult` (Key 7) — default `"arena_basic"`
+- **Baker**: `ClashUpMapBaker` editor tool ("ClashUp/Bake Map to JSON") — scans `AetherRigidbody` + `SpawnPointMarker` components
+- **Visual prefab**: Instantiated by `MatchSessionRunner.LoadMap()`, destroyed on Dispose. NO Unity colliders — physics is AetherNet only
+- **Materials**: `Assets/Core/Match/Content/Maps/Materials/` — WallGray, GroundGreen, SpawnZone (transparent)
+- **First map**: "arena_basic" — 40×30 arena, 11 wall entities, 2 spawn areas (team 0 at x=-16, team 1 at x=16)
+
 ## Important Conventions
 - Central package management via `Directory.Packages.props`
 - Build output redirected to `.artifacts/` to avoid polluting Unity's local package import
@@ -114,6 +126,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Environments**: Local (`localhost:5001`), Tailscale (`100.68.118.109:5001`), Dev (remote). Tailscale for phone→local-server testing. Emulator uses `adb reverse` + Local.
 - **Critical**: Server ping must block & retry — never proceed to lobby on failure
 - **Boot sequence**: load PersistentUI → show loading → env picker (dev) → identity → ping → load lobby → hide loading
+- **Active scene**: `GameFlowController` calls `SceneManager.SetActiveScene()` after every additive load — ensures `new GameObject()` / `Instantiate()` go into the correct scene (not AppStarter). See [scene-ownership.md](scene-ownership.md).
 - **Game flow**: Lobby → (Play) → Matchmaking scene → (matched) → Match scene → (end) → Lobby
 - **Reconnect flow**: Lobby checks for active match on startup → if found, skip lobby UI → go straight to Match
 - **Disconnect handling**: Server marks player disconnected (not removed), client can rejoin same match. `MatchHub.JoinAsync` replays `OnMatchEnded` to late-joining clients. See [debugging.md](debugging.md) for the full race-condition fix sequence.
@@ -124,7 +137,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 
 ## Android / IL2CPP Build Requirements
 - **MagicOnion Source Generator**: `[MagicOnionClientGeneration(...)]` attribute required in `ClashUp.Networking` for IL2CPP. See `MagicOnionGeneratedClientInitializer.cs`.
-- **Standard shader**: Must be in `AlwaysIncludedShaders` (fileID: 46) — player materials use it; `PlayerSpawner` still uses `CreatePrimitive()` for ground plane.
+- **Standard shader**: Must be in `AlwaysIncludedShaders` (fileID: 46) — player materials use it.
 - **Custom AndroidManifest.xml**: Do NOT add one — Unity generates it correctly. Adding a minimal one strips the launcher activity.
 - **Emulator ports**: `adb reverse tcp:5001 tcp:5001` AND `tcp:5101 tcp:5101` (Services + GameServer).
 - **Package name**: `com.DefaultCompany.ClashUp.Unity`
