@@ -10,6 +10,7 @@ public sealed class AetherServerSimulation : IServerSimulation
 {
     private readonly MatchPhysicsWorld _world = new();
     private readonly HealthTable _health = new();
+    private readonly Dictionary<string, int> _lastSeq = new();
 
     public int CurrentTick { get; private set; }
     public uint RandomSeed { get; }
@@ -21,15 +22,18 @@ public sealed class AetherServerSimulation : IServerSimulation
 
     public void EnsurePlayer(PlayerId player, int colorSlot)
     {
-        _world.EnsurePlayer(player.Value, colorSlot);
         var stats = CharacterRegistry.Default.BaseStats;
+        _world.EnsurePlayer(player.Value, colorSlot, stats.MoveSpeed);
         _health.Initialize(player.Value, stats.MaxHealth);
     }
 
     public void ApplyInput(PlayerId player, InputCommand command)
-        => _world.ApplyInput(player.Value,
+    {
+        _lastSeq[player.Value] = command.SequenceId;
+        _world.ApplyInput(player.Value,
             MovementModel.DecodeAxis(command.MoveX),
             MovementModel.DecodeAxis(command.MoveY));
+    }
 
     public void Step(double deltaSeconds)
     {
@@ -50,6 +54,7 @@ public sealed class AetherServerSimulation : IServerSimulation
                 Z = z,
                 Yaw = yaw,
                 Health = _health.GetHealth(id),
+                LastProcessedInputSeq = _lastSeq.TryGetValue(id, out var seq) ? seq : 0,
             });
         }
         return MessagePackSerializer.Serialize(new WorldStatePacket { Players = dtos.ToArray() });

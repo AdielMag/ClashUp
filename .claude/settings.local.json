@@ -63,7 +63,20 @@
       "PowerShell(dotnet build \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\external\\\\AetherNet\\\\src\\\\AetherNet.Shared\\\\AetherNet.Shared.csproj\" -c Debug --nologo -v quiet)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\src\\\\Shared\\\\ClashUp.Shared\" -Recurse -File)",
       "Bash(Select-Object FullName)",
-      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\client\\\\ClashUp.Unity\\\\Assets\\\\Core\\\\Gameplay\\\\\" -Recurse -File | Select-Object FullName)"
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\client\\\\ClashUp.Unity\\\\Assets\\\\Core\\\\Gameplay\\\\\" -Recurse -File | Select-Object FullName)",
+      "Bash(gh pr create --base main --title 'feat: SimulationPlane \\(XY/XZ\\) and configurable PixelsPerMeter' --body ' *)",
+      "WebFetch(domain:www.gabrielgambetta.com)",
+      "mcp__ai-game-developer__scene-list-opened",
+      "mcp__ai-game-developer__gameobject-component-destroy",
+      "mcp__ai-game-developer__assets-prefab-create",
+      "mcp__ai-game-developer__gameobject-destroy",
+      "mcp__ai-game-developer__assets-prefab-open",
+      "mcp__ai-game-developer__gameobject-component-add",
+      "mcp__ai-game-developer__gameobject-component-modify",
+      "mcp__ai-game-developer__gameobject-create",
+      "mcp__ai-game-developer__gameobject-component-get",
+      "mcp__ai-game-developer__assets-prefab-close",
+      "Bash(cp \"C:/Users/Adiel/.claude/projects/C--Users-Adiel-Documents-ClashUp/memory/\"*.md .claude/memory/ 2>/dev/null; ls .claude/memory/)"
     ]
   },
   "enableAllProjectMcpServers": true,

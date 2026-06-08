@@ -46,6 +46,7 @@ namespace ClashUp.Client.Gameplay
         private static GameObject BuildMainCamera()
         {
             var go = new GameObject("MatchCamera");
+            go.tag = "MainCamera";
             go.AddComponent<Camera>();
             go.AddComponent<CinemachineBrain>();
             return go;

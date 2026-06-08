@@ -125,7 +125,7 @@ namespace ClashUp.Client.Match
             }
         }
 
-        private void OnSnapshot(SnapshotPacket snapshot) => _prediction.ApplyServerSnapshot(snapshot);
+        private void OnSnapshot(SnapshotPacket snapshot) => _prediction.EnqueueSnapshot(snapshot);
 
         private void OnPlayerJoined(PlayerSummary player)
         {

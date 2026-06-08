@@ -20,6 +20,7 @@ namespace ClashUp.Shared.Simulation
         private readonly PhysicsWorldManager _world;
         private readonly float _playerRadius;
         private readonly Dictionary<string, int> _playerIds = new();
+        private readonly Dictionary<string, float> _playerMoveSpeeds = new();
         private readonly Dictionary<string, Vector2> _pendingVel = new();
         private int _nextId;
 
@@ -38,7 +39,7 @@ namespace ClashUp.Shared.Simulation
 
         public IEnumerable<string> PlayerIds => _playerIds.Keys;
 
-        public void EnsurePlayer(string playerId, int colorSlot)
+        public void EnsurePlayer(string playerId, int colorSlot, float moveSpeed = MovementModel.MoveSpeed)
         {
             if (_playerIds.ContainsKey(playerId)) return;
 
@@ -53,6 +54,7 @@ namespace ClashUp.Shared.Simulation
             var body = _world.CreateBody(def, id);
             body.CreateCircle(_playerRadius, 1f);
             _playerIds[playerId] = id;
+            _playerMoveSpeeds[playerId] = moveSpeed;
         }
 
         public void ApplyInput(string playerId, float moveX, float moveZ)
@@ -72,7 +74,8 @@ namespace ClashUp.Shared.Simulation
                 if (_pendingVel.TryGetValue(kvp.Key, out var raw))
                 {
                     float mag = raw.Length();
-                    vel = (mag > 1f ? raw / mag : raw) * MovementModel.MoveSpeed;
+                    float speed = _playerMoveSpeeds.TryGetValue(kvp.Key, out var s) ? s : MovementModel.MoveSpeed;
+                    vel = (mag > 1f ? raw / mag : raw) * speed;
                 }
                 _world.SetLinearVelocity(kvp.Value, vel);
             }

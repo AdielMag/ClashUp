@@ -26,9 +26,23 @@ namespace ClashUp.Client.Gameplay
         void Step(double deltaSeconds);
 
         /// <summary>
-        /// Rewind to <paramref name="serverTick"/>, apply the snapshot,
-        /// then re-run any local inputs queued past <paramref name="serverTick"/>.
+        /// Advances physics without updating render state (PrevX/X). Used during
+        /// reconciliation replay so the render interpolation targets stay clean.
         /// </summary>
-        void ReconcileTo(int serverTick, ReadOnlyMemory<byte> deltaBlob);
+        void StepPhysicsOnly(double deltaSeconds);
+
+        /// <summary>
+        /// Returns the local player's current physics position (not render state).
+        /// Used for computing reconciliation corrections at the physics level.
+        /// </summary>
+        bool TryGetPhysicsPosition(out float x, out float z);
+
+        /// <summary>
+        /// Applies the authoritative state for the <b>local</b> player from a snapshot
+        /// (remote players are handled by <see cref="RemotePlayerInterpolator"/>, not here).
+        /// Returns the sequence id of the last local input the server processed, so the
+        /// caller can discard acked pending inputs and replay the rest (reconciliation).
+        /// </summary>
+        int ReconcileTo(int serverTick, WorldStatePacket packet);
     }
 }

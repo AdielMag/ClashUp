@@ -4,7 +4,6 @@ using AetherNet;
 using ClashUp.Shared.Characters;
 using ClashUp.Shared.MessagePackObjects;
 using ClashUp.Shared.Simulation;
-using MessagePack;
 using UnityEngine;
 
 namespace ClashUp.Client.Gameplay
@@ -45,21 +44,47 @@ namespace ClashUp.Client.Gameplay
             SyncRenderStates();
         }
 
-        public void ReconcileTo(int serverTick, ReadOnlyMemory<byte> deltaBlob)
+        public void StepPhysicsOnly(double deltaSeconds)
+        {
+            _world.Step(deltaSeconds);
+            CurrentTick++;
+        }
+
+        public bool TryGetPhysicsPosition(out float x, out float z)
+        {
+            var lid = LocalId.Value;
+            if (lid != null)
+            {
+                var (px, pz, _) = _world.GetPlayerState(lid);
+                x = px;
+                z = pz;
+                return true;
+            }
+            x = z = 0f;
+            return false;
+        }
+
+        public int ReconcileTo(int serverTick, WorldStatePacket packet)
         {
             CurrentTick = Math.Max(CurrentTick, serverTick);
-            if (deltaBlob.Length == 0) return;
+            if (LocalId.Value == null || packet == null) return 0;
 
-            var packet = MessagePackSerializer.Deserialize<WorldStatePacket>(deltaBlob);
-            var maxHealth = CharacterRegistry.Default.BaseStats.MaxHealth;
+            // Only the local player is simulated on the client. Remote players are rendered
+            // from RemotePlayerInterpolator and intentionally ignored here.
+            var stats = CharacterRegistry.Default.BaseStats;
             foreach (var dto in packet.Players)
             {
-                _world.EnsurePlayer(dto.Id.Value, 0);
+                if (!dto.Id.Equals(LocalId)) continue;
+
+                _world.EnsurePlayer(dto.Id.Value, 0, stats.MoveSpeed);
                 _world.SnapPlayerPosition(dto.Id.Value, dto.X, dto.Z);
-                _health.Initialize(dto.Id.Value, maxHealth);
+                _health.Initialize(dto.Id.Value, stats.MaxHealth);
                 _health.SnapHealth(dto.Id.Value, dto.Health);
+                // Do NOT touch render state here. Replay uses StepPhysicsOnly so
+                // PrevX/X stay untouched. Only normal Predict→Step updates them.
+                return dto.LastProcessedInputSeq;
             }
-            SyncRenderStates();
+            return 0;
         }
 
         private void SyncRenderStates()
@@ -70,9 +95,12 @@ namespace ClashUp.Client.Gameplay
                 var (x, z, yaw) = _world.GetPlayerState(id);
                 if (!_players.TryGetValue(id, out var rs))
                 {
-                    rs = new PlayerRenderState { Id = new PlayerId(id) };
+                    rs = new PlayerRenderState { Id = new PlayerId(id), X = x, Z = z, Yaw = yaw };
                     _players[id] = rs;
                 }
+                rs.PrevX = rs.X;
+                rs.PrevZ = rs.Z;
+                rs.PrevYaw = rs.Yaw;
                 rs.X = x;
                 rs.Z = z;
                 rs.Yaw = yaw;

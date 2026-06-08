@@ -13,6 +13,7 @@ namespace ClashUp.Shared.Characters
             {
                 MaxHealth = 100f,
                 Damage = 10f,
+                MoveSpeed = 5f,
             },
         };
 

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using ClashUp.Shared.MessagePackObjects;
 using ClashUp.Shared.Simulation;
-using MessagePack;
 
 namespace ClashUp.Client.Gameplay
 {
@@ -35,14 +34,29 @@ namespace ClashUp.Client.Gameplay
             CurrentTick++;
         }
 
-        public void ReconcileTo(int serverTick, ReadOnlyMemory<byte> deltaBlob)
+        public void StepPhysicsOnly(double deltaSeconds) => Step(deltaSeconds);
+
+        public bool TryGetPhysicsPosition(out float x, out float z)
+        {
+            var lid = LocalId.Value;
+            if (lid != null && _players.TryGetValue(lid, out var state))
+            {
+                x = state.X;
+                z = state.Z;
+                return true;
+            }
+            x = z = 0f;
+            return false;
+        }
+
+        public int ReconcileTo(int serverTick, WorldStatePacket packet)
         {
             CurrentTick = Math.Max(CurrentTick, serverTick);
 
-            if (deltaBlob.Length == 0) return;
+            if (packet == null) return 0;
 
-            var world = MessagePackSerializer.Deserialize<WorldStatePacket>(deltaBlob);
-            foreach (var dto in world.Players)
+            int ack = 0;
+            foreach (var dto in packet.Players)
             {
                 if (!_players.TryGetValue(dto.Id.Value, out var state))
                 {
@@ -52,7 +66,9 @@ namespace ClashUp.Client.Gameplay
                 state.X = dto.X;
                 state.Z = dto.Z;
                 state.Yaw = dto.Yaw;
+                if (dto.Id.Equals(LocalId)) ack = dto.LastProcessedInputSeq;
             }
+            return ack;
         }
 
         public void Dispose() { }

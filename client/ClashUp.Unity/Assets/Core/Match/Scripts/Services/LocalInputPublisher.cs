@@ -44,12 +44,19 @@ namespace ClashUp.Client.Match
         {
             if (!_started || !_gate.IsEnabled) return;
 
+            // Process any snapshots that arrived since last frame BEFORE accumulating
+            // time or computing alpha. This ensures PrevX/X and RenderAlpha are always
+            // consistent — no mid-frame corruption from MagicOnion callback timing.
+            _prediction.ProcessPendingSnapshots();
+
             _accumulator += Time.deltaTime;
             while (_accumulator >= _tickInterval)
             {
                 _accumulator -= _tickInterval;
                 SendTick();
             }
+
+            _prediction.RenderAlpha = _tickInterval > 0f ? Mathf.Clamp01(_accumulator / _tickInterval) : 0f;
         }
 
         private void SendTick()

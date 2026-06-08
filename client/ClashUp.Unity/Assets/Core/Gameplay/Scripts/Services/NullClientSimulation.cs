@@ -22,9 +22,14 @@ namespace ClashUp.Client.Gameplay
         public void SetRandomSeed(uint seed) { }
         public void ApplyLocalInput(InputCommand command) { }
         public void Step(double deltaSeconds) => CurrentTick++;
+        public void StepPhysicsOnly(double deltaSeconds) => CurrentTick++;
+        public bool TryGetPhysicsPosition(out float x, out float z) { x = z = 0f; return false; }
 
-        public void ReconcileTo(int serverTick, ReadOnlyMemory<byte> deltaBlob)
-            => CurrentTick = Math.Max(CurrentTick, serverTick);
+        public int ReconcileTo(int serverTick, WorldStatePacket packet)
+        {
+            CurrentTick = Math.Max(CurrentTick, serverTick);
+            return 0;
+        }
 
         public void Dispose() { }
     }

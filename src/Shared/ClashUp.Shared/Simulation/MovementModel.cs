@@ -18,7 +18,7 @@ namespace ClashUp.Shared.Simulation
             return encoded / AxisScale;
         }
 
-        public static void Step(ref float x, ref float z, ref float yaw, float moveX, float moveZ, double dt)
+        public static void Step(ref float x, ref float z, ref float yaw, float moveX, float moveZ, double dt, float moveSpeed = MoveSpeed)
         {
             float mag = MathF.Sqrt(moveX * moveX + moveZ * moveZ);
             if (mag > 1f)
@@ -27,8 +27,8 @@ namespace ClashUp.Shared.Simulation
                 moveZ /= mag;
             }
 
-            x += moveX * MoveSpeed * (float)dt;
-            z += moveZ * MoveSpeed * (float)dt;
+            x += moveX * moveSpeed * (float)dt;
+            z += moveZ * moveSpeed * (float)dt;
 
             if (mag > 0.001f)
             {

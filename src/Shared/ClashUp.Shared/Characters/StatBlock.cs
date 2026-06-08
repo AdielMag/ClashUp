@@ -4,5 +4,6 @@ namespace ClashUp.Shared.Characters
     {
         public float MaxHealth { get; init; } = 100f;
         public float Damage { get; init; } = 10f;
+        public float MoveSpeed { get; init; } = 5f;
     }
 }

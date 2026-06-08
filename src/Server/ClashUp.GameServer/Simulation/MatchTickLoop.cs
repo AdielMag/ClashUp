@@ -33,16 +33,16 @@ public sealed class MatchTickLoop : IDisposable
 
     private async Task RunAsync()
     {
-        var tickIntervalMs = Math.Max(1, 1000 / _context.Provision.TickRateHz);
+        double tickIntervalSec = 1.0 / _context.Provision.TickRateHz;
         var durationSeconds = _context.Provision.DurationSeconds;
-        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(tickIntervalMs));
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(tickIntervalSec));
 
         try
         {
             while (await timer.WaitForNextTickAsync(_cts.Token))
             {
                 Drain();
-                _context.Simulation.Step(tickIntervalMs / 1000.0);
+                _context.Simulation.Step(tickIntervalSec);
                 await BroadcastAsync();
 
                 if (durationSeconds > 0 && _context.Clock.ElapsedSeconds >= durationSeconds)

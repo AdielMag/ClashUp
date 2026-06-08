@@ -10,12 +10,12 @@ namespace ClashUp.Client.Match
     public sealed class MatchLifetimeScope : LifetimeScope
     {
         [SerializeField] private GameObject _playerPrefab;
-        [SerializeField] private PlayerMaterialMap _playerMaterialMap;
+        [SerializeField] private CharacterPrefabMap _characterPrefabMap;
 
         protected override void Configure(IContainerBuilder builder)
         {
             builder.RegisterInstance(_playerPrefab);
-            builder.RegisterInstance(_playerMaterialMap);
+            builder.RegisterInstance(_characterPrefabMap);
             var flow = Parent.Container.Resolve<GameFlowController>();
             builder.RegisterInstance(new MatchHandoffHolder { Value = flow.PendingHandoff });
 
@@ -27,13 +27,14 @@ namespace ClashUp.Client.Match
             builder.Register<AetherClientSimulation>(Lifetime.Singleton);
             builder.Register<IClientSimulation>(
                 c => c.Resolve<AetherClientSimulation>(), Lifetime.Singleton);
+            builder.Register<RemotePlayerInterpolator>(Lifetime.Singleton);
             builder.Register<ClientPredictionWorld>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<JoystickInputProvider>().As<IMovementInput>();
             builder.RegisterEntryPoint<PlayerSpawner>();
+            builder.RegisterEntryPoint<LocalInputPublisher>().AsSelf();
             builder.RegisterEntryPoint<PlayerViewSystem>().AsSelf();
             builder.RegisterEntryPoint<MatchCameraRig>();
-            builder.RegisterEntryPoint<LocalInputPublisher>().AsSelf();
 
             builder.RegisterEntryPoint<MatchSessionRunner>();
         }
