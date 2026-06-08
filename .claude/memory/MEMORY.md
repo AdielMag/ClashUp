@@ -33,7 +33,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - `com.unity.cinemachine`: 3.1.6 — namespace `Unity.Cinemachine`; `BindingMode` in `Unity.Cinemachine.TargetTracking`
 - `com.unity.inputsystem`: 1.19.0 — use `Keyboard.current`, `Touchscreen.current`, `Mouse.current` for raw polling
 - Player Settings → Active Input Handling: must be **"Both"** for new Input System + legacy UGUI to coexist
-- `ClashUp.Gameplay.asmdef` references: `Unity.Cinemachine`, `Unity.InputSystem`, `AetherNet.Unity`; precompiledReferences includes `AetherNet.Shared.dll`
+- `ClashUp.Gameplay.asmdef` references: `Unity.Cinemachine`, `Unity.InputSystem`, `AetherNet.Unity`, `Unity.TextMeshPro`; precompiledReferences includes `AetherNet.Shared.dll`
 
 ## Server Package Versions (Directory.Packages.props)
 - MagicOnion: 7.10.0 (7.10.1 does NOT exist on NuGet)
@@ -58,7 +58,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Coordinate mapping**: game (X, Z) ↔ Aether (x, y); gravity = zero for top-down
 - **Player bodies**: dynamic circles, velocity set from input each tick (kinematic move-and-slide style)
 - **Player radius**: `MatchPhysicsWorld` constructor parameter (default `0.4f`). Client reads from prefab's `AetherCircleCollider.Radius`. Server uses default.
-- **Wire protocol**: `InputCommand` up, `SnapshotPacket → WorldStatePacket → PlayerStateDto{X,Z,Yaw,Health}` down
+- **Wire protocol**: `InputCommand` up, `SnapshotPacket → WorldStatePacket → PlayerStateDto{X,Z,Yaw,Health,LastProcessedInputSeq}` down
 - **AetherNet.Shared**: `AetherNet.Shared.dll` (netstandard2.0, C# 10) committed in `Assets/Packages/AetherNet.Shared.0.1.0/`. Uses pre-built DLL — Unity can't compile C# 10 file-scoped namespaces.
 - **AetherNet.Unity**: Source-only package copied to `Assets/Packages/AetherNet.Unity/` by `setup-aethernet.ps1`. These files ARE C# 9 compatible (block-scoped namespaces). Has Runtime + Editor asmdefs. `AetherSceneBaker.cs` excluded (depends on `AetherNet.Server`).
 - **AetherNet.Unity asmdefs**: `AetherNet.Unity` (Runtime, unsafe, precompiled refs: AetherNet.Shared.dll + Aether.Physics2D.dll) and `AetherNet.Unity.Editor` (Editor-only, refs AetherNet.Unity)
@@ -66,6 +66,11 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Server DLL wiring**: conditional MSBuild in `AetherNet.refs.props` (repo root) — `ProjectReference` when clone exists, `PackageReference` fallback
 - **AetherNetSettings**: ScriptableObject at `Assets/Resources/AetherNetSettings.asset` — configures `SimulationPlane` (XZ) and `PixelsPerMeter` (1). Auto-applies in both editor (`[InitializeOnLoadMethod]`) and runtime (`[RuntimeInitializeOnLoadMethod]`).
 - **Determinism watch**: Aether.Physics2D is float-based; monitor for rubber-banding jitter between x86 server and ARM client
+
+### Client Prediction & Interpolation (Gambetta)
+- **Local player**: client-side prediction + server reconciliation via `LastProcessedInputSeq` (sequence-based ack, NOT tick-based). Render with sub-tick alpha-lerp (prev/current) for smooth motion between 30 Hz fixed steps.
+- **Remote players**: NOT in client physics world. Pure entity interpolation from buffered authoritative snapshots, rendered ~66ms in the past (2 × tick interval). `RemotePlayerInterpolator` ring buffer per player.
+- **Lag compensation**: documented but not yet implemented (no combat). See [netcode-architecture.md](netcode-architecture.md).
 - **Fixes to AetherNet**: must be generic/non-specific (upstreamable). Key fixes: `Directory.Packages.props` CPM opt-out, `SimulationPlane` enum, configurable `PixelsPerMeter`, `#nullable enable` on Unity files, `using` aliases for type ambiguities (RaycastHit, Vector2)
 
 ## Character / Stat / Health System
@@ -77,7 +82,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Health in snapshots**: `PlayerStateDto.Health` (Key 4) — sent every tick, client reconciles against it
 - **Random seed**: `DeterministicRng` (Xorshift32) in Shared. Per-tick re-seeding via `ForTick(baseSeed, tick)` to avoid drift. Seed generated server-side, sent in `JoinResult.RandomSeed` (Key 6).
 - **PlayerSummary.CharacterId** (Key 4) — sent on join
-- **PlayerRenderState**: has `Health` and `MaxHealth` fields, synced from `HealthTable` in `SyncRenderStates()`
+- **PlayerRenderState**: has `Health`, `MaxHealth`, and `Prev{X,Z,Yaw}` fields. Local player synced from `HealthTable` in `SyncRenderStates()`; remote health comes from `RemotePlayerInterpolator`.
 - **No combat yet**: HealthTable API exists but nothing deals damage. Infrastructure only.
 
 ## Important Conventions
@@ -136,3 +141,5 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - [dev-environment.md](dev-environment.md) — CLASHUP_DEV define, Tailscale phone testing, ServerEnvironment enum
 - [stat-health-system.md](stat-health-system.md) — Character stats, health table, deterministic RNG architecture
 - [feedback-scope-narrowing.md](feedback-scope-narrowing.md) — Start with minimum fields, ask before over-designing
+- [feedback-reread-before-edit.md](feedback-reread-before-edit.md) — Always re-read files before editing after plan phase
+- [netcode-architecture.md](netcode-architecture.md) — Gambetta netcode: prediction, reconciliation, entity interpolation

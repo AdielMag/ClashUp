@@ -87,6 +87,26 @@ Anti-aliased edge via `center - dist + 0.5f` clamp. Used for joystick background
 - Main Camera lives in Lobby scene (Core), NOT AppStarter
 - AppStarter scene is bootstrap-only — no visual/rendering objects
 
+## Client Prediction + Interpolation Pattern
+
+Two separate rendering paths for local vs remote players:
+
+**Local player (snappy):**
+- `ClientPredictionWorld.Predict()` immediately applies input to physics
+- `PlayerRenderState` stores prev and current tick state (shifted each step)
+- `PlayerViewSystem` lerps by `RenderAlpha` (accumulator fraction 0..1) → smooth at any fps
+- On snapshot: snap to authoritative state, drop acked inputs by `SequenceId`, replay rest
+
+**Remote players (smooth):**
+- NOT in client physics. `RemotePlayerInterpolator` buffers snapshots with `serverStampMs`
+- Rendered ~66ms behind newest sample, lerping between two bracketing samples
+- `PlayerViewSystem` queries interpolator each frame — no physics Lerp or exponential smoothing
+
+**When to snap vs replay:**
+- Reconciliation always snaps the local player to the server's position then replays pending inputs
+- Remote players are never snapped — interpolation buffer handles everything
+- If the interpolation clock falls too far behind (stall/burst), it snaps forward to `target - delay`
+
 ## Dumb Client Principle
 - Client is a thin display layer — NEVER put game logic on the client
 - All game state transitions (match end, scoring, phase changes) must originate from the server
@@ -117,14 +137,17 @@ Anti-aliased edge via `center - dist + 0.5f` clamp. Used for joystick background
 - `ConfigSeeder` always upserts (no skip-if-exists) so config values take effect on server restart without manual DB cleanup.
 - Current match config: `{"NumberOfTeams":1,"TeamSize":1,"DurationSeconds":20,"ObjectiveType":"survival"}`
 
-## Player Visual Setup
+## Player Visual Setup (Character Prefab System)
 
-- **Player prefab**: `Assets/Core/Gameplay/Art/Prefabs/Player.prefab` — capsule with `MeshRenderer` + `AetherCircleCollider` (radius 0.4, gizmo visible in Scene view)
-- **Materials**: 8 color-indexed materials in `Assets/Core/Gameplay/Art/Materials/PlayerColor_0..7.mat`
-- **PlayerMaterialMap**: ScriptableObject at `Assets/Core/Gameplay/Art/Config/PlayerMaterialMap.asset` — maps color slot index to material. `Get(int colorSlot)` with modulo wrapping.
-- **DI wiring**: `MatchLifetimeScope` has serialized `_playerPrefab` (GameObject) and `_playerMaterialMap` (PlayerMaterialMap), registered as instances
-- **PlayerViewSystem**: Instantiates prefab, assigns material from map based on player's `ColorSlot`
+- **Player prefab**: `Assets/Core/Gameplay/Art/Prefabs/Player.prefab` — physics-only root with `Transform` + `AetherCircleCollider` (radius 0.5). No mesh or renderer — visual comes from character prefab child.
+- **Character prefabs**: `Assets/Core/Gameplay/Art/Prefabs/Characters/` — one per character (e.g., `Brawler.prefab`). Contains the visual mesh/renderer. No collider (physics on player root).
+- **CharacterPrefabMap**: ScriptableObject at `Assets/Core/Gameplay/Art/Config/CharacterPrefabMap.asset` — maps `CharacterId.Value` (string) → prefab, with `_fallbackPrefab` for unknown ids. Script at `Scripts/Config/CharacterPrefabMap.cs`.
+- **DI wiring**: `MatchLifetimeScope` has serialized `_playerPrefab` (GameObject) and `_characterPrefabMap` (CharacterPrefabMap), registered as instances
+- **PlayerViewSystem**: Instantiates `_playerPrefab` (root), then instantiates character prefab as child via `_characterMap.Get(characterId)`. Also sets world-space TMP name label from `PlayerSummary.DisplayName`.
 - **AetherClientSimulation**: Reads `AetherCircleCollider.Radius` from the prefab to construct `MatchPhysicsWorld` with matching radius — single source of truth
+- **Billboard name labels**: `Player.prefab` has a `NameLabel` child (world-space Canvas, scale 0.01) with `BillboardLabel` MonoBehaviour + `TextMeshProUGUI` grandchild. `BillboardLabel` faces `Camera.main` in `LateUpdate`.
+- **Camera.main**: `MatchCameraRig.BuildMainCamera()` tags the camera as `MainCamera` so `Camera.main` resolves for billboard labels.
+- **Old PlayerMaterialMap (deprecated)**: Still exists in codebase but no longer wired into DI. Color tinting was dropped in favor of character-specific prefabs.
 
 ## Match Reconnection Pattern
 - Server: `MatchContext` tracks players as connected/disconnected (not removed on disconnect)

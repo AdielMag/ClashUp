@@ -31,6 +31,30 @@
 5. `script-execute` to add to build settings (no built-in tool for this)
 6. `script-execute` with `EditorSceneManager.OpenScene()` to restore the original scene
 
+## Creating ScriptableObject Assets with Private Fields
+Use `script-execute` with reflection when the SO has private serialized fields:
+```csharp
+var so = ScriptableObject.CreateInstance("FullTypeName");
+var type = so.GetType();
+var field = type.GetField("_fieldName", BindingFlags.NonPublic | BindingFlags.Instance);
+// For nested struct arrays, use GetNestedType + Array.CreateInstance
+field.SetValue(so, value);
+AssetDatabase.CreateAsset(so, "Assets/Path/Name.asset");
+AssetDatabase.SaveAssets();
+```
+
+## Creating Prefabs from Primitives
+1. `gameobject-create` with `primitiveType: "Capsule"` (or Cube, Sphere, etc.)
+2. `gameobject-component-destroy` to strip the auto-added collider (CapsuleCollider, BoxCollider, etc.)
+3. `assets-prefab-create` with `prefabAssetPath` — auto-creates intermediate folders
+4. `gameobject-destroy` to clean up the temp scene object
+
+## Modifying Component Fields via MCP
+- Use `gameobject-component-modify` with `pathPatches` for targeted field changes
+- For Unity object references: `{"typeName": "FullTypeName", "value": {"instanceID": N}}`
+- For enums: `{"typeName": "Full.Enum.Type", "value": "EnumValueName"}`
+- For Vector2: use `fields` array with `x`/`y` sub-members
+
 ## When to Use MCP vs Editor Scripts
 - **MCP first**: For one-time setup tasks (creating scenes, modifying build settings, adding components)
 - **Editor scripts**: Only when the setup needs to be repeatable by other team members without MCP

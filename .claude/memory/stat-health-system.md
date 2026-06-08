@@ -34,6 +34,7 @@ Owned by both `AetherServerSimulation` and `AetherClientSimulation` as sibling t
 | DTO | Key | Field | Added |
 |-----|-----|-------|-------|
 | PlayerStateDto | 4 | `float Health` | stat system |
+| PlayerStateDto | 5 | `int LastProcessedInputSeq` | netcode/reconciliation |
 | JoinResult | 6 | `uint RandomSeed` | stat system |
 | PlayerSummary | 4 | `CharacterId CharacterId` | stat system |
 
@@ -62,8 +63,8 @@ Server generates seed at `AetherServerSimulation` construction. Sent to client v
 
 - **Server `EnsurePlayer`**: Initializes health and passes move speed from `CharacterRegistry.Default.BaseStats`
 - **Server `EncodeDelta`**: Includes `Health` from `HealthTable` in each `PlayerStateDto`
-- **Client `ReconcileTo`**: Snaps health from server's `PlayerStateDto.Health`
-- **Client `SyncRenderStates`**: Copies health into `PlayerRenderState.Health` / `.MaxHealth`
+- **Client `ReconcileTo`**: Snaps health from server's `PlayerStateDto.Health` (local player only; remote health arrives via `RemotePlayerInterpolator`)
+- **Client `SyncRenderStates`**: Copies health into `PlayerRenderState.Health` / `.MaxHealth` (local player only)
 - **`MatchHub.JoinAsync`**: Sends `RandomSeed` and `CharacterId` in join result/summary
 
 ## Status

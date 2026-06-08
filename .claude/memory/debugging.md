@@ -192,6 +192,22 @@ There are three distinct root causes, each fixed separately:
 
 **Rule**: The client is dumb — it never synthesizes match-end on its own. The server must always deliver `OnMatchEnded`. `SessionResetHandler` handles the pause case separately (full boot reset on unpause).
 
+## Prediction & Interpolation Debugging
+
+### Rubber-banding / jitter on local player
+- **Most likely**: reconciliation acking by tick instead of `SequenceId`. Tick clocks drift with latency, so the wrong inputs get dropped → over/under-replay. Always drop by `input.SequenceId <= ackedSeq`.
+- **Check**: Log `(ackedSeq, pendingCount)` after each reconcile. Pending queue should stay small (≈ RTT / tickInterval). If it grows unbounded, the server isn't echoing the seq correctly.
+- **Determinism**: Aether.Physics2D is float-based. x86 server vs ARM client can produce slightly different positions for the same inputs → small corrections each snapshot. This is expected and tolerable for now.
+
+### Remote players stuttering
+- **Interp buffer underrun**: If packets arrive late or are dropped, the render clock catches up to the newest sample and clamps. Increase `InterpolationDelayMs` (default: 2 × tick interval = ~66ms).
+- **Interp clock too far behind**: After a long stall (tab switch, GC spike), the render clock snaps forward. This is correct — a brief visual pop is better than remote players being stuck in the past.
+- **Wrong data path**: Remote DTOs must go to `RemotePlayerInterpolator`, NOT the physics world. If `AetherClientSimulation.ReconcileTo` still processes remote ids, they'll snap instead of interpolate.
+
+### Local player visually stepping (not smooth)
+- `RenderAlpha` not being set: Check that `LocalInputPublisher.Tick()` writes `_prediction.RenderAlpha` each frame.
+- Alpha always 0 or 1: Tick interval might be zero (division guard). Confirm `Configure(tickRateHz)` was called.
+
 ## Unity Input System — Cross-Platform Pitfalls
 
 ### InputSystemUIInputModule vs StandaloneInputModule
