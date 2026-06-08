@@ -4,17 +4,14 @@ namespace ClashUp.Client.Gameplay
 {
     public sealed class BillboardLabel : MonoBehaviour
     {
-        private Camera _cam;
-
         private void LateUpdate()
         {
-            if (_cam == null)
-            {
-                _cam = Camera.main;
-                if (_cam == null) return;
-            }
+            var cam = CameraService.Instance.ActiveCamera;
+            if (cam == null) return;
 
-            transform.rotation = _cam.transform.rotation;
+            var fwd = cam.transform.forward;
+            var up = cam.transform.up;
+            transform.rotation = Quaternion.LookRotation(fwd, up);
         }
     }
 }

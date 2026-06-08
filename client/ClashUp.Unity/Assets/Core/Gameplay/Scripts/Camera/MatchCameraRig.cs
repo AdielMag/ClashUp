@@ -49,6 +49,8 @@ namespace ClashUp.Client.Gameplay
             go.tag = "MainCamera";
             go.AddComponent<Camera>();
             go.AddComponent<CinemachineBrain>();
+            var registrant = go.AddComponent<CameraRegistrant>();
+            registrant.IsMatchCamera = true;
             return go;
         }
 

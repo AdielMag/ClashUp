@@ -76,7 +76,11 @@
       "mcp__ai-game-developer__gameobject-create",
       "mcp__ai-game-developer__gameobject-component-get",
       "mcp__ai-game-developer__assets-prefab-close",
-      "Bash(cp \"C:/Users/Adiel/.claude/projects/C--Users-Adiel-Documents-ClashUp/memory/\"*.md .claude/memory/ 2>/dev/null; ls .claude/memory/)"
+      "Bash(cp \"C:/Users/Adiel/.claude/projects/C--Users-Adiel-Documents-ClashUp/memory/\"*.md .claude/memory/ 2>/dev/null; ls .claude/memory/)",
+      "Bash(Select-String -Pattern \"Camera|camera\")",
+      "mcp__ai-game-developer__scene-get-data",
+      "mcp__ai-game-developer__scene-save",
+      "Bash(cp \"C:/Users/Adiel/.claude/projects/C--Users-Adiel-Documents-ClashUp/memory/\"*.md .claude/memory/ && git add .claude/memory/ && git diff --cached --quiet || git commit -m \"Update Claude memory: CameraService pattern, MCP workflow proactivity\")"
     ]
   },
   "enableAllProjectMcpServers": true,
