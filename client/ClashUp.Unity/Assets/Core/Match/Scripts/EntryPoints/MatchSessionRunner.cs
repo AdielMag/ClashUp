@@ -6,6 +6,7 @@ using ClashUp.Client.CoreStarter;
 using ClashUp.Client.Gameplay;
 using ClashUp.Client.Lobby;
 using ClashUp.Client.Networking;
+using ClashUp.Shared.Maps;
 using ClashUp.Shared.MessagePackObjects;
 
 using Cysharp.Threading.Tasks;
@@ -26,8 +27,10 @@ namespace ClashUp.Client.Match
         private readonly IClientSimulation _sim;
         private readonly PlayerViewSystem _viewSystem;
         private readonly LocalInputPublisher _inputPublisher;
+        private readonly MapRegistry _mapRegistry;
 
         private MatchUI _matchUI;
+        private GameObject _mapVisualInstance;
         private int _durationSeconds;
         private double _serverElapsedAtJoin;
         private DateTimeOffset _joinWallClock;
@@ -44,7 +47,8 @@ namespace ClashUp.Client.Match
             MatchInputGate inputGate,
             IClientSimulation sim,
             PlayerViewSystem viewSystem,
-            LocalInputPublisher inputPublisher)
+            LocalInputPublisher inputPublisher,
+            MapRegistry mapRegistry)
         {
             _log = log;
             _session = session;
@@ -55,6 +59,7 @@ namespace ClashUp.Client.Match
             _sim = sim;
             _viewSystem = viewSystem;
             _inputPublisher = inputPublisher;
+            _mapRegistry = mapRegistry;
         }
 
         public async UniTask StartAsync(CancellationToken cancellation)
@@ -86,6 +91,8 @@ namespace ClashUp.Client.Match
                 _sim.SetLocalPlayer(join.You);
                 _prediction.Configure(join.TickRateHz);
                 _prediction.SetRandomSeed(join.RandomSeed);
+
+                LoadMap(join.MapId);
 
                 foreach (var player in join.Players)
                     _viewSystem.RegisterPlayer(player);
@@ -151,6 +158,26 @@ namespace ClashUp.Client.Match
             _log.Log($"[Match] Match ended. Winner team={result.WinningTeamId}");
         }
 
+        private void LoadMap(string mapId)
+        {
+            var mapDef = _mapRegistry.Get(mapId);
+            if (mapDef == null)
+            {
+                _log.LogError($"[Match] Map '{mapId}' not found in registry");
+                return;
+            }
+
+            if (mapDef.BakedMapJson != null)
+            {
+                var mapData = MapDataDeserializer.Deserialize(mapDef.BakedMapJson.text);
+                if (mapData != null)
+                    _sim.LoadMap(mapData);
+            }
+
+            if (mapDef.VisualPrefab != null)
+                _mapVisualInstance = UnityEngine.Object.Instantiate(mapDef.VisualPrefab);
+        }
+
         private void OnBackToLobby()
         {
             _flow.ReturnToLobbyAsync().Forget();
@@ -165,6 +192,9 @@ namespace ClashUp.Client.Match
             _session.Receiver.PlayerJoined -= OnPlayerJoined;
             _session.Receiver.PlayerLeft -= OnPlayerLeft;
             _session.Receiver.MatchEnded -= OnMatchEnded;
+
+            if (_mapVisualInstance != null)
+                UnityEngine.Object.Destroy(_mapVisualInstance);
 
             _matchUI?.Destroy();
             _session.LeaveAsync().Forget();

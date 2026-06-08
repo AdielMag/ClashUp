@@ -1,4 +1,5 @@
 using ClashUp.Shared.Characters;
+using ClashUp.Shared.Maps;
 using ClashUp.Shared.MessagePackObjects;
 using ClashUp.Shared.Simulation;
 using MessagePack;
@@ -23,7 +24,9 @@ public sealed class MovementServerSimulation : IServerSimulation
     public int CurrentTick { get; private set; }
     public uint RandomSeed { get; } = (uint)System.Random.Shared.Next(1, int.MaxValue);
 
-    public void EnsurePlayer(PlayerId player, int colorSlot)
+    public void LoadMap(MapData mapData) { }
+
+    public void EnsurePlayer(PlayerId player, int colorSlot, int teamId)
     {
         if (_players.ContainsKey(player.Value)) return;
 

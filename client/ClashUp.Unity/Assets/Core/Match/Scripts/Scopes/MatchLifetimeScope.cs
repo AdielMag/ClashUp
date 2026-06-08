@@ -11,11 +11,13 @@ namespace ClashUp.Client.Match
     {
         [SerializeField] private GameObject _playerPrefab;
         [SerializeField] private CharacterPrefabMap _characterPrefabMap;
+        [SerializeField] private MapRegistry _mapRegistry;
 
         protected override void Configure(IContainerBuilder builder)
         {
             builder.RegisterInstance(_playerPrefab);
             builder.RegisterInstance(_characterPrefabMap);
+            builder.RegisterInstance(_mapRegistry);
             var flow = Parent.Container.Resolve<GameFlowController>();
             builder.RegisterInstance(new MatchHandoffHolder { Value = flow.PendingHandoff });
 

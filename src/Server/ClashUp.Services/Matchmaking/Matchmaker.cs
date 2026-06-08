@@ -104,6 +104,7 @@ public sealed class Matchmaker : BackgroundService
             ModeId = modeId,
             TickRateHz = _options.DefaultTickRateHz,
             DurationSeconds = config.DurationSeconds,
+            MapId = config.MapId,
         };
 
         try

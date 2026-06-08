@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ClashUp.Shared.Maps;
 using ClashUp.Shared.MessagePackObjects;
 
 namespace ClashUp.Client.Gameplay
@@ -20,6 +21,8 @@ namespace ClashUp.Client.Gameplay
         void SetLocalPlayer(PlayerId id);
 
         void SetRandomSeed(uint seed);
+
+        void LoadMap(MapData mapData);
 
         void ApplyLocalInput(InputCommand command);
 

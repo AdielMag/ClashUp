@@ -14,6 +14,7 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(2)] public string ModeId { get; init; } = "default";
         [Key(3)] public int TickRateHz { get; init; } = 30;
         [Key(4)] public int DurationSeconds { get; init; } = 20;
+        [Key(5)] public string MapId { get; init; } = "arena_basic";
     }
 
     [MessagePackObject]

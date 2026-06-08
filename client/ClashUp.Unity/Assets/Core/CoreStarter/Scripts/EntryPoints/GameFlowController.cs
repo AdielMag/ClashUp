@@ -8,6 +8,7 @@ using ClashUp.Shared.MessagePackObjects;
 using Cysharp.Threading.Tasks;
 
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using VContainer.Unity;
 
 namespace ClashUp.Client.CoreStarter
@@ -57,6 +58,7 @@ namespace ClashUp.Client.CoreStarter
             {
                 _lobbyHandle = await _sceneLoader.LoadAdditiveAsync("Lobby", ct: cancellation);
             }
+            SceneManager.SetActiveScene(_lobbyHandle.Scene);
             loadingScreen.SetProgress(1f);
 
             await loadingScreen.WaitForProgressComplete(cancellation);
@@ -80,6 +82,7 @@ namespace ClashUp.Client.CoreStarter
             {
                 _matchmakingHandle = await _sceneLoader.LoadAdditiveAsync("Matchmaking");
             }
+            SceneManager.SetActiveScene(_matchmakingHandle.Scene);
 
             await loadingScreen.HideAsync();
         }
@@ -101,6 +104,7 @@ namespace ClashUp.Client.CoreStarter
             {
                 _lobbyHandle = await _sceneLoader.LoadAdditiveAsync("Lobby");
             }
+            SceneManager.SetActiveScene(_lobbyHandle.Scene);
 
             await loadingScreen.HideAsync();
         }
@@ -123,6 +127,7 @@ namespace ClashUp.Client.CoreStarter
             {
                 _matchHandle = await _sceneLoader.LoadAdditiveAsync("Match");
             }
+            SceneManager.SetActiveScene(_matchHandle.Scene);
 
             await loadingScreen.HideAsync();
         }
@@ -145,6 +150,7 @@ namespace ClashUp.Client.CoreStarter
             {
                 _matchHandle = await _sceneLoader.LoadAdditiveAsync("Match");
             }
+            SceneManager.SetActiveScene(_matchHandle.Scene);
 
             await loadingScreen.HideAsync();
         }
@@ -161,6 +167,7 @@ namespace ClashUp.Client.CoreStarter
             {
                 _lobbyHandle = await _sceneLoader.LoadAdditiveAsync("Lobby");
             }
+            SceneManager.SetActiveScene(_lobbyHandle.Scene);
 
             await loadingScreen.HideAsync();
         }

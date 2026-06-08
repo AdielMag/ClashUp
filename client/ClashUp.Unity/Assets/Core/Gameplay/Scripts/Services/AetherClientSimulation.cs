@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using AetherNet;
 using ClashUp.Shared.Characters;
+using ClashUp.Shared.Maps;
 using ClashUp.Shared.MessagePackObjects;
 using ClashUp.Shared.Simulation;
 using UnityEngine;
@@ -28,6 +29,11 @@ namespace ClashUp.Client.Gameplay
 
         public void SetLocalPlayer(PlayerId id) => LocalId = id;
         public void SetRandomSeed(uint seed) => _randomSeed = seed;
+
+        public void LoadMap(MapData mapData)
+        {
+            _world.LoadMapGeometry(mapData);
+        }
 
         public void ApplyLocalInput(InputCommand command)
         {

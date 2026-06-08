@@ -1,0 +1,352 @@
+{
+  "MapName": "Arena_Basic_Bake",
+  "Entities": [
+    {
+      "EntityId": 0,
+      "BodyType": 0,
+      "PositionX": 0.0,
+      "PositionY": 8.0,
+      "Angle": 0.0,
+      "LinearDamping": 0.0,
+      "AngularDamping": 0.0,
+      "GravityScale": 1.0,
+      "FixedRotation": true,
+      "Constraints": 0,
+      "Fixtures": [
+        {
+          "Shape": 0,
+          "Width": 1.5,
+          "Height": 1.5,
+          "Radius": 0.5,
+          "VerticesX": [],
+          "VerticesY": [],
+          "OffsetX": 0.0,
+          "OffsetY": 0.0,
+          "Density": 1.0,
+          "Friction": 0.2,
+          "Restitution": 0.0,
+          "IsSensor": false,
+          "Layer": 2
+        }
+      ]
+    },
+    {
+      "EntityId": 1,
+      "BodyType": 0,
+      "PositionX": 20.5,
+      "PositionY": 0.0,
+      "Angle": 0.0,
+      "LinearDamping": 0.0,
+      "AngularDamping": 0.0,
+      "GravityScale": 1.0,
+      "FixedRotation": true,
+      "Constraints": 0,
+      "Fixtures": [
+        {
+          "Shape": 0,
+          "Width": 1.0,
+          "Height": 32.0,
+          "Radius": 0.5,
+          "VerticesX": [],
+          "VerticesY": [],
+          "OffsetX": 0.0,
+          "OffsetY": 0.0,
+          "Density": 1.0,
+          "Friction": 0.2,
+          "Restitution": 0.0,
+          "IsSensor": false,
+          "Layer": 2
+        }
+      ]
+    },
+    {
+      "EntityId": 2,
+      "BodyType": 0,
+      "PositionX": 0.0,
+      "PositionY": 0.0,
+      "Angle": 0.0,
+      "LinearDamping": 0.0,
+      "AngularDamping": 0.0,
+      "GravityScale": 1.0,
+      "FixedRotation": true,
+      "Constraints": 0,
+      "Fixtures": [
+        {
+          "Shape": 0,
+          "Width": 3.0,
+          "Height": 3.0,
+          "Radius": 0.5,
+          "VerticesX": [],
+          "VerticesY": [],
+          "OffsetX": 0.0,
+          "OffsetY": 0.0,
+          "Density": 1.0,
+          "Friction": 0.2,
+          "Restitution": 0.0,
+          "IsSensor": false,
+          "Layer": 2
+        }
+      ]
+    },
+    {
+      "EntityId": 3,
+      "BodyType": 0,
+      "PositionX": 8.0,
+      "PositionY": 6.0,
+      "Angle": 0.0,
+      "LinearDamping": 0.0,
+      "AngularDamping": 0.0,
+      "GravityScale": 1.0,
+      "FixedRotation": true,
+      "Constraints": 0,
+      "Fixtures": [
+        {
+          "Shape": 0,
+          "Width": 4.0,
+          "Height": 1.0,
+          "Radius": 0.5,
+          "VerticesX": [],
+          "VerticesY": [],
+          "OffsetX": 0.0,
+          "OffsetY": 0.0,
+          "Density": 1.0,
+          "Friction": 0.2,
+          "Restitution": 0.0,
+          "IsSensor": false,
+          "Layer": 2
+        }
+      ]
+    },
+    {
+      "EntityId": 4,
+      "BodyType": 0,
+      "PositionX": -8.0,
+      "PositionY": -6.0,
+      "Angle": 0.0,
+      "LinearDamping": 0.0,
+      "AngularDamping": 0.0,
+      "GravityScale": 1.0,
+      "FixedRotation": true,
+      "Constraints": 0,
+      "Fixtures": [
+        {
+          "Shape": 0,
+          "Width": 4.0,
+          "Height": 1.0,
+          "Radius": 0.5,
+          "VerticesX": [],
+          "VerticesY": [],
+          "OffsetX": 0.0,
+          "OffsetY": 0.0,
+          "Density": 1.0,
+          "Friction": 0.2,
+          "Restitution": 0.0,
+          "IsSensor": false,
+          "Layer": 2
+        }
+      ]
+    },
+    {
+      "EntityId": 5,
+      "BodyType": 0,
+      "PositionX": 0.0,
+      "PositionY": -8.0,
+      "Angle": 0.0,
+      "LinearDamping": 0.0,
+      "AngularDamping": 0.0,
+      "GravityScale": 1.0,
+      "FixedRotation": true,
+      "Constraints": 0,
+      "Fixtures": [
+        {
+          "Shape": 0,
+          "Width": 1.5,
+          "Height": 1.5,
+          "Radius": 0.5,
+          "VerticesX": [],
+          "VerticesY": [],
+          "OffsetX": 0.0,
+          "OffsetY": 0.0,
+          "Density": 1.0,
+          "Friction": 0.2,
+          "Restitution": 0.0,
+          "IsSensor": false,
+          "Layer": 2
+        }
+      ]
+    },
+    {
+      "EntityId": 6,
+      "BodyType": 0,
+      "PositionX": -8.0,
+      "PositionY": 6.0,
+      "Angle": 0.0,
+      "LinearDamping": 0.0,
+      "AngularDamping": 0.0,
+      "GravityScale": 1.0,
+      "FixedRotation": true,
+      "Constraints": 0,
+      "Fixtures": [
+        {
+          "Shape": 0,
+          "Width": 4.0,
+          "Height": 1.0,
+          "Radius": 0.5,
+          "VerticesX": [],
+          "VerticesY": [],
+          "OffsetX": 0.0,
+          "OffsetY": 0.0,
+          "Density": 1.0,
+          "Friction": 0.2,
+          "Restitution": 0.0,
+          "IsSensor": false,
+          "Layer": 2
+        }
+      ]
+    },
+    {
+      "EntityId": 7,
+      "BodyType": 0,
+      "PositionX": -20.5,
+      "PositionY": 0.0,
+      "Angle": 0.0,
+      "LinearDamping": 0.0,
+      "AngularDamping": 0.0,
+      "GravityScale": 1.0,
+      "FixedRotation": true,
+      "Constraints": 0,
+      "Fixtures": [
+        {
+          "Shape": 0,
+          "Width": 1.0,
+          "Height": 32.0,
+          "Radius": 0.5,
+          "VerticesX": [],
+          "VerticesY": [],
+          "OffsetX": 0.0,
+          "OffsetY": 0.0,
+          "Density": 1.0,
+          "Friction": 0.2,
+          "Restitution": 0.0,
+          "IsSensor": false,
+          "Layer": 2
+        }
+      ]
+    },
+    {
+      "EntityId": 8,
+      "BodyType": 0,
+      "PositionX": 0.0,
+      "PositionY": -15.5,
+      "Angle": 0.0,
+      "LinearDamping": 0.0,
+      "AngularDamping": 0.0,
+      "GravityScale": 1.0,
+      "FixedRotation": true,
+      "Constraints": 0,
+      "Fixtures": [
+        {
+          "Shape": 0,
+          "Width": 42.0,
+          "Height": 1.0,
+          "Radius": 0.5,
+          "VerticesX": [],
+          "VerticesY": [],
+          "OffsetX": 0.0,
+          "OffsetY": 0.0,
+          "Density": 1.0,
+          "Friction": 0.2,
+          "Restitution": 0.0,
+          "IsSensor": false,
+          "Layer": 2
+        }
+      ]
+    },
+    {
+      "EntityId": 9,
+      "BodyType": 0,
+      "PositionX": 8.0,
+      "PositionY": -6.0,
+      "Angle": 0.0,
+      "LinearDamping": 0.0,
+      "AngularDamping": 0.0,
+      "GravityScale": 1.0,
+      "FixedRotation": true,
+      "Constraints": 0,
+      "Fixtures": [
+        {
+          "Shape": 0,
+          "Width": 4.0,
+          "Height": 1.0,
+          "Radius": 0.5,
+          "VerticesX": [],
+          "VerticesY": [],
+          "OffsetX": 0.0,
+          "OffsetY": 0.0,
+          "Density": 1.0,
+          "Friction": 0.2,
+          "Restitution": 0.0,
+          "IsSensor": false,
+          "Layer": 2
+        }
+      ]
+    },
+    {
+      "EntityId": 10,
+      "BodyType": 0,
+      "PositionX": 0.0,
+      "PositionY": 15.5,
+      "Angle": 0.0,
+      "LinearDamping": 0.0,
+      "AngularDamping": 0.0,
+      "GravityScale": 1.0,
+      "FixedRotation": true,
+      "Constraints": 0,
+      "Fixtures": [
+        {
+          "Shape": 0,
+          "Width": 42.0,
+          "Height": 1.0,
+          "Radius": 0.5,
+          "VerticesX": [],
+          "VerticesY": [],
+          "OffsetX": 0.0,
+          "OffsetY": 0.0,
+          "Density": 1.0,
+          "Friction": 0.2,
+          "Restitution": 0.0,
+          "IsSensor": false,
+          "Layer": 2
+        }
+      ]
+    }
+  ],
+  "SpawnAreas": [
+    {
+      "TeamIndex": 0,
+      "PositionsX": [
+        -16.0,
+        -16.0,
+        -16.0
+      ],
+      "PositionsZ": [
+        -3.0,
+        0.0,
+        3.0
+      ]
+    },
+    {
+      "TeamIndex": 1,
+      "PositionsX": [
+        16.0,
+        16.0,
+        16.0
+      ],
+      "PositionsZ": [
+        -3.0,
+        0.0,
+        3.0
+      ]
+    }
+  ]
+}

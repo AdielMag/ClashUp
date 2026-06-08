@@ -99,6 +99,7 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
             DurationSeconds = context.Provision.DurationSeconds,
             ElapsedSeconds = context.Clock.ElapsedSeconds,
             RandomSeed = context.Simulation.RandomSeed,
+            MapId = context.Provision.MapId,
         };
     }
 

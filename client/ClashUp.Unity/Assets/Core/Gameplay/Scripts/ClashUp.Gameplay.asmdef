@@ -10,7 +10,8 @@
         "VContainer.Unity",
         "Unity.Cinemachine",
         "Unity.InputSystem",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "Toolbox"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -19,7 +20,8 @@
     "precompiledReferences": [
         "MessagePack.dll",
         "MessagePack.Annotations.dll",
-        "AetherNet.Shared.dll"
+        "AetherNet.Shared.dll",
+        "Newtonsoft.Json.dll"
     ],
     "autoReferenced": true,
     "noEngineReferences": false

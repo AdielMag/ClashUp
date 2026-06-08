@@ -1,20 +1,17 @@
 using System;
 using System.Collections.Generic;
-using System.Numerics;
 using AetherNet;
+using AetherNet.Collision;
+using ClashUp.Shared.Maps;
+using nkast.Aether.Physics2D.Common;
 using nkast.Aether.Physics2D.Dynamics;
+using Vector2 = System.Numerics.Vector2;
+using AVec2 = nkast.Aether.Physics2D.Common.Vector2;
 
 namespace ClashUp.Shared.Simulation
 {
-    /// <summary>
-    /// Deterministic 2D physics world for one match, shared by server and client.
-    /// Coordinate mapping: game (X, Z) ↔ Aether (x, y).  Gravity is zero (top-down view).
-    /// Players are dynamic circle bodies; velocity is set from input each tick so collision
-    /// resolution (collide-and-slide) happens naturally via Box2D.
-    /// </summary>
     public sealed class MatchPhysicsWorld : IDisposable
     {
-        /// <summary>Fallback radius when none is provided.</summary>
         public const float DefaultPlayerRadius = 0.4f;
 
         private readonly PhysicsWorldManager _world;
@@ -33,13 +30,84 @@ namespace ClashUp.Shared.Simulation
             {
                 Gravity = Vector2.Zero,
                 AllowSleeping = false,
-                MaxBodies = 64,
+                MaxBodies = 256,
             });
         }
 
         public IEnumerable<string> PlayerIds => _playerIds.Keys;
 
-        public void EnsurePlayer(string playerId, int colorSlot, float moveSpeed = MovementModel.MoveSpeed)
+        public void LoadMapGeometry(MapData map)
+        {
+            if (map?.Entities == null) return;
+
+            int maxEntityId = _nextId;
+            var scratchVertices = new Vertices(64);
+
+            foreach (var entity in map.Entities)
+            {
+                var bodyType = entity.BodyType switch
+                {
+                    1 => BodyType.Kinematic,
+                    2 => BodyType.Dynamic,
+                    _ => BodyType.Static,
+                };
+
+                var def = new BodyDef
+                {
+                    BodyType = bodyType,
+                    Position = new Vector2(entity.PositionX, entity.PositionY),
+                    Angle = entity.Angle,
+                    LinearDamping = entity.LinearDamping,
+                    AngularDamping = entity.AngularDamping,
+                    GravityScale = entity.GravityScale,
+                    FixedRotation = entity.FixedRotation,
+                    Constraints = (RigidbodyConstraints)entity.Constraints,
+                };
+
+                var body = _world.CreateBody(def, entity.EntityId);
+
+                foreach (var fix in entity.Fixtures)
+                {
+                    AVec2 offset = new AVec2(fix.OffsetX, fix.OffsetY);
+                    Fixture fixture;
+
+                    switch (fix.Shape)
+                    {
+                        case BakedFixtureShape.Box:
+                            fixture = body.CreateRectangle(fix.Width, fix.Height, fix.Density, offset);
+                            break;
+                        case BakedFixtureShape.Circle:
+                            fixture = body.CreateCircle(fix.Radius, fix.Density, offset);
+                            break;
+                        case BakedFixtureShape.Polygon:
+                            scratchVertices.Clear();
+                            int count = Math.Min(fix.VerticesX.Length, fix.VerticesY.Length);
+                            for (int i = 0; i < count; i++)
+                                scratchVertices.Add(new AVec2(fix.VerticesX[i], fix.VerticesY[i]));
+                            fixture = body.CreatePolygon(scratchVertices, fix.Density);
+                            break;
+                        default:
+                            continue;
+                    }
+
+                    fixture.Friction = fix.Friction;
+                    fixture.Restitution = fix.Restitution;
+                    fixture.IsSensor = fix.IsSensor;
+
+                    var filter = CollisionFilter.FromLayer(fix.Layer);
+                    fixture.CollisionCategories = (Category)filter.CategoryBits;
+                    fixture.CollidesWith = (Category)filter.MaskBits;
+                    fixture.CollisionGroup = filter.GroupIndex;
+                }
+
+                if (entity.EntityId >= maxEntityId)
+                    maxEntityId = entity.EntityId + 1;
+            }
+
+            _nextId = maxEntityId;
+        }
+
+        public void EnsurePlayer(string playerId, float spawnX, float spawnZ, float moveSpeed = MovementModel.MoveSpeed)
         {
             if (_playerIds.ContainsKey(playerId)) return;
 
@@ -47,7 +115,7 @@ namespace ClashUp.Shared.Simulation
             var def = new BodyDef
             {
                 BodyType = BodyType.Dynamic,
-                Position = new Vector2(colorSlot * MovementModel.SpawnSpacing, 0f),
+                Position = new Vector2(spawnX, spawnZ),
                 FixedRotation = true,
                 LinearDamping = 0f,
             };
@@ -62,10 +130,6 @@ namespace ClashUp.Shared.Simulation
             _pendingVel[playerId] = new Vector2(moveX, moveZ);
         }
 
-        /// <summary>
-        /// Applies pending velocities and advances physics by <paramref name="deltaSeconds"/>.
-        /// Pending velocities are cleared after each step — callers must call ApplyInput again next tick.
-        /// </summary>
         public void Step(double deltaSeconds)
         {
             foreach (var kvp in _playerIds)
@@ -83,7 +147,6 @@ namespace ClashUp.Shared.Simulation
             _world.Advance((float)deltaSeconds);
         }
 
-        /// <summary>Returns (x, z, yaw) for the given player. Yaw is derived from velocity direction.</summary>
         public (float x, float z, float yaw) GetPlayerState(string playerId)
         {
             if (!_playerIds.TryGetValue(playerId, out int id)) return default;
@@ -94,9 +157,6 @@ namespace ClashUp.Shared.Simulation
             return (ts.Position.X, ts.Position.Y, yaw);
         }
 
-        /// <summary>
-        /// Teleports the player to (x, z) and zeros velocity. Used for server-authoritative reconciliation.
-        /// </summary>
         public void SnapPlayerPosition(string playerId, float x, float z)
         {
             if (!_playerIds.TryGetValue(playerId, out int id)) return;

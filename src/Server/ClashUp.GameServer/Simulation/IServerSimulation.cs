@@ -1,3 +1,4 @@
+using ClashUp.Shared.Maps;
 using ClashUp.Shared.MessagePackObjects;
 
 namespace ClashUp.Server.GameServer.Simulation;
@@ -8,7 +9,9 @@ public interface IServerSimulation : IDisposable
 
     uint RandomSeed { get; }
 
-    void EnsurePlayer(PlayerId player, int colorSlot);
+    void LoadMap(MapData mapData);
+
+    void EnsurePlayer(PlayerId player, int colorSlot, int teamId);
 
     void ApplyInput(PlayerId player, InputCommand command);
 

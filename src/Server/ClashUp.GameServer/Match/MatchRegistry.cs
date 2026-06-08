@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using ClashUp.Server.GameServer.Maps;
 using ClashUp.Server.GameServer.Registration;
 using ClashUp.Server.GameServer.Simulation;
 using ClashUp.Shared.MessagePackObjects;
@@ -12,17 +13,20 @@ public sealed class MatchRegistry : IMatchRegistry, IDisposable
     private readonly ILoggerFactory _loggerFactory;
     private readonly IServicesRegistryClient _servicesClient;
     private readonly GameServerIdentity _identity;
+    private readonly ServerMapStore _mapStore;
 
     public MatchRegistry(
         IServiceScopeFactory scopeFactory,
         ILoggerFactory loggerFactory,
         IServicesRegistryClient servicesClient,
-        GameServerIdentity identity)
+        GameServerIdentity identity,
+        ServerMapStore mapStore)
     {
         _scopeFactory = scopeFactory;
         _loggerFactory = loggerFactory;
         _servicesClient = servicesClient;
         _identity = identity;
+        _mapStore = mapStore;
     }
 
     public int Count => _matches.Count;
@@ -40,6 +44,10 @@ public sealed class MatchRegistry : IMatchRegistry, IDisposable
             throw new InvalidOperationException(
                 $"Match {provision.MatchId} is already registered on this instance.");
         }
+
+        var mapData = _mapStore.GetMap(provision.MapId);
+        if (mapData != null)
+            context.Simulation.LoadMap(mapData);
 
         context.OnMatchEndedEarly = id => _ = NotifyMatchEndedAsync(id);
         context.OnMatchEnded = id => RemoveAndDispose(id);

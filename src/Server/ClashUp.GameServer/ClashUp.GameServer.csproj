@@ -6,6 +6,10 @@
     <UserSecretsId>clashup-gameserver-dev</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Update="Maps\Data\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <Import Project="..\..\..\AetherNet.refs.props" />
 
   <ItemGroup>

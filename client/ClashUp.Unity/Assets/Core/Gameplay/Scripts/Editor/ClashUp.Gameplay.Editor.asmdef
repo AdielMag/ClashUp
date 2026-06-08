@@ -1,0 +1,22 @@
+{
+    "name": "ClashUp.Gameplay.Editor",
+    "rootNamespace": "ClashUp.Client.Gameplay.Editor",
+    "references": [
+        "ClashUp.Gameplay",
+        "ClashUp.Shared",
+        "AetherNet.Unity"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "AetherNet.Shared.dll",
+        "Aether.Physics2D.dll",
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": true,
+    "noEngineReferences": false
+}
