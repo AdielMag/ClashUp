@@ -43,6 +43,23 @@ Two modes:
 5. `script-execute` to add to build settings (no built-in tool for this)
 6. `script-execute` with `EditorSceneManager.OpenScene()` to restore the original scene
 
+## Modifying SerializedDictionary via script-execute
+
+`SerializedDictionary<K, V>` (from editor-toolbox) stores entries in a `pairs` array — NOT `_keys`/`_values`. Each pair has `Key` and `Value` (capitalized). When adding entries via `SerializedObject`:
+
+```csharp
+var mapsProp = so.FindProperty("_maps");               // the SerializedDictionary field
+var pairsProp = mapsProp.FindPropertyRelative("pairs"); // array of {Key, Value} pairs
+int idx = pairsProp.arraySize;
+pairsProp.InsertArrayElementAtIndex(idx);
+var pair = pairsProp.GetArrayElementAtIndex(idx);
+pair.FindPropertyRelative("Key").stringValue = "my_key";
+pair.FindPropertyRelative("Value").objectReferenceValue = myAsset;
+so.ApplyModifiedPropertiesWithoutUndo();
+EditorUtility.SetDirty(target);
+AssetDatabase.SaveAssets();
+```
+
 ## Creating ScriptableObject Assets with Private Fields
 Use `script-execute` with reflection when the SO has private serialized fields:
 ```csharp

@@ -430,6 +430,16 @@ PrefabUtility.UnloadPrefabContents(prefab);
 
 **Fix**: Check `SceneManager.sceneCount == 1 && GetSceneAt(0).buildIndex == 0` before showing the popup. If only the boot scene is loaded, skip the reset. File: `SessionResetHandler.cs`.
 
+## AetherServerSimulation.EnsurePlayer Called Every Tick
+
+`MatchTickLoop.Drain()` calls `simulation.EnsurePlayer()` for every player every tick. `MatchPhysicsWorld.EnsurePlayer` has a `_playerIds.ContainsKey` guard, but the simulation layer (`AetherServerSimulation.EnsurePlayer`) does NOT — it calls `_health.Initialize` (resetting health to max) and increments `_teamSlotCounters` each tick.
+
+**Symptom**: Health resets to full every tick; slot counter grows unboundedly.
+
+**Fix**: Add `HashSet<string> _knownPlayers` to the simulation. Guard the entire body of `EnsurePlayer` with `if (!_knownPlayers.Add(player.Value)) return;`.
+
+**Lesson**: Any time a simulation adds per-player initialization logic (health, invulnerability, spawn slot, etc.), it must be guarded this way — `MatchPhysicsWorld`'s guard is NOT sufficient.
+
 ## Docker Volume Persistence
 
 **Symptom**: Changed MongoDB config but the change didn't take effect after container restart.

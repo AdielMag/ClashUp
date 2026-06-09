@@ -23,9 +23,13 @@ Files in `src/Shared/ClashUp.Shared/Characters/`:
 
 `HealthTable` in `ClashUp.Shared/Simulation/` — `Dictionary<string, float>` wrapper.
 - `Initialize(playerId, maxHealth)` — set starting health
-- `ApplyDamage(playerId, amount)` → new health (clamped to 0)
+- `ApplyDamage(playerId, amount)` → new health (clamped to 0); early-returns current health if player is invulnerable
 - `ApplyHeal(playerId, amount, maxHealth)` → new health (clamped to max)
 - `SnapHealth(playerId, health)` — server reconciliation override
+- `SetInvulnerable(playerId, durationTicks)` — sets invulnerability timer
+- `IsInvulnerable(playerId)` → bool — true if ticks remaining > 0
+- `Tick()` — decrements all invuln counters; must be called once per simulation step
+- `DefaultSpawnInvulnTicks = 90` — 3 seconds at 30 Hz
 
 Owned by both `AetherServerSimulation` and `AetherClientSimulation` as sibling to `MatchPhysicsWorld`.
 
@@ -35,6 +39,7 @@ Owned by both `AetherServerSimulation` and `AetherClientSimulation` as sibling t
 |-----|-----|-------|-------|
 | PlayerStateDto | 4 | `float Health` | stat system |
 | PlayerStateDto | 5 | `int LastProcessedInputSeq` | netcode/reconciliation |
+| PlayerStateDto | 6 | `bool IsInvulnerable` | spawn invulnerability |
 | JoinResult | 6 | `uint RandomSeed` | stat system |
 | PlayerSummary | 4 | `CharacterId CharacterId` | stat system |
 
@@ -67,6 +72,19 @@ Server generates seed at `AetherServerSimulation` construction. Sent to client v
 - **Client `SyncRenderStates`**: Copies health into `PlayerRenderState.Health` / `.MaxHealth` (local player only)
 - **`MatchHub.JoinAsync`**: Sends `RandomSeed` and `CharacterId` in join result/summary
 
+## Integration Points — Invulnerability
+
+- **Server `EnsurePlayer`**: On first join (guarded by `_knownPlayers HashSet`), calls `_health.SetInvulnerable(player.Value, HealthTable.DefaultSpawnInvulnTicks)` after `Initialize`
+- **Server `Step`**: Calls `_health.Tick()` after `_world.Step()` each tick
+- **Server `EncodeDelta`**: Sets `IsInvulnerable = _health.IsInvulnerable(id)` on each `PlayerStateDto`
+- **`PlayerRenderState`**: Has `IsInvulnerable` bool field — wired for future visual effects
+
+## AetherServerSimulation EnsurePlayer Guard (Important)
+
+`MatchTickLoop.Drain()` calls `simulation.EnsurePlayer()` every tick for every player. `MatchPhysicsWorld.EnsurePlayer` has an early-return guard, but the simulation layer must also guard health init — otherwise health resets to max every tick.
+
+**Pattern**: `_knownPlayers HashSet<string>` in `AetherServerSimulation`. `if (!_knownPlayers.Add(player.Value)) return;` at the top of `EnsurePlayer`. Also prevents `_teamSlotCounters` from incrementing on every tick.
+
 ## Status
 
-Infrastructure only — no combat mechanics. `HealthTable` API exists but nothing calls `ApplyDamage` yet. Health stays at 100 for all players.
+Infrastructure only — no combat mechanics. `HealthTable.ApplyDamage` is wired with invulnerability guard. Spawn invulnerability runs for 3s after join. Nothing deals damage yet.

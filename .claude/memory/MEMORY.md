@@ -58,7 +58,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Coordinate mapping**: game (X, Z) ↔ Aether (x, y); gravity = zero for top-down
 - **Player bodies**: dynamic circles, velocity set from input each tick (kinematic move-and-slide style)
 - **Player radius**: `MatchPhysicsWorld` constructor parameter (default `0.4f`). Client reads from prefab's `AetherCircleCollider.Radius`. Server uses default.
-- **Wire protocol**: `InputCommand` up, `SnapshotPacket → WorldStatePacket → PlayerStateDto{X,Z,Yaw,Health,LastProcessedInputSeq}` down
+- **Wire protocol**: `InputCommand` up, `SnapshotPacket → WorldStatePacket → PlayerStateDto{X,Z,Yaw,Health,LastProcessedInputSeq,IsInvulnerable}` down
 - **AetherNet.Shared**: `AetherNet.Shared.dll` (netstandard2.0, C# 10) committed in `Assets/Packages/AetherNet.Shared.0.1.0/`. Uses pre-built DLL — Unity can't compile C# 10 file-scoped namespaces.
 - **AetherNet.Unity**: Source-only package copied to `Assets/Packages/AetherNet.Unity/` by `setup-aethernet.ps1`. These files ARE C# 9 compatible (block-scoped namespaces). Has Runtime + Editor asmdefs. `AetherSceneBaker.cs` excluded (depends on `AetherNet.Server`).
 - **AetherNet.Unity asmdefs**: `AetherNet.Unity` (Runtime, unsafe, precompiled refs: AetherNet.Shared.dll + Aether.Physics2D.dll) and `AetherNet.Unity.Editor` (Editor-only, refs AetherNet.Unity)
@@ -91,11 +91,12 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Server**: `ServerMapStore` singleton loads `Maps/Data/*.json` (System.Text.Json). `AetherServerSimulation.LoadMap()` + spawn via `SpawnResolver`
 - **Client**: `MapDefinition` SO (mapId, displayName, TextAsset json, visual prefab) + `MapRegistry` SO (`SerializedDictionary<string, MapDefinition>`)
 - **Client deserialization**: `MapDataDeserializer` uses Newtonsoft.Json (not System.Text.Json — netstandard2.1)
-- **Wire protocol**: `MapId` field on `MatchConfig` (Key 4), `MatchProvision` (Key 5), `JoinResult` (Key 7) — default `"arena_basic"`
+- **Wire protocol**: `MapId` field on `MatchConfig` (Key 4), `MatchProvision` (Key 5), `JoinResult` (Key 7) — default `"arena_tdm"`
 - **Baker**: `ClashUpMapBaker` editor tool ("ClashUp/Bake Map to JSON") — scans `AetherRigidbody` + `SpawnPointMarker` components
 - **Visual prefab**: Instantiated by `MatchSessionRunner.LoadMap()`, destroyed on Dispose. NO Unity colliders — physics is AetherNet only
 - **Materials**: `Assets/Core/Match/Content/Maps/Materials/` — WallGray, GroundGreen, SpawnZone (transparent)
-- **First map**: "arena_basic" — 40×30 arena, 11 wall entities, 2 spawn areas (team 0 at x=-16, team 1 at x=16)
+- **Maps**: `arena_basic` (40×30 landscape, legacy), `arena_tdm` (50×80 portrait, current default) — 24 entities, teams at Z=±35
+- **Map JSON location**: server `src/Server/ClashUp.GameServer/Maps/Data/` + client `Assets/Core/Match/Content/Maps/` — must keep both in sync
 
 ## Important Conventions
 - Central package management via `Directory.Packages.props`
@@ -159,3 +160,4 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - [monday-api.md](monday-api.md) — Monday.com API integration, board IDs, column gotchas
 - [mvp1-architecture.md](mvp1-architecture.md) — YARP gateway, session cache, write-behind persistence, version routing
 - [feedback-no-singletons.md](feedback-no-singletons.md) — Use DI-registered services, not singleton pattern
+- [feedback-ticket-status.md](feedback-ticket-status.md) — Never mark tickets Done without user confirmation it's working
