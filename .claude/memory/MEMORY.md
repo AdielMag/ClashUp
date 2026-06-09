@@ -156,3 +156,6 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - [feedback-scope-narrowing.md](feedback-scope-narrowing.md) — Start with minimum fields, ask before over-designing
 - [feedback-reread-before-edit.md](feedback-reread-before-edit.md) — Always re-read files before editing after plan phase
 - [netcode-architecture.md](netcode-architecture.md) — Gambetta netcode: prediction, reconciliation, entity interpolation
+- [monday-api.md](monday-api.md) — Monday.com API integration, board IDs, column gotchas
+- [mvp1-architecture.md](mvp1-architecture.md) — YARP gateway, session cache, write-behind persistence, version routing
+- [feedback-no-singletons.md](feedback-no-singletons.md) — Use DI-registered services, not singleton pattern
