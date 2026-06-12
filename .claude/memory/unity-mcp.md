@@ -86,6 +86,27 @@ AssetDatabase.SaveAssets();
 - **RectTransform**: use property names (`anchoredPosition`, `sizeDelta`, `anchorMin`, `anchorMax`, `pivot`), NOT serialized field names with `m_` prefix — `m_AnchoredPosition` etc. will 404 with "field not found"
 - **Image fill**: `type: "Filled"`, `fillMethod: "Horizontal"`, `fillAmount: 1.0` are all properties, not fields
 
+## Setting Cross-Object Unity Object References (SerializedField pointing to another GameObject/Component)
+
+`gameobject-component-modify` **cannot reliably persist** Unity Object cross-references (e.g. a `[SerializeField] CinemachineCamera _vcam` on Scope A pointing to a component on a different scene GameObject B). The tool reports success but the value stays null after save/reload.
+
+**Fix**: Use `script-execute` with reflection + `EditorUtility.SetDirty`:
+```csharp
+var holder = GameObject.Find("HolderObjectName");
+var comp = holder.GetComponent<My.Namespace.MyComponent>();
+var target = GameObject.Find("TargetObjectName").GetComponent<TargetType>();
+var field = typeof(My.Namespace.MyComponent).GetField("_fieldName",
+    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+field.SetValue(comp, target);
+UnityEditor.EditorUtility.SetDirty(comp);
+```
+Then call `scene-save`. Always verify with a follow-up script-execute that reads the field back.
+
+## Cinemachine BindingMode Enum Values
+- `WorldSpace` = **4** (NOT 0)
+- `LockToTargetOnAssign` = 0
+- When setting via `pathPatches`, use the integer value: `{"typeName": "Unity.Cinemachine.TargetTracking.BindingMode", "value": 4}`
+
 ## When to Use MCP vs Editor Scripts
 - **MCP first**: For one-time setup tasks (creating scenes, modifying build settings, adding components)
 - **Editor scripts**: Only when the setup needs to be repeatable by other team members without MCP

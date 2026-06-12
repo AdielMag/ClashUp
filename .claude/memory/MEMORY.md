@@ -34,6 +34,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - `com.unity.inputsystem`: 1.19.0 — use `Keyboard.current`, `Touchscreen.current`, `Mouse.current` for raw polling
 - Player Settings → Active Input Handling: must be **"Both"** for new Input System + legacy UGUI to coexist
 - `ClashUp.Gameplay.asmdef` references: `Unity.Cinemachine`, `Unity.InputSystem`, `AetherNet.Unity`, `Unity.TextMeshPro`; precompiledReferences includes `AetherNet.Shared.dll`
+- `ClashUp.Match.asmdef` references: `Unity.Cinemachine` (added for MatchLifetimeScope vcam serialized field)
 
 ## Server Package Versions (Directory.Packages.props)
 - MagicOnion: 7.10.0 (7.10.1 does NOT exist on NuGet)
@@ -118,6 +119,13 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - Doesn't want manual rebuild steps — automate everything (e.g. `pull_policy: build` in docker-compose)
 - Prefers quick iterative fixes over lengthy exploration/planning when the problem is clear
 - **Fix vendored packages at the source** — never create project-side workarounds for issues in vendored packages (AetherNet, etc.). Fix the package itself so it works correctly.
+
+## Match Camera Architecture
+- **MatchCamera** and **MatchVirtualCamera** are scene objects in `Match.unity` (NOT created via code)
+- `MatchCamera`: Camera + CinemachineBrain + CameraRegistrant (`IsMatchCamera=true`, tag=MainCamera)
+- `MatchVirtualCamera`: CinemachineCamera + CinemachineFollow (offset `(0, 32.5, -32.8)`, WorldSpace binding, 0.15 damping, FOV=35, rotation X=46.1)
+- `MatchCameraRig` (VContainer `ITickable`) receives `CinemachineCamera` via DI, polls `PlayerViewSystem.LocalPlayerTransform` each tick, sets `_vcam.Follow` once player spawns
+- `MatchLifetimeScope` has `[SerializeField] CinemachineCamera _virtualCamera` — must be wired to scene vcam
 
 ## Boot Flow Architecture
 - **UniTask + VContainer** are core client frameworks (async + DI)
