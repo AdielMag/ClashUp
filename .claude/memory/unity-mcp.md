@@ -83,6 +83,8 @@ AssetDatabase.SaveAssets();
 - For Unity object references: `{"typeName": "FullTypeName", "value": {"instanceID": N}}`
 - For enums: `{"typeName": "Full.Enum.Type", "value": "EnumValueName"}`
 - For Vector2: use `fields` array with `x`/`y` sub-members
+- **RectTransform**: use property names (`anchoredPosition`, `sizeDelta`, `anchorMin`, `anchorMax`, `pivot`), NOT serialized field names with `m_` prefix — `m_AnchoredPosition` etc. will 404 with "field not found"
+- **Image fill**: `type: "Filled"`, `fillMethod: "Horizontal"`, `fillAmount: 1.0` are all properties, not fields
 
 ## When to Use MCP vs Editor Scripts
 - **MCP first**: For one-time setup tasks (creating scenes, modifying build settings, adding components)

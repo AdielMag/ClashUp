@@ -83,7 +83,8 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Random seed**: `DeterministicRng` (Xorshift32) in Shared. Per-tick re-seeding via `ForTick(baseSeed, tick)` to avoid drift. Seed generated server-side, sent in `JoinResult.RandomSeed` (Key 6).
 - **PlayerSummary.CharacterId** (Key 4) — sent on join
 - **PlayerRenderState**: has `Health`, `MaxHealth`, and `Prev{X,Z,Yaw}` fields. Local player synced from `HealthTable` in `SyncRenderStates()`; remote health comes from `RemotePlayerInterpolator`.
-- **No combat yet**: HealthTable API exists but nothing deals damage. Infrastructure only.
+- **No combat yet**: HealthTable API exists but nothing deals damage. Health bar UI renders health (full bars until damage is added).
+- **Health bar UI**: `WorldSpaceHealthBar.cs` in `Core/Gameplay/Scripts/UI/` — world-space filled Image under Player.prefab's NameLabel Canvas. `PlayerViewSystem` caches per-player reference and calls `SetHealth(current, max)` each frame.
 
 ## Map System
 - **Shared POCOs**: `MapData`, `BakedEntityDef`, `BakedFixtureDef`, `SpawnArea` in `ClashUp.Shared/Maps/`
