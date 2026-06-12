@@ -100,6 +100,21 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Maps**: `arena_basic` (40×30 landscape, legacy), `arena_tdm` (50×80 portrait, current default) — 24 entities, teams at Z=±35
 - **Map JSON location**: server `src/Server/ClashUp.GameServer/Maps/Data/` + client `Assets/Core/Match/Content/Maps/` — must keep both in sync
 
+## Ability System
+- **Shared POCOs**: `AbilityDefinition`, `AbilityNode`, `HitboxConfig`, `ProjectileConfig`, `TelegraphConfig` in `ClashUp.Shared/Abilities/`
+- **Node types**: `Parallel=0, Hitbox=1, Projectile=2` (string enum in JSON — never integer, fragile on reorder)
+- **Sequential chaining**: via `AbilityNode.Next` linked-list; root's output connects to first node, "Next" port chains the rest
+- **Parallel execution**: Parallel node's `Children[]` — all run simultaneously, `Next` runs after all finish
+- **No Sequence node**: sequential chaining is implicit via Next ports — Sequence node was removed
+- **Wire protocol**: abilities NOT sent over wire; loaded from JSON at match start by both client and server
+- **Server**: `ServerAbilityStore` loads `Abilities/Data/*.json`; `AbilityExecutor` (per-match) processes input and ticks nodes
+- **Executor**: `ActiveAbility.Flatten()` builds flat node array; `EvaluateChain()` follows `Next` pointers; `EvaluateParallel()` uses `Children[]`
+- **Telegraph shapes**: `CircleAroundCaster`, `TargetCircle`, `ForwardLine`, `ForwardCone` — direction always follows `AimYaw`
+- **Editor tool**: `Tools → Ability Editor` (UIToolkit GraphView, `ClashUp.AbilityEditor.asmdef`). Save to BOTH server and client paths.
+- **JSON serialization**: `JsonStringEnumConverter` (server, System.Text.Json) + `StringEnumConverter` (editor, Newtonsoft) — MUST use string enums
+- **Wiring**: `CharacterDefinition.Abilities AbilityId[]` in `CharacterRegistry.cs`; server calls `AbilityExecutor.InitPlayer` on player spawn
+- See [ability-authoring.md](ability-authoring.md) for full schema and examples
+
 ## Important Conventions
 - Central package management via `Directory.Packages.props`
 - Build output redirected to `.artifacts/` to avoid polluting Unity's local package import
@@ -170,3 +185,4 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - [mvp1-architecture.md](mvp1-architecture.md) — YARP gateway, session cache, write-behind persistence, version routing
 - [feedback-no-singletons.md](feedback-no-singletons.md) — Use DI-registered services, not singleton pattern
 - [feedback-ticket-status.md](feedback-ticket-status.md) — Never mark tickets Done without user confirmation it's working
+- [ability-authoring.md](ability-authoring.md) — How to create ability JSON files: editor tool, schema, node types, wiring to characters

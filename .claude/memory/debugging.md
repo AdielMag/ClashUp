@@ -1,5 +1,28 @@
 # Debugging & Common Pitfalls
 
+## UIToolkit GraphView — StretchToParentSize Covers Siblings
+
+**Symptom**: Toolbar added before a `GraphView` is invisible — covered by the graph.
+
+**Root cause**: `graphView.StretchToParentSize()` applies `position: absolute; left:0; right:0; top:0; bottom:0` which overlays the entire parent, including any earlier siblings (like a Toolbar).
+
+**Fix**: Use `flexGrow = 1` on the graph inside a `flexDirection = Column` root, OR keep it absolute but wrap it in a container that is itself a flex child:
+```csharp
+rootVisualElement.style.flexDirection = FlexDirection.Column;
+var toolbar = new Toolbar(); // added first → renders at top
+rootVisualElement.Add(toolbar);
+var container = new VisualElement();
+container.style.flexGrow = 1;
+container.style.position = Position.Relative;
+rootVisualElement.Add(container);
+_graphView.style.position = Position.Absolute;
+_graphView.style.left = 0; _graphView.style.right = 0;
+_graphView.style.top = 0; _graphView.style.bottom = 0;
+container.Add(_graphView);
+```
+
+**Rule**: Never call `StretchToParentSize()` on a GraphView that has siblings — use the absolute-inside-flex-container pattern instead.
+
 ## Where to Check Errors — Always Ask First
 
 Before pulling logs, confirm which context the error is in:

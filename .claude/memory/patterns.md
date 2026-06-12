@@ -1,5 +1,27 @@
 # Code Patterns & Conventions
 
+## JSON Enum Serialization — Always Use Strings
+
+Integer-based enum values in JSON are fragile: any insertion, deletion, or reordering of enum members silently shifts all downstream int values, corrupting existing JSON files.
+
+**Rule**: All enums serialized to disk (ability JSON, map JSON, config files) must use string enum converters on BOTH the server and the Unity editor:
+
+```csharp
+// Server (System.Text.Json) — in ServerAbilityStore, ServerMapStore, etc.
+var opts = new JsonSerializerOptions
+{
+    Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+};
+
+// Editor (Newtonsoft.Json) — in AbilityGraphSerializer, map baker, etc.
+var settings = new JsonSerializerSettings
+{
+    Converters = { new Newtonsoft.Json.Converters.StringEnumConverter() },
+};
+```
+
+**Why**: We hit this when removing `Sequence` from `AbilityNodeType`. Old int `2` = Hitbox; new int `2` = Projectile after the removal — all saved files broke silently.
+
 ## IDebugLogger (Logging Service)
 - **Interface**: `ClashUp.Client.Core.IDebugLogger` in `Core/Scripts/Interfaces/IDebugLogger.cs`
 - **Implementation**: `ClashUp.Client.Core.UnityDebugLogger` in `Core/Scripts/Services/UnityDebugLogger.cs`
