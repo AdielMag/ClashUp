@@ -113,6 +113,9 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Editor tool**: `Tools → Ability Editor` (UIToolkit GraphView, `ClashUp.AbilityEditor.asmdef`). Save to BOTH server and client paths.
 - **JSON serialization**: `JsonStringEnumConverter` (server, System.Text.Json) + `StringEnumConverter` (editor, Newtonsoft) — MUST use string enums
 - **Wiring**: `CharacterDefinition.Abilities AbilityId[]` in `CharacterRegistry.cs`; server calls `AbilityExecutor.InitPlayer` on player spawn
+- **AbilityVisualConfig**: one SO per ability (`CreateAssetMenu: ClashUp/Ability Visual Config`). Holds VFX prefabs, sounds, telegraph visuals. Connected in editor Root Node → GUID written to JSON as `VisualConfigGuid`.
+- **AbilityVisualRegistry**: SO (`ClashUp/Ability Visual Registry`) with `Entry[] { Guid, AbilityId, Config }`. `GetByGuid()`/`GetByAbilityId()` for lookups. Custom editor "Refresh GUIDs" button fills Guid strings from asset refs. `MatchLifetimeScope._abilityVisualRegistry` (was `_abilityVisualConfig` — inspector must be re-wired).
+- **AbilityVisualHandler**: injects `AbilityVisualRegistry`, resolves visuals by `GetByAbilityId` on `ability_cast` events.
 - See [ability-authoring.md](ability-authoring.md) for full schema and examples
 
 ## Important Conventions

@@ -16,8 +16,9 @@ Open **Tools → Ability Editor** in Unity. It provides a node graph with live v
 1. Click **New Ability** (or Load an existing one)
 2. Fill in the Root node: ID (snake_case), Display Name, Cooldown (seconds), Button (0–3)
 3. Configure Telegraph (see below)
-4. Right-click the graph to add nodes; connect Root **Out** → first node, then chain via each node's **Next** port
-5. Click **Save JSON** — save to BOTH locations (see File Locations below)
+4. Connect an `AbilityVisualConfig` asset in the **Visual Config** field on the Root node (optional — see Visual Config below)
+5. Right-click the graph to add nodes; connect Root **Out** → first node, then chain via each node's **Next** port
+6. Click **Save JSON** — save to BOTH locations (see File Locations below)
 
 The editor reads/writes seconds; tick conversion (×30) is handled automatically on save/load.
 
@@ -173,6 +174,30 @@ Root → Hitbox (instant) → Hitbox (delayed 0.2s):
   }
 }
 ```
+
+---
+
+## Visual Config
+
+Each ability can have an `AbilityVisualConfig` ScriptableObject that defines VFX prefabs, sounds, and telegraph visuals.
+
+### Creating a Visual Config
+
+1. In Project window: right-click → **Create → ClashUp → Ability Visual Config**
+2. Fill in fields: `CastVfxPrefab`, `HitVfxPrefab`, `ProjectilePrefab`, `CastSound`, `HitSound`, `Telegraph` (material + color)
+3. In Ability Editor: drag the asset into the **Visual Config** field on the Root node
+4. Save JSON — the GUID of the asset is written to `VisualConfigGuid` in the JSON
+
+### Registering in AbilityVisualRegistry
+
+The `AbilityVisualRegistry` SO (in `Assets/Core/Gameplay/Art/Config/`) connects GUIDs to Unity references for runtime lookup.
+
+1. Open the registry asset in the Inspector
+2. Add an entry: set **Config** to the `AbilityVisualConfig` asset, set **Ability Id** to match the ability's ID (e.g. `brawler_punch`)
+3. Click **Refresh GUIDs from References** — fills the Guid string automatically
+4. Save
+
+At runtime, `AbilityVisualHandler` calls `registry.GetByAbilityId(abilityId)` on `ability_cast` events.
 
 ---
 
