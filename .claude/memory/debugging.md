@@ -447,6 +447,21 @@ PrefabUtility.UnloadPrefabContents(prefab);
 
 **Key insight**: Tailscale only works for the initial Services connection (client chooses the URL). The GameServer URL comes from the server's `PublicEndpoint` config, which is always `localhost:5101` in Docker. So Tailscale environment + Docker = broken GameServer connection for emulators.
 
+## VContainer LifetimeScope Missing from Rebuilt Scene
+
+**Symptom**: Play button clicks (or any scene-level interaction) do nothing. No error shown. VContainer entry points are never called.
+
+**Root cause**: When a Unity scene is rebuilt from scratch via an editor script, the `LifetimeScope` subclass GameObject must be explicitly included. Without it, VContainer never creates the scope, `RegisterEntryPoint<T>()` never fires, and `StartAsync` / event wiring never happens — completely silent failure.
+
+**Example**: Lobby scene rebuilt via script didn't include `LobbyLifetimeScope`. `LobbyEntryPoint.StartAsync` never ran, so nobody subscribed to `MathmakingPage.OnPlayClicked`, so clicking PLAY did nothing.
+
+**Fix**: Ensure every additively-loaded scene has its `LifetimeScope` subclass as a root GameObject with `autoRun: 1` and empty `parentReference.TypeName`. When adding via YAML edit:
+- Use `Transform` (type 4), NOT `RectTransform`
+- Add Transform fileID to `SceneRoots.m_Roots`
+- Use `autoRun: 1` so the scope builds automatically at scene load
+
+**Check**: When a scene has entry points / DI, always verify its LifetimeScope subclass is in the scene hierarchy before debugging event flow.
+
 ## SessionResetHandler — Skip Reset on Boot Scene
 
 **Symptom**: `SessionResetHandler` shows the reset popup even when the app is already on the AppStarter scene (nothing to reset).

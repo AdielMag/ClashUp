@@ -75,10 +75,13 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Fixes to AetherNet**: must be generic/non-specific (upstreamable). Key fixes: `Directory.Packages.props` CPM opt-out, `SimulationPlane` enum, configurable `PixelsPerMeter`, `#nullable enable` on Unity files, `using` aliases for type ambiguities (RaycastHit, Vector2)
 
 ## Character / Stat / Health System
-- **Characters**: `CharacterId` (string struct like PlayerId), `CharacterDefinition`, `CharacterRegistry` (static, in `ClashUp.Shared/Characters/`)
-- **Stats**: `StatBlock` — `MaxHealth` (100), `Damage` (10), `MoveSpeed` (5). Plain C# class, not MessagePack (static config, not networked)
+- **Characters**: `CharacterId` (string struct like PlayerId), `CharacterDefinition`, `CharacterCatalog` (instance, in `ClashUp.Shared/Characters/`)
+- **`CharacterRegistry` DELETED** — replaced by `CharacterCatalog` (instance initialized from `CharactersConfig`) + `CharactersConfig` (MessagePack, sent over the wire)
+- **`CharactersConfig`**: MessagePack object in `ClashUp.Shared/MessagePackObjects/` — `DefaultCharacterId` + `Characters[]`. Has static `Default` (Brawler). DB key: `characters:registry`, fetched by `CharacterConfigProvider` (60s cache) on Services side, sent in `MatchProvision.Characters` (Key 7) and `JoinResult.Characters`
+- **`CharacterCatalog`**: instance class, `Get(CharacterId)` falls back to `Default` on unknown id. Both server (`MatchCharactersHolder`) and client (`MatchCharactersHolder` in Gameplay) hold one, initialized from the wire config.
+- **Stats**: `StatBlock` — `MaxHealth` (100), `Damage` (10), `MoveSpeed` (5). Now MessagePack-annotated (sent inside `CharactersConfig`).
 - **Per-player move speed**: `MatchPhysicsWorld.EnsurePlayer` accepts `moveSpeed` param, stores per-player speeds. `MovementModel.Step` also accepts optional `moveSpeed` param.
-- **Default character**: "Brawler" via `CharacterRegistry.Default`. Single character for now, everyone gets the same.
+- **Default character**: "Brawler". `CharactersConfig.Default` is the hardcoded fallback used when DB has no config.
 - **Health**: `HealthTable` in `ClashUp.Shared/Simulation/` — `Initialize`, `ApplyDamage`, `ApplyHeal`, `SnapHealth`. Owned by both `AetherServerSimulation` and `AetherClientSimulation`.
 - **Health in snapshots**: `PlayerStateDto.Health` (Key 4) — sent every tick, client reconciles against it
 - **Random seed**: `DeterministicRng` (Xorshift32) in Shared. Per-tick re-seeding via `ForTick(baseSeed, tick)` to avoid drift. Seed generated server-side, sent in `JoinResult.RandomSeed` (Key 6).
@@ -93,7 +96,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Server**: `ServerMapStore` singleton loads `Maps/Data/*.json` (System.Text.Json). `AetherServerSimulation.LoadMap()` + spawn via `SpawnResolver`
 - **Client**: `MapDefinition` SO (mapId, displayName, TextAsset json, visual prefab) + `MapRegistry` SO (`SerializedDictionary<string, MapDefinition>`)
 - **Client deserialization**: `MapDataDeserializer` uses Newtonsoft.Json (not System.Text.Json — netstandard2.1)
-- **Wire protocol**: `MapId` field on `MatchConfig` (Key 4), `MatchProvision` (Key 5), `JoinResult` (Key 7) — default `"arena_tdm"`
+- **Wire protocol**: `MapId` field on `MatchConfig` (Key 4), `MatchProvision` (Key 5), `JoinResult` (Key 7) — default `"arena_tdm"`. `MatchProvision` also carries `PlayerAssignments` (Key 6, `PlayerId→TeamId` list pre-assigned by `Matchmaker`) and `Characters` (Key 7, `CharactersConfig`)
 - **Baker**: `ClashUpMapBaker` editor tool ("ClashUp/Bake Map to JSON") — scans `AetherRigidbody` + `SpawnPointMarker` components
 - **Visual prefab**: Instantiated by `MatchSessionRunner.LoadMap()`, destroyed on Dispose. NO Unity colliders — physics is AetherNet only
 - **Materials**: `Assets/Core/Match/Content/Maps/Materials/` — WallGray, GroundGreen, SpawnZone (transparent)
@@ -112,7 +115,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Telegraph shapes**: `CircleAroundCaster`, `TargetCircle`, `ForwardLine`, `ForwardCone` — direction always follows `AimYaw`
 - **Editor tool**: `Tools → Ability Editor` (UIToolkit GraphView, `ClashUp.AbilityEditor.asmdef`). Save to BOTH server and client paths.
 - **JSON serialization**: `JsonStringEnumConverter` (server, System.Text.Json) + `StringEnumConverter` (editor, Newtonsoft) — MUST use string enums
-- **Wiring**: `CharacterDefinition.Abilities AbilityId[]` in `CharacterRegistry.cs`; server calls `AbilityExecutor.InitPlayer` on player spawn
+- **Wiring**: `CharacterDefinition.Abilities AbilityId[]` — defined in `CharactersConfig` (DB or static default). `AetherServerSimulation.EnsurePlayer` calls `AbilityExecutor.InitPlayer` with the character's ability list on first spawn. `_knownPlayers` hashset prevents double-init on reconnect.
 - **AbilityVisualConfig**: one SO per ability (`CreateAssetMenu: ClashUp/Ability Visual Config`). Holds VFX prefabs, sounds, telegraph visuals. Connected in editor Root Node → GUID written to JSON as `VisualConfigGuid`.
 - **AbilityVisualRegistry**: SO (`ClashUp/Ability Visual Registry`) with `Entry[] { Guid, AbilityId, Config }`. `GetByGuid()`/`GetByAbilityId()` for lookups. Custom editor "Refresh GUIDs" button fills Guid strings from asset refs. `MatchLifetimeScope._abilityVisualRegistry` (was `_abilityVisualConfig` — inspector must be re-wired).
 - **AbilityVisualHandler**: injects `AbilityVisualRegistry`, resolves visuals by `GetByAbilityId` on `ability_cast` events.
@@ -149,7 +152,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **UniTask + VContainer** are core client frameworks (async + DI)
 - **Scene loading**: `ISceneLoader` / `UniTaskSceneLoader` — additive load/unload via UniTask
 - **Loading screen**: `LoadingScreenPresenter` in `PersistentUI` scene (Core/UI) — not DI-registered, found via `FindAnyObjectByType` after scene load
-- **Lobby**: child scope of AppStarter via `LifetimeScope.EnqueueParent`
+- **Lobby**: child scope of AppStarter via `LifetimeScope.EnqueueParent`. `LobbyLifetimeScope` must exist as a root GameObject in `Lobby.unity` (Transform + `autoRun:1`) — without it, `LobbyEntryPoint` is never created and play button does nothing. See [lobby-ui.md](lobby-ui.md).
 - **Environment picker**: prefab-based TMP UI loaded via `Resources.Load`, `#if CLASHUP_DEV || UNITY_EDITOR`
 - **Environments**: Local (`localhost:5001`), Tailscale (`100.68.118.109:5001`), Dev (remote). Tailscale for phone→local-server testing. Emulator uses `adb reverse` + Local.
 - **Critical**: Server ping must block & retry — never proceed to lobby on failure
@@ -189,3 +192,4 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - [feedback-no-singletons.md](feedback-no-singletons.md) — Use DI-registered services, not singleton pattern
 - [feedback-ticket-status.md](feedback-ticket-status.md) — Never mark tickets Done without user confirmation it's working
 - [ability-authoring.md](ability-authoring.md) — How to create ability JSON files: editor tool, schema, node types, wiring to characters
+- [lobby-ui.md](lobby-ui.md) — Lobby pager UI: horizontal scroll, vertical per-page scroll, bottom bar, play button wiring, VContainer scope
