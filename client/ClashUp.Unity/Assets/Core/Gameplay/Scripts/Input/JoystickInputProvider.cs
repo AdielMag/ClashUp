@@ -9,12 +9,13 @@ namespace ClashUp.Client.Gameplay
 {
     public sealed class JoystickInputProvider : IMovementInput, IStartable, IDisposable
     {
-        // Touch zone: bottom 45% of screen, full width
+        // Touch zone: bottom 45% of screen, LEFT half only (right half reserved for ability button)
         private static readonly Vector2 ZoneAnchorMin = new Vector2(0f, 0f);
-        private static readonly Vector2 ZoneAnchorMax = new Vector2(1f, 0.45f);
+        private static readonly Vector2 ZoneAnchorMax = new Vector2(0.5f, 0.45f);
 
         private const float BackgroundRadius = 240f;
         private const float HandleRadius    = 160f;
+
 
         private readonly MatchInputGate _gate;
 
@@ -120,7 +121,12 @@ namespace ClashUp.Client.Gameplay
             zoneRect.offsetMax = Vector2.zero;
 
             var joystick = zoneGo.AddComponent<Joystick>();
-            joystick.Initialize(zoneRect, bgRect, handleRect, BackgroundRadius);
+            var canvasRect = (RectTransform)canvas.transform;
+            float w = canvasRect.rect.width;
+            float h = canvasRect.rect.height;
+            // 50% from left edge, 20% from bottom edge — percentage-based for any aspect ratio
+            var defaultPos = new Vector2(0f, -h * 0.30f);
+            joystick.Initialize(zoneRect, bgRect, handleRect, BackgroundRadius, defaultPos);
             return joystick;
         }
 

@@ -4,6 +4,7 @@
     "references": [
         "ClashUp.Core",
         "ClashUp.Shared",
+        "ClashUp.Networking",
         "AetherNet.Unity",
         "UniTask",
         "VContainer",

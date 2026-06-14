@@ -7,7 +7,7 @@ namespace ClashUp.Shared.Characters
     public readonly struct CharacterId : IEquatable<CharacterId>
     {
         [Key(0)]
-        public string Value { get; }
+        public string Value { get; init; }
 
         public CharacterId(string value) => Value = value;
 

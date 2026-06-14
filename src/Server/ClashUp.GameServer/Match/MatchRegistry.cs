@@ -38,6 +38,8 @@ public sealed class MatchRegistry : IMatchRegistry, IDisposable
     {
         var scope = _scopeFactory.CreateScope();
         var context = new MatchContext(provision, scope);
+        scope.ServiceProvider.GetRequiredService<MatchCharactersHolder>()
+            .Initialize(provision.Characters);
         if (!_matches.TryAdd(provision.MatchId, context))
         {
             scope.Dispose();

@@ -11,6 +11,7 @@ namespace ClashUp.Client.Match
     public sealed class LocalInputPublisher : ITickable
     {
         private readonly IMovementInput _input;
+        private readonly IAbilityInput _abilityInput;
         private readonly MatchInputGate _gate;
         private readonly ClientPredictionWorld _prediction;
         private readonly MatchSession _session;
@@ -23,11 +24,13 @@ namespace ClashUp.Client.Match
 
         public LocalInputPublisher(
             IMovementInput input,
+            IAbilityInput abilityInput,
             MatchInputGate gate,
             ClientPredictionWorld prediction,
             MatchSession session)
         {
             _input = input;
+            _abilityInput = abilityInput;
             _gate = gate;
             _prediction = prediction;
             _session = session;
@@ -44,10 +47,9 @@ namespace ClashUp.Client.Match
         {
             if (!_started || !_gate.IsEnabled) return;
 
-            // Process any snapshots that arrived since last frame BEFORE accumulating
-            // time or computing alpha. This ensures PrevX/X and RenderAlpha are always
-            // consistent — no mid-frame corruption from MagicOnion callback timing.
             _prediction.ProcessPendingSnapshots();
+
+            _abilityInput.Poll();
 
             _accumulator += Time.deltaTime;
             while (_accumulator >= _tickInterval)
@@ -65,14 +67,21 @@ namespace ClashUp.Client.Match
             _sequenceId++;
 
             var dir = _input.Value;
+            uint buttonMask = _abilityInput.ButtonMask;
+            float aimYaw = _abilityInput.AimYaw;
+
             var cmd = new InputCommand
             {
                 Tick = _tick,
                 ClientSendStampMs = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 MoveX = MovementModel.EncodeAxis(dir.x),
                 MoveY = MovementModel.EncodeAxis(dir.y),
+                ButtonMask = buttonMask,
+                AimYawQ = MovementModel.EncodeAxis(aimYaw / 180f),
                 SequenceId = _sequenceId,
             };
+
+            _abilityInput.ConsumeInput();
 
             _prediction.Predict(cmd);
             _session.SubmitInputAsync(cmd).Forget();

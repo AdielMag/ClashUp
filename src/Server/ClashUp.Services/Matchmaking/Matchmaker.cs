@@ -21,6 +21,7 @@ public sealed class Matchmaker : BackgroundService
     private readonly GameServerAdminClientFactory _adminClients;
     private readonly IJwtTokenIssuer _tokens;
     private readonly MatchConfigProvider _configProvider;
+    private readonly CharacterConfigProvider _characterConfigProvider;
     private readonly MatchmakingOptions _options;
     private readonly ILogger<Matchmaker> _logger;
 
@@ -32,6 +33,7 @@ public sealed class Matchmaker : BackgroundService
         GameServerAdminClientFactory adminClients,
         IJwtTokenIssuer tokens,
         MatchConfigProvider configProvider,
+        CharacterConfigProvider characterConfigProvider,
         IOptions<MatchmakingOptions> options,
         ILogger<Matchmaker> logger)
     {
@@ -42,6 +44,7 @@ public sealed class Matchmaker : BackgroundService
         _adminClients = adminClients;
         _tokens = tokens;
         _configProvider = configProvider;
+        _characterConfigProvider = characterConfigProvider;
         _options = options.Value;
         _logger = logger;
     }
@@ -67,6 +70,7 @@ public sealed class Matchmaker : BackgroundService
     {
         var modeId = "default";
         var config = await _configProvider.GetAsync(modeId, ct);
+        var characters = await _characterConfigProvider.GetAsync(ct);
         var matchSize = config.NumberOfTeams * config.TeamSize;
 
         var batch = _queue.TryDrain(matchSize);
@@ -105,6 +109,12 @@ public sealed class Matchmaker : BackgroundService
             TickRateHz = _options.DefaultTickRateHz,
             DurationSeconds = config.DurationSeconds,
             MapId = config.MapId,
+            PlayerAssignments = batch.Select((b, i) => new PlayerAssignment
+            {
+                PlayerId = new PlayerId(b.PlayerId),
+                TeamId = i % config.NumberOfTeams,
+            }).ToList(),
+            Characters = characters,
         };
 
         try

@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Content Update="Maps\Data\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Update="Abilities\Data\ability_*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Import Project="..\..\..\AetherNet.refs.props" />

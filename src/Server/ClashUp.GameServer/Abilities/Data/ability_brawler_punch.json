@@ -1,0 +1,29 @@
+{
+  "Id": { "Value": "brawler_punch" },
+  "DisplayName": "Punch",
+  "CooldownTicks": 30,
+  "ButtonIndex": 0,
+  "TriggerMode": "Auto",
+  "AutoRange": 2.5,
+  "Telegraph": {
+    "Shape": "CircleAroundCaster",
+    "Radius": 1.5,
+    "Length": 0.0,
+    "Angle": 0.0,
+    "ShowDurationTicks": 0
+  },
+  "RootNode": {
+    "Type": "Hitbox",
+    "DelayTicks": 0,
+    "Hitbox": {
+      "Effect": "Damage",
+      "Amount": 10.0,
+      "Radius": 1.5,
+      "OffsetForward": 1.0,
+      "DurationTicks": 1,
+      "HitIntervalTicks": 0,
+      "HitSelf": false,
+      "HitAllies": false
+    }
+  }
+}

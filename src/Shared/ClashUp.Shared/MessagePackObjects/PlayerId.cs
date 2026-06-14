@@ -8,7 +8,7 @@ namespace ClashUp.Shared.MessagePackObjects
     public readonly struct PlayerId : IEquatable<PlayerId>
     {
         [Key(0)]
-        public string Value { get; }
+        public string Value { get; init; }
 
         public PlayerId(string value) => Value = value;
 

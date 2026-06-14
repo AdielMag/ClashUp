@@ -1,0 +1,29 @@
+{
+  "Id": { "Value": "brawler_charge" },
+  "DisplayName": "Charge",
+  "CooldownTicks": 90,
+  "ButtonIndex": 1,
+  "TriggerMode": "Manual",
+  "CastMode": "Aimed",
+  "Telegraph": {
+    "Shape": "ForwardLine",
+    "Radius": 1.0,
+    "Length": 2.5,
+    "Angle": 0.0,
+    "ShowDurationTicks": 0
+  },
+  "RootNode": {
+    "Type": "Hitbox",
+    "DelayTicks": 0,
+    "Hitbox": {
+      "Effect": "Damage",
+      "Amount": 20.0,
+      "Radius": 1.0,
+      "OffsetForward": 2.5,
+      "DurationTicks": 1,
+      "HitIntervalTicks": 0,
+      "HitSelf": false,
+      "HitAllies": false
+    }
+  }
+}

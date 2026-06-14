@@ -8,6 +8,7 @@ WORKDIR /src
 COPY global.json Directory.Build.props Directory.Packages.props AetherNet.refs.props ./
 COPY ClashUp.sln ./
 
+COPY libs/ libs/
 COPY src/Shared/ClashUp.Shared/*.csproj src/Shared/ClashUp.Shared/
 COPY src/Server/ClashUp.Server.Common/*.csproj src/Server/ClashUp.Server.Common/
 COPY src/Server/ClashUp.GameServer/*.csproj src/Server/ClashUp.GameServer/

@@ -23,5 +23,6 @@ namespace ClashUp.Shared.MessagePackObjects
         /// rest (server reconciliation). Zero for players that have not sent input yet.
         /// </summary>
         [Key(5)] public int LastProcessedInputSeq { get; init; }
+        [Key(6)] public bool IsInvulnerable { get; init; }
     }
 }

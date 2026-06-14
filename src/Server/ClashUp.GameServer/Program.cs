@@ -1,6 +1,7 @@
 using ClashUp.Server.Common.Auth;
 using ClashUp.Server.Common.Configuration;
 using ClashUp.Server.Common.Interceptors;
+using ClashUp.Server.GameServer.Abilities;
 using ClashUp.Server.GameServer.Maps;
 using ClashUp.Server.GameServer.Match;
 using ClashUp.Server.GameServer.Registration;
@@ -26,9 +27,11 @@ builder.Services
 builder.Services.AddSingleton<IJwtKeyProvider, JwtKeyProvider>();
 builder.Services.AddSingleton<IMatchTokenValidator, MatchTokenValidator>();
 builder.Services.AddSingleton<ServerMapStore>();
+builder.Services.AddSingleton<ServerAbilityStore>();
 builder.Services.AddSingleton<IMatchRegistry, MatchRegistry>();
 
 // Per-match scoped simulation pieces. Resolved via MatchContext's IServiceScope.
+builder.Services.AddScoped<MatchCharactersHolder>();
 builder.Services.AddScoped<IServerSimulation, AetherServerSimulation>();
 builder.Services.AddScoped<InputBuffer>();
 builder.Services.AddScoped<MatchClock>();

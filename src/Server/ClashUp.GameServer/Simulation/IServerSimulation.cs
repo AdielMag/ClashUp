@@ -1,3 +1,4 @@
+using ClashUp.Shared.Characters;
 using ClashUp.Shared.Maps;
 using ClashUp.Shared.MessagePackObjects;
 
@@ -11,11 +12,13 @@ public interface IServerSimulation : IDisposable
 
     void LoadMap(MapData mapData);
 
-    void EnsurePlayer(PlayerId player, int colorSlot, int teamId);
+    void EnsurePlayer(PlayerId player, int colorSlot, int teamId, CharacterId characterId);
 
     void ApplyInput(PlayerId player, InputCommand command);
 
     void Step(double deltaSeconds);
 
     ReadOnlyMemory<byte> EncodeDelta(int baselineTick);
+
+    IReadOnlyList<MatchEvent> DrainAbilityEvents();
 }

@@ -2,11 +2,12 @@
   <!--
     Automatic AetherNet.Shared reference switch.
     Local clone (external/AetherNet) → live ProjectReference so you can edit the source.
-    Clone absent (CI / fresh checkout without setup-aethernet.ps1) → NuGet release.
-    Run tools/setup-aethernet.ps1 once to create the clone.
+    Clone absent (Docker / CI) → committed DLL in libs/AetherNet.Shared/ (kept in sync with Unity's copy).
+    Run tools/setup-aethernet.ps1 once to create the clone for local dev.
   -->
   <PropertyGroup>
     <_AetherNetSharedSrc>$(MSBuildThisFileDirectory)external\AetherNet\src\AetherNet.Shared\AetherNet.Shared.csproj</_AetherNetSharedSrc>
+    <_AetherNetSharedDll>$(MSBuildThisFileDirectory)libs\AetherNet.Shared\AetherNet.Shared.dll</_AetherNetSharedDll>
   </PropertyGroup>
   <Choose>
     <When Condition="Exists('$(_AetherNetSharedSrc)')">
@@ -16,7 +17,14 @@
     </When>
     <Otherwise>
       <ItemGroup>
-        <PackageReference Include="AetherNet.Shared" />
+        <Reference Include="AetherNet.Shared">
+          <HintPath>$(_AetherNetSharedDll)</HintPath>
+          <Private>true</Private>
+        </Reference>
+        <Reference Include="Aether.Physics2D">
+          <HintPath>$(MSBuildThisFileDirectory)libs\AetherNet.Shared\Aether.Physics2D.dll</HintPath>
+          <Private>true</Private>
+        </Reference>
       </ItemGroup>
     </Otherwise>
   </Choose>

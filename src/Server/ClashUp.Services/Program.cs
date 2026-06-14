@@ -42,6 +42,7 @@ builder.Services.AddHostedService<IndexBootstrapper>();
 
 builder.Services.AddSingleton<IConfigRepository, ConfigRepository>();
 builder.Services.AddSingleton<MatchConfigProvider>();
+builder.Services.AddSingleton<CharacterConfigProvider>();
 builder.Services.AddHostedService<ConfigSeeder>();
 
 builder.Services.AddSingleton<MatchmakingQueue>();

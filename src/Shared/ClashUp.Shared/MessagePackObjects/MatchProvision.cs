@@ -14,7 +14,16 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(2)] public string ModeId { get; init; } = "default";
         [Key(3)] public int TickRateHz { get; init; } = 30;
         [Key(4)] public int DurationSeconds { get; init; } = 20;
-        [Key(5)] public string MapId { get; init; } = "arena_basic";
+        [Key(5)] public string MapId { get; init; } = "arena_tdm";
+        [Key(6)] public IReadOnlyList<PlayerAssignment> PlayerAssignments { get; init; } = System.Array.Empty<PlayerAssignment>();
+        [Key(7)] public CharactersConfig Characters { get; init; } = CharactersConfig.Default;
+    }
+
+    [MessagePackObject]
+    public sealed class PlayerAssignment
+    {
+        [Key(0)] public PlayerId PlayerId { get; init; }
+        [Key(1)] public int TeamId { get; init; }
     }
 
     [MessagePackObject]

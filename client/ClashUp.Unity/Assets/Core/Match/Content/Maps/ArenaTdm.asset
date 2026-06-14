@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1c0e3007678ddb49a4d6fb12acb350c, type: 3}
+  m_Name: ArenaTdm
+  m_EditorClassIdentifier: 
+  _mapId: arena_tdm
+  _displayName: Arena TDM
+  _bakedMapJson: {fileID: 4900000, guid: 79e47b18a9fc5fb4798296d8c1fa3944, type: 3}
+  _visualPrefab: {fileID: 3916440430262371117, guid: 3c2575b93418c224393f0ee2898c324e, type: 3}

@@ -15,7 +15,9 @@ namespace ClashUp.Client.Gameplay
         private readonly ClientPredictionWorld _prediction;
         private readonly GameObject _playerPrefab;
         private readonly CharacterPrefabMap _characterMap;
+        private readonly MatchCharactersHolder _characters;
         private readonly Dictionary<string, GameObject> _views = new();
+        private readonly Dictionary<string, WorldSpaceHealthBar> _healthBars = new();
         private readonly Dictionary<string, CharacterId> _characterIds = new();
         private readonly Dictionary<string, string> _displayNames = new();
         private Vector3 _lastRenderedPos;
@@ -27,13 +29,15 @@ namespace ClashUp.Client.Gameplay
             RemotePlayerInterpolator interpolator,
             ClientPredictionWorld prediction,
             GameObject playerPrefab,
-            CharacterPrefabMap characterMap)
+            CharacterPrefabMap characterMap,
+            MatchCharactersHolder characters)
         {
             _sim = sim;
             _interpolator = interpolator;
             _prediction = prediction;
             _playerPrefab = playerPrefab;
             _characterMap = characterMap;
+            _characters = characters;
         }
 
         public void RegisterPlayer(PlayerSummary player)
@@ -46,9 +50,21 @@ namespace ClashUp.Client.Gameplay
         {
             if (_views.Remove(id.Value, out var go))
                 UnityEngine.Object.Destroy(go);
+            _healthBars.Remove(id.Value);
             _interpolator.Remove(id.Value);
             if (LocalPlayerTransform != null && id.Equals(_sim.LocalId))
                 LocalPlayerTransform = null;
+        }
+
+        public bool TryGetPosition(string playerId, out Vector3 pos)
+        {
+            if (_views.TryGetValue(playerId, out var go) && go != null)
+            {
+                pos = go.transform.position;
+                return true;
+            }
+            pos = default;
+            return false;
         }
 
         public void Tick()
@@ -68,6 +84,9 @@ namespace ClashUp.Client.Gameplay
                 var rot = Quaternion.Euler(0f, Mathf.LerpAngle(local.PrevYaw, local.Yaw, alpha), 0f);
                 go.transform.SetPositionAndRotation(pos, rot);
 
+                if (_healthBars.TryGetValue(localId, out var localHb))
+                    localHb.SetHealth(local.Health, local.MaxHealth);
+
                 _lastRenderedPos = pos;
             }
 
@@ -75,9 +94,15 @@ namespace ClashUp.Client.Gameplay
             for (int i = 0; i < remoteIds.Count; i++)
             {
                 var id = remoteIds[i];
-                if (!_interpolator.TryGet(id, out var pos, out var yaw, out _)) continue;
+                if (!_interpolator.TryGet(id, out var pos, out var yaw, out var health)) continue;
                 var go = GetOrSpawn(id, isLocal: false);
                 go.transform.SetPositionAndRotation(pos, Quaternion.Euler(0f, yaw, 0f));
+
+                if (_healthBars.TryGetValue(id, out var remoteHb))
+                {
+                    var maxHealth = GetMaxHealth(id);
+                    remoteHb.SetHealth(health, maxHealth);
+                }
             }
         }
 
@@ -101,7 +126,7 @@ namespace ClashUp.Client.Gameplay
 
             var characterId = _characterIds.TryGetValue(playerId, out var cid)
                 ? cid
-                : CharacterRegistry.Default.Id;
+                : _characters.Catalog.DefaultId;
             var charPrefab = _characterMap.Get(characterId);
             var charGo = UnityEngine.Object.Instantiate(charPrefab, go.transform);
             charGo.transform.localPosition = Vector3.zero;
@@ -116,7 +141,19 @@ namespace ClashUp.Client.Gameplay
                 label.text = displayName;
             }
 
+            var healthBar = go.GetComponentInChildren<WorldSpaceHealthBar>();
+            if (healthBar != null)
+                _healthBars[playerId] = healthBar;
+
             return go;
+        }
+
+        private float GetMaxHealth(string playerId)
+        {
+            var characterId = _characterIds.TryGetValue(playerId, out var cid)
+                ? cid
+                : _characters.Catalog.DefaultId;
+            return _characters.Catalog.Get(characterId).BaseStats.MaxHealth;
         }
 
         public void Dispose()

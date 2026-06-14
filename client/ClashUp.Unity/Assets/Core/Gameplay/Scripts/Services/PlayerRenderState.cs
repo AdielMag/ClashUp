@@ -19,5 +19,6 @@ namespace ClashUp.Client.Gameplay
 
         public float Health;
         public float MaxHealth;
+        public bool IsInvulnerable;
     }
 }

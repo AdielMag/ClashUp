@@ -13,20 +13,44 @@ public sealed class ConfigSeeder : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        const string key = "match:default";
-        var existing = await _configs.GetByKeyAsync(key, cancellationToken);
+        await SeedIfMissingAsync(
+            "match:default",
+            """{"NumberOfTeams":1,"TeamSize":1,"DurationSeconds":20,"ObjectiveType":"survival","MapId":"arena_tdm"}""",
+            cancellationToken);
+
+        await SeedIfMissingAsync(
+            "characters:registry",
+            """
+            {
+              "DefaultCharacterId": "brawler",
+              "Characters": [
+                {
+                  "Id": { "Value": "brawler" },
+                  "DisplayName": "Brawler",
+                  "BaseStats": {
+                    "MaxHealth": 100,
+                    "Damage": 10,
+                    "MoveSpeed": 5
+                  },
+                  "AutoAttackId": { "Value": "brawler_punch" },
+                  "ActiveAbilityId": { "Value": "brawler_charge" }
+                }
+              ]
+            }
+            """,
+            cancellationToken);
+    }
+
+    private async Task SeedIfMissingAsync(string key, string value, CancellationToken ct)
+    {
+        var existing = await _configs.GetByKeyAsync(key, ct);
         if (existing is not null)
         {
             _logger.LogInformation("Config '{Key}' already exists, skipping seed", key);
             return;
         }
 
-        var doc = new ConfigDoc
-        {
-            Key = key,
-            Value = """{"NumberOfTeams":1,"TeamSize":1,"DurationSeconds":20,"ObjectiveType":"survival"}""",
-        };
-        await _configs.UpsertAsync(doc, cancellationToken);
+        await _configs.UpsertAsync(new ConfigDoc { Key = key, Value = value }, ct);
         _logger.LogInformation("Seeded config '{Key}'", key);
     }
 

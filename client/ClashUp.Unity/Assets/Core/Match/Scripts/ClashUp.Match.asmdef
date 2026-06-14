@@ -11,7 +11,8 @@
         "UniTask",
         "VContainer",
         "VContainer.Unity",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "Unity.Cinemachine"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

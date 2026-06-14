@@ -28,6 +28,7 @@ namespace ClashUp.Client.Match
         private readonly PlayerViewSystem _viewSystem;
         private readonly LocalInputPublisher _inputPublisher;
         private readonly MapRegistry _mapRegistry;
+        private readonly MatchCharactersHolder _characters;
 
         private MatchUI _matchUI;
         private GameObject _mapVisualInstance;
@@ -48,7 +49,8 @@ namespace ClashUp.Client.Match
             IClientSimulation sim,
             PlayerViewSystem viewSystem,
             LocalInputPublisher inputPublisher,
-            MapRegistry mapRegistry)
+            MapRegistry mapRegistry,
+            MatchCharactersHolder characters)
         {
             _log = log;
             _session = session;
@@ -60,6 +62,7 @@ namespace ClashUp.Client.Match
             _viewSystem = viewSystem;
             _inputPublisher = inputPublisher;
             _mapRegistry = mapRegistry;
+            _characters = characters;
         }
 
         public async UniTask StartAsync(CancellationToken cancellation)
@@ -82,6 +85,7 @@ namespace ClashUp.Client.Match
             try
             {
                 var join = await _session.ConnectAndJoinAsync(_handoff.Value, cancellation);
+                _characters.Initialize(join.Characters);
                 _durationSeconds = join.DurationSeconds;
                 _serverElapsedAtJoin = join.ElapsedSeconds;
                 _joinWallClock = DateTimeOffset.UtcNow;

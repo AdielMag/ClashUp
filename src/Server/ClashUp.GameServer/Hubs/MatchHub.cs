@@ -72,13 +72,15 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
         }
         else
         {
+            var assignment = context.Provision.PlayerAssignments
+                .FirstOrDefault(a => a.PlayerId.Value == _claims.PlayerId);
             summary = new PlayerSummary
             {
                 Id = new PlayerId(_claims.PlayerId),
                 DisplayName = $"Player-{_claims.PlayerId[..6]}",
-                TeamId = 0,
+                TeamId = assignment?.TeamId ?? 0,
                 ColorSlot = context.GetPlayers().Count,
-                CharacterId = CharacterRegistry.Default.Id,
+                CharacterId = CharacterCatalog.FromConfig(context.Provision.Characters).DefaultId,
             };
             context.AddPlayer(summary);
         }
@@ -100,6 +102,7 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
             ElapsedSeconds = context.Clock.ElapsedSeconds,
             RandomSeed = context.Simulation.RandomSeed,
             MapId = context.Provision.MapId,
+            Characters = context.Provision.Characters,
         };
     }
 

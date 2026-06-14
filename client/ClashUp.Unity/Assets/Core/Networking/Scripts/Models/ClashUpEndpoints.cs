@@ -10,6 +10,9 @@ namespace ClashUp.Client.Networking
         /// <summary>Resolved URL set by AppStarter after env picker, read by CoreStarter.</summary>
         public static string ResolvedServicesAddress { get; set; } = string.Empty;
 
+        /// <summary>Resolved environment set by AppStarter after env picker.</summary>
+        public static ServerEnvironment ResolvedEnvironment { get; set; } = ServerEnvironment.Local;
+
         public string ServicesAddress { get; set; }
 
         public ClashUpEndpoints(EnvironmentConfig config)

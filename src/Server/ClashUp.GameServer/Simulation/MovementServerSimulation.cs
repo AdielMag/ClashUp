@@ -1,3 +1,4 @@
+using ClashUp.Server.GameServer.Match;
 using ClashUp.Shared.Characters;
 using ClashUp.Shared.Maps;
 using ClashUp.Shared.MessagePackObjects;
@@ -18,15 +19,21 @@ public sealed class MovementServerSimulation : IServerSimulation
         public PlayerId Id;
     }
 
+    private readonly MatchCharactersHolder _characters;
     private readonly Dictionary<string, PlayerState> _players = new();
     private readonly HealthTable _health = new();
+
+    public MovementServerSimulation(MatchCharactersHolder characters)
+    {
+        _characters = characters;
+    }
 
     public int CurrentTick { get; private set; }
     public uint RandomSeed { get; } = (uint)System.Random.Shared.Next(1, int.MaxValue);
 
     public void LoadMap(MapData mapData) { }
 
-    public void EnsurePlayer(PlayerId player, int colorSlot, int teamId)
+    public void EnsurePlayer(PlayerId player, int colorSlot, int teamId, CharacterId characterId)
     {
         if (_players.ContainsKey(player.Value)) return;
 
@@ -38,7 +45,8 @@ public sealed class MovementServerSimulation : IServerSimulation
             Z = 0f,
             Yaw = 0f,
         };
-        _health.Initialize(player.Value, CharacterRegistry.Default.BaseStats.MaxHealth);
+        var stats = _characters.Catalog.Get(characterId).BaseStats;
+        _health.Initialize(player.Value, stats.MaxHealth);
     }
 
     public void ApplyInput(PlayerId player, InputCommand command)
@@ -74,6 +82,8 @@ public sealed class MovementServerSimulation : IServerSimulation
         }
         return MessagePackSerializer.Serialize(new WorldStatePacket { Players = dtos });
     }
+
+    public IReadOnlyList<MatchEvent> DrainAbilityEvents() => Array.Empty<MatchEvent>();
 
     public void Dispose() { }
 }

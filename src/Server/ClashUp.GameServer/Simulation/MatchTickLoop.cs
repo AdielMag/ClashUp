@@ -89,7 +89,7 @@ public sealed class MatchTickLoop : IDisposable
     private void Drain()
     {
         foreach (var p in _context.GetPlayers())
-            _context.Simulation.EnsurePlayer(p.Id, p.ColorSlot, p.TeamId);
+            _context.Simulation.EnsurePlayer(p.Id, p.ColorSlot, p.TeamId, p.CharacterId);
 
         while (_context.Inputs.TryDequeue(out var input))
         {
@@ -102,6 +102,7 @@ public sealed class MatchTickLoop : IDisposable
         var group = _context.Group;
         if (group is null)
         {
+            _context.Simulation.DrainAbilityEvents();
             return Task.CompletedTask;
         }
 
@@ -114,6 +115,11 @@ public sealed class MatchTickLoop : IDisposable
         };
 
         group.All.OnSnapshot(snapshot);
+
+        var abilityEvents = _context.Simulation.DrainAbilityEvents();
+        foreach (var evt in abilityEvents)
+            group.All.OnMatchEvent(evt);
+
         return Task.CompletedTask;
     }
 

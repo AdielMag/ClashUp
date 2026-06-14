@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using AetherNet;
 using AetherNet.Collision;
+using AetherNet.Queries;
 using ClashUp.Shared.Maps;
 using nkast.Aether.Physics2D.Common;
 using nkast.Aether.Physics2D.Dynamics;
@@ -17,8 +18,10 @@ namespace ClashUp.Shared.Simulation
         private readonly PhysicsWorldManager _world;
         private readonly float _playerRadius;
         private readonly Dictionary<string, int> _playerIds = new();
+        private readonly Dictionary<int, string> _entityToPlayer = new();
         private readonly Dictionary<string, float> _playerMoveSpeeds = new();
         private readonly Dictionary<string, Vector2> _pendingVel = new();
+        private readonly PhysicsQueryBuffer _queryBuffer = new();
         private int _nextId;
 
         public float PlayerRadius => _playerRadius;
@@ -122,6 +125,7 @@ namespace ClashUp.Shared.Simulation
             var body = _world.CreateBody(def, id);
             body.CreateCircle(_playerRadius, 1f);
             _playerIds[playerId] = id;
+            _entityToPlayer[id] = playerId;
             _playerMoveSpeeds[playerId] = moveSpeed;
         }
 
@@ -163,6 +167,21 @@ namespace ClashUp.Shared.Simulation
             _world.SetPosition(id, new Vector2(x, z));
             _world.ResetDynamics(id);
         }
+
+        public int OverlapCircle(float centerX, float centerZ, float radius, int[] resultEntityIds, int layerMask = -1)
+        {
+            _world.OverlapCircle(new Vector2(centerX, centerZ), radius, _queryBuffer, layerMask);
+            int count = Math.Min(_queryBuffer.OverlapCount, resultEntityIds.Length);
+            for (int i = 0; i < count; i++)
+                resultEntityIds[i] = _queryBuffer.OverlapResults[i].EntityId;
+            return count;
+        }
+
+        public string? GetPlayerByEntityId(int entityId) =>
+            _entityToPlayer.TryGetValue(entityId, out var p) ? p : null;
+
+        public int GetEntityIdForPlayer(string playerId) =>
+            _playerIds.TryGetValue(playerId, out var id) ? id : -1;
 
         public void Dispose() { }
     }

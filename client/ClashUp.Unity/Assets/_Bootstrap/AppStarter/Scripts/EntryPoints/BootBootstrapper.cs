@@ -54,6 +54,7 @@ namespace ClashUp.Client.AppStarter
             _log.Log($"[Boot] Environment: {selectedEnv} → {_endpoints.ServicesAddress}");
 #endif
             ClashUpEndpoints.ResolvedServicesAddress = _endpoints.ServicesAddress;
+            ClashUpEndpoints.ResolvedEnvironment = _environmentConfig.Current;
             loadingScreen.SetProgress(0.2f);
 
             // 3. Identity

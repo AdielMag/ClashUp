@@ -11,13 +11,15 @@ namespace ClashUp.Client.Gameplay
 {
     public sealed class AetherClientSimulation : IClientSimulation
     {
+        private readonly MatchCharactersHolder _characters;
         private readonly MatchPhysicsWorld _world;
         private readonly HealthTable _health = new();
         private readonly Dictionary<string, PlayerRenderState> _players = new();
         private uint _randomSeed;
 
-        public AetherClientSimulation(GameObject playerPrefab)
+        public AetherClientSimulation(GameObject playerPrefab, MatchCharactersHolder characters)
         {
+            _characters = characters;
             var collider = playerPrefab.GetComponent<AetherCircleCollider>();
             float radius = collider != null ? collider.Radius : MatchPhysicsWorld.DefaultPlayerRadius;
             _world = new MatchPhysicsWorld(radius);
@@ -77,7 +79,7 @@ namespace ClashUp.Client.Gameplay
 
             // Only the local player is simulated on the client. Remote players are rendered
             // from RemotePlayerInterpolator and intentionally ignored here.
-            var stats = CharacterRegistry.Default.BaseStats;
+            var stats = _characters.Catalog.Default.BaseStats;
             foreach (var dto in packet.Players)
             {
                 if (!dto.Id.Equals(LocalId)) continue;
@@ -95,7 +97,7 @@ namespace ClashUp.Client.Gameplay
 
         private void SyncRenderStates()
         {
-            var maxHealth = CharacterRegistry.Default.BaseStats.MaxHealth;
+            var maxHealth = _characters.Catalog.Default.BaseStats.MaxHealth;
             foreach (var id in _world.PlayerIds)
             {
                 var (x, z, yaw) = _world.GetPlayerState(id);
