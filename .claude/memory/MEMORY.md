@@ -193,3 +193,4 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - [feedback-ticket-status.md](feedback-ticket-status.md) — Never mark tickets Done without user confirmation it's working
 - [ability-authoring.md](ability-authoring.md) — How to create ability JSON files: editor tool, schema, node types, wiring to characters
 - [lobby-ui.md](lobby-ui.md) — Lobby pager UI: horizontal scroll, vertical per-page scroll, bottom bar, play button wiring, VContainer scope
+- [feedback-ui-scope.md](feedback-ui-scope.md) — "Hide UI" means input controls only, not informational HUD
