@@ -222,6 +222,21 @@ There are three distinct root causes, each fixed separately:
 - **Check**: Log `(ackedSeq, pendingCount)` after each reconcile. Pending queue should stay small (≈ RTT / tickInterval). If it grows unbounded, the server isn't echoing the seq correctly.
 - **Determinism**: Aether.Physics2D is float-based. x86 server vs ARM client can produce slightly different positions for the same inputs → small corrections each snapshot. This is expected and tolerable for now.
 
+### Shimmer/jitter ONLY at walls (not in open ground) — check physics parity FIRST
+Diagnostic ordering (a whole session was burned tuning reconciliation before finding the real cause):
+1. **Player collision radius parity** — the client reads radius from `Player.prefab`'s `AetherCircleCollider._radius`; the server uses `MatchPhysicsWorld.DefaultPlayerRadius`. If they differ, client and server stop at DIFFERENT distances from a wall → a CONSTANT position disagreement at contact → reconciliation shimmer. (Real case: prefab 0.5 vs server default 0.4 = 10 cm; both now 0.5.)
+2. **Map geometry parity** — wall positions must be byte-identical between client (`Assets/Core/Match/Content/Maps/`) and server (`src/Server/ClashUp.GameServer/Maps/Data/`). A wall placed slightly differently = fixed disagreement.
+3. **Tick rate parity** — both must be 30 Hz.
+- **Why open ground is fine**: with identical inputs + identical physics, the two sims agree exactly off-collision. Only collision resolution exposes a parameter mismatch.
+- **Rule**: when shimmer is collision-specific, suspect a shared-physics constant mismatch BEFORE touching prediction/reconciliation code. A constant >0 cm offset that exceeds the reconciliation dead-zone (`ReconcileDeadzoneSq`, 0.06 m) can never settle.
+
+### Local player won't stop / overshoots after releasing input
+Server input-consumption cadence. The client predicts ONE physics step per input sent, so the server must apply ONE input per player per tick (`MatchTickLoop.Drain` + per-player `InputBuffer`). Pitfalls seen, all in [[netcode-architecture]]:
+- **Drain-ALL-then-step-once** (original bug): bursts collapse to one step → rubber-band.
+- **Playout buffer (slack >0)**: adds latency felt as post-release overshoot ("keeps moving into the wall after a delay"). Consume immediately.
+- **Repeat-last-input on underflow**: pushes the server past the client's prediction → sinks into walls. On underflow apply NOTHING (hold zero); the unconsumed input stays pending and is replayed by reconciliation.
+- Keep `MaxQueueDepth` tight (2, drop-oldest) so a fresh "stop" evicts stale "move" fast.
+
 ### Remote players stuttering
 - **Interp buffer underrun**: If packets arrive late or are dropped, the render clock catches up to the newest sample and clamps. Increase `InterpolationDelayMs` (default: 2 × tick interval = ~66ms).
 - **Interp clock too far behind**: After a long stall (tab switch, GC spike), the render clock snaps forward. This is correct — a brief visual pop is better than remote players being stuck in the past.

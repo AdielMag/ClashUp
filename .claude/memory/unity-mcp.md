@@ -107,6 +107,21 @@ Then call `scene-save`. Always verify with a follow-up script-execute that reads
 - `LockToTargetOnAssign` = 0
 - When setting via `pathPatches`, use the integer value: `{"typeName": "Unity.Cinemachine.TargetTracking.BindingMode", "value": 4}`
 
+## assets-refresh Pre-Flight Check
+
+Before calling `assets-refresh`, always check if Unity is in play mode and stop it first. Refreshing while playing can cause compilation to be deferred or ignored until play mode exits.
+
+```bash
+# 1. Check state
+npx unity-mcp-cli run-tool editor-application-get-state --input '{}'
+# 2. If IsPlaying == true, stop play mode first
+npx unity-mcp-cli run-tool editor-application-set-state --input '{"isPlaying": false}'
+# 3. Then refresh
+npx unity-mcp-cli run-tool assets-refresh --input '{}'
+```
+
+Or use Skill `editor-application-get-state` → Skill `editor-application-set-state` → Skill `assets-refresh`.
+
 ## When to Use MCP vs Editor Scripts
 - **MCP first**: For one-time setup tasks (creating scenes, modifying build settings, adding components)
 - **Editor scripts**: Only when the setup needs to be repeatable by other team members without MCP

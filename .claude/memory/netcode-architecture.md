@@ -37,6 +37,49 @@ When a snapshot arrives, the client resets to the server's authoritative positio
 
 **Why ack by sequence, not tick:** Client and server ticks drift with latency. Tick-based acking drops the wrong inputs → rubber-banding. Sequence ids are a monotonic client-local counter that the server echoes verbatim.
 
+### Server input buffering (critical for 1:1 with prediction)
+
+The client predicts **one physics step per input sent**, so the server MUST apply
+**one input per player per tick**. `InputBuffer` is a per-player queue, consumed
+**immediately** (no playout delay) by `MatchTickLoop.Drain()` — one per player per
+tick. Two rules, both load-bearing:
+
+1. **Hold on underflow** — if nothing is queued, apply NOTHING (player holds at zero
+   velocity). Never repeat the last input: repeating stale movement pushes the server
+   past what the client predicted → sinks into a wall a tick after the finger lifts.
+   A held (unconsumed) input stays pending on the client and is replayed by
+   reconciliation, so holding is correct and causes no drag.
+2. **No playout slack, tight cap** — `MaxQueueDepth = 2`, drop-oldest. Any buffered
+   "move" backlog is felt directly as post-release overshoot ("after a short delay it
+   keeps moving into the wall"). Consuming immediately + drop-oldest means a fresh
+   "stop" pushes stale "move" out fast. Both ends run 30 Hz so steady depth is ~0–1.
+
+**History / do-not-repeat:** the original bug was `Drain()` draining ALL queued inputs
+into one `Step` (burst-collapse → rubber-band). A playout buffer (TargetDepth 2) was
+tried to absorb frame-vs-clock drift but its latency caused the post-release overshoot
+above — reverted. A repeat-last-on-underflow fallback was tried but caused wall-sink —
+reverted. The current immediate-consume + hold-on-underflow keeps the server's applied
+sequence 1:1 with prediction at minimum latency.
+
+### Reconciliation dead-zone (client) — kills collision micro-jitter
+
+Even with a perfect 1:1 input stream, the client's snap-and-replay re-runs Box2D
+collision from the server's position every snapshot, landing a few mm off the client's
+continuous prediction → re-injected each snapshot → shimmer against walls (on contact
+AND on release). Fix in `ClientPredictionWorld.ApplyServerSnapshot`: after snap+replay,
+compare the result to the pre-reconcile prediction; if within `ReconcileDeadzoneSq`
+(0.06 m, above Box2D contact slop, below any real desync) the two agree, so call
+`IClientSimulation.SnapLocalPosition(prePhys)` to restore the smooth prediction and add
+NO correction. Only beyond the dead-zone do we keep the authoritative result + smoothed
+`CorrectionX/Z`. `SnapLocalPosition` added to `IClientSimulation` (+ Aether/Null/Movement
+impls) for exactly this revert.
+
+**Bug this fixed (2026-06):** the old `Drain()` drained ALL queued inputs (a single
+global queue) and overwrote `_pendingVel`, then stepped once → bursts collapsed to
+one step, empty ticks zeroed velocity. Symptoms: avatar drifts forward after joystick
+release + constant rubber-band jitter. Any future change to drain/step cadence must
+preserve the 1:1 contract.
+
 ## 4. Entity Interpolation (Remote Players)
 
 Remote players are NOT simulated on the client. They are rendered purely from buffered authoritative snapshots, played back ~66ms in the past.

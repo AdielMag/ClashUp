@@ -58,7 +58,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Shared world**: `MatchPhysicsWorld` in `ClashUp.Shared/Simulation/` — same code runs on client (prediction) and server (authority)
 - **Coordinate mapping**: game (X, Z) ↔ Aether (x, y); gravity = zero for top-down
 - **Player bodies**: dynamic circles, velocity set from input each tick (kinematic move-and-slide style)
-- **Player radius**: `MatchPhysicsWorld` constructor parameter (default `0.4f`). Client reads from prefab's `AetherCircleCollider.Radius`. Server uses default.
+- **Player radius**: `MatchPhysicsWorld` constructor parameter (default `0.5f`). Client reads from prefab's `AetherCircleCollider.Radius` (Player.prefab `_radius: 0.5`). Server uses default. **These MUST match** — a mismatch makes client/server resolve wall collisions at different distances → constant position disagreement → reconciliation shimmer against walls (was 0.4 server vs 0.5 prefab).
 - **Wire protocol**: `InputCommand` up, `SnapshotPacket → WorldStatePacket → PlayerStateDto{X,Z,Yaw,Health,LastProcessedInputSeq,IsInvulnerable}` down
 - **AetherNet.Shared**: `AetherNet.Shared.dll` (netstandard2.0, C# 10) committed in `Assets/Packages/AetherNet.Shared.0.1.0/`. Uses pre-built DLL — Unity can't compile C# 10 file-scoped namespaces.
 - **AetherNet.Unity**: Source-only package copied to `Assets/Packages/AetherNet.Unity/` by `setup-aethernet.ps1`. These files ARE C# 9 compatible (block-scoped namespaces). Has Runtime + Editor asmdefs. `AetherSceneBaker.cs` excluded (depends on `AetherNet.Server`).
