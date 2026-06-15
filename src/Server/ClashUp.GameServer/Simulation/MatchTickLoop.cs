@@ -88,12 +88,17 @@ public sealed class MatchTickLoop : IDisposable
 
     private void Drain()
     {
+        // Consume exactly one input per player per tick so the server advances 1:1 with the
+        // client's predicted steps. On underflow we apply nothing — the player holds (zero
+        // velocity) rather than repeating stale movement, which would push the server past
+        // what the client predicted (e.g. sinking into a wall after the finger lifts). The
+        // playout buffer in InputBuffer keeps underflow rare during real movement.
         foreach (var p in _context.GetPlayers())
+        {
             _context.Simulation.EnsurePlayer(p.Id, p.ColorSlot, p.TeamId, p.CharacterId);
 
-        while (_context.Inputs.TryDequeue(out var input))
-        {
-            _context.Simulation.ApplyInput(input.Player, input.Command);
+            if (_context.Inputs.TryDequeueOne(p.Id.Value, out var input))
+                _context.Simulation.ApplyInput(p.Id, input);
         }
     }
 

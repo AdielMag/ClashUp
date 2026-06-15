@@ -26,6 +26,7 @@ namespace ClashUp.Client.Gameplay
         public void Step(double deltaSeconds) => CurrentTick++;
         public void StepPhysicsOnly(double deltaSeconds) => CurrentTick++;
         public bool TryGetPhysicsPosition(out float x, out float z) { x = z = 0f; return false; }
+        public void SnapLocalPosition(float x, float z) { }
 
         public int ReconcileTo(int serverTick, WorldStatePacket packet)
         {

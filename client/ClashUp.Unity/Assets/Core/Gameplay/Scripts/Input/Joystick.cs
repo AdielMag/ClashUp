@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -17,6 +18,8 @@ namespace ClashUp.Client.Gameplay
         private bool _dragging;
         private Vector2 _defaultAnchorPos;
         private int _activeTouchId = NoTouch;
+
+        public event Action<bool> OnActiveChanged;
 
         public Vector2 Direction { get; private set; }
         public bool InputEnabled { get; set; }
@@ -146,6 +149,7 @@ namespace ClashUp.Client.Gameplay
             }
             _handleRect.anchoredPosition = Vector2.zero;
             Direction = Vector2.zero;
+            OnActiveChanged?.Invoke(true);
         }
 
         private void UpdateDrag(Vector2 screenPos)
@@ -168,6 +172,7 @@ namespace ClashUp.Client.Gameplay
                 ClaimedTouchIds.Remove(_activeTouchId);
                 _activeTouchId = NoTouch;
             }
+            OnActiveChanged?.Invoke(false);
         }
     }
 }

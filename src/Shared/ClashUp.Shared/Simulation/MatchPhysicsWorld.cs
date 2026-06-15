@@ -13,7 +13,12 @@ namespace ClashUp.Shared.Simulation
 {
     public sealed class MatchPhysicsWorld : IDisposable
     {
-        public const float DefaultPlayerRadius = 0.4f;
+        // MUST match the Player prefab's AetherCircleCollider radius (Assets/Core/Gameplay/
+        // Art/Prefabs/Player.prefab → _radius). The client reads the radius from that collider;
+        // the server can't, so it uses this default. If they differ, client and server resolve
+        // wall collisions at different distances → a constant position disagreement → reconciliation
+        // shimmer against walls. Keep these two values in sync.
+        public const float DefaultPlayerRadius = 0.5f;
 
         private readonly PhysicsWorldManager _world;
         private readonly float _playerRadius;

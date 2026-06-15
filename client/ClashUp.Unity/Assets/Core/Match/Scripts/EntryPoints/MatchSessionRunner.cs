@@ -29,6 +29,8 @@ namespace ClashUp.Client.Match
         private readonly LocalInputPublisher _inputPublisher;
         private readonly MapRegistry _mapRegistry;
         private readonly MatchCharactersHolder _characters;
+        private readonly JoystickInputProvider _joystickProvider;
+        private readonly AbilityInputProvider _abilityProvider;
 
         private MatchUI _matchUI;
         private GameObject _mapVisualInstance;
@@ -37,6 +39,8 @@ namespace ClashUp.Client.Match
         private DateTimeOffset _joinWallClock;
         private int _playerCount;
         private bool _matchEnded;
+        private bool _joystickTouching;
+        private bool _abilityTouching;
         private CancellationTokenSource _timerCts;
 
         public MatchSessionRunner(
@@ -50,7 +54,9 @@ namespace ClashUp.Client.Match
             PlayerViewSystem viewSystem,
             LocalInputPublisher inputPublisher,
             MapRegistry mapRegistry,
-            MatchCharactersHolder characters)
+            MatchCharactersHolder characters,
+            JoystickInputProvider joystickProvider,
+            AbilityInputProvider abilityProvider)
         {
             _log = log;
             _session = session;
@@ -63,6 +69,8 @@ namespace ClashUp.Client.Match
             _inputPublisher = inputPublisher;
             _mapRegistry = mapRegistry;
             _characters = characters;
+            _joystickProvider = joystickProvider;
+            _abilityProvider = abilityProvider;
         }
 
         public async UniTask StartAsync(CancellationToken cancellation)
@@ -76,6 +84,9 @@ namespace ClashUp.Client.Match
             _matchUI = MatchUI.Create();
             _matchUI.SetStatus("Connecting...");
             _matchUI.OnBackToLobbyClicked += OnBackToLobby;
+
+            _joystickProvider.OnTouching += OnJoystickTouching;
+            _abilityProvider.OnTouching  += OnAbilityTouching;
 
             _session.Receiver.SnapshotReceived += OnSnapshot;
             _session.Receiver.PlayerJoined += OnPlayerJoined;
@@ -182,6 +193,24 @@ namespace ClashUp.Client.Match
                 _mapVisualInstance = UnityEngine.Object.Instantiate(mapDef.VisualPrefab);
         }
 
+        private void OnJoystickTouching(bool active)
+        {
+            _joystickTouching = active;
+            UpdateInputVisibility();
+        }
+
+        private void OnAbilityTouching(bool active)
+        {
+            _abilityTouching = active;
+            UpdateInputVisibility();
+        }
+
+        private void UpdateInputVisibility()
+        {
+            _abilityProvider.SetVisible(!_joystickTouching);
+            _joystickProvider.SetVisible(!_abilityTouching);
+        }
+
         private void OnBackToLobby()
         {
             _flow.ReturnToLobbyAsync().Forget();
@@ -191,6 +220,9 @@ namespace ClashUp.Client.Match
         {
             _timerCts?.Cancel();
             _timerCts?.Dispose();
+
+            _joystickProvider.OnTouching -= OnJoystickTouching;
+            _abilityProvider.OnTouching  -= OnAbilityTouching;
 
             _session.Receiver.SnapshotReceived -= OnSnapshot;
             _session.Receiver.PlayerJoined -= OnPlayerJoined;

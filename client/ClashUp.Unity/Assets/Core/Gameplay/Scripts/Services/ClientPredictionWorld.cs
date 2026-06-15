@@ -29,6 +29,12 @@ namespace ClashUp.Client.Gameplay
         // frames instead of hard-popping. Exponentially decayed toward zero each frame.
         private const float CorrectionDecayRate = 18f; // per second; ~95% corrected in ~160ms
 
+        // Reconciliation dead-zone: if snap-and-replay lands within this distance of the
+        // client's own prediction, the two already agree — keep the smooth prediction rather
+        // than importing per-snapshot collision-resolution noise (the source of wall jitter).
+        // Sized above Box2D contact slop but below any real desync. Squared for cheap compare.
+        private const float ReconcileDeadzoneSq = 0.06f * 0.06f;
+
         public ClientPredictionWorld(IClientSimulation sim, RemotePlayerInterpolator interpolator)
         {
             _sim = sim;
@@ -119,11 +125,23 @@ namespace ClashUp.Client.Gameplay
                 _sim.StepPhysicsOnly(_tickInterval);
             }
 
-            // Accumulate the visual correction offset from the physics-level delta.
+            // Accumulate the visual correction offset from the physics-level delta — unless
+            // the delta is within the dead-zone, in which case the client and server agree and
+            // we keep the smooth local prediction (avoids re-importing collision noise each
+            // snapshot, which is what made the player jitter against walls).
             if (_sim.TryGetPhysicsPosition(out float postPhysX, out float postPhysZ))
             {
-                CorrectionX += prePhysX - postPhysX;
-                CorrectionZ += prePhysZ - postPhysZ;
+                float dx = prePhysX - postPhysX;
+                float dz = prePhysZ - postPhysZ;
+                if (dx * dx + dz * dz <= ReconcileDeadzoneSq)
+                {
+                    _sim.SnapLocalPosition(prePhysX, prePhysZ);
+                }
+                else
+                {
+                    CorrectionX += dx;
+                    CorrectionZ += dz;
+                }
             }
         }
 

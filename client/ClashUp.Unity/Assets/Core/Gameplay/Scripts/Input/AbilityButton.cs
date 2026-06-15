@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -23,6 +24,8 @@ namespace ClashUp.Client.Gameplay
 
         private float _cooldownTotal;
         private float _cooldownRemaining;
+
+        public event Action<bool> OnActiveChanged;
 
         public bool WasFired { get; private set; }
         public Vector2 AimDirection { get; private set; }
@@ -183,6 +186,7 @@ namespace ClashUp.Client.Gameplay
             }
             _handleRect.anchoredPosition = Vector2.zero;
             SetArrowVisible(false);
+            OnActiveChanged?.Invoke(true);
         }
 
         private void UpdateDrag(Vector2 screenPos)
@@ -224,6 +228,7 @@ namespace ClashUp.Client.Gameplay
                 Joystick.ClaimedTouchIds.Remove(_activeTouchId);
                 _activeTouchId = NoTouch;
             }
+            OnActiveChanged?.Invoke(false);
         }
 
         private void CancelDrag()
@@ -238,6 +243,7 @@ namespace ClashUp.Client.Gameplay
                 Joystick.ClaimedTouchIds.Remove(_activeTouchId);
                 _activeTouchId = NoTouch;
             }
+            OnActiveChanged?.Invoke(false);
         }
 
         private void SetArrowVisible(bool visible)

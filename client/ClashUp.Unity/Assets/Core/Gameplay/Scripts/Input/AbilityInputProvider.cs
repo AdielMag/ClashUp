@@ -8,8 +8,8 @@ namespace ClashUp.Client.Gameplay
 {
     public sealed class AbilityInputProvider : IAbilityInput, IStartable, IDisposable
     {
-        // Right half of screen, same vertical band as movement joystick
-        private static readonly Vector2 ZoneAnchorMin = new Vector2(0.5f, 0f);
+        // Rightmost 40% of screen — 10% gap from movement joystick zone (which ends at 0.5)
+        private static readonly Vector2 ZoneAnchorMin = new Vector2(0.6f, 0f);
         private static readonly Vector2 ZoneAnchorMax = new Vector2(1.0f, 0.45f);
 
         // 70% of movement joystick (movement: 240/160)
@@ -24,6 +24,13 @@ namespace ClashUp.Client.Gameplay
         private GameObject _canvasRoot;
         private bool _pendingFire;
         private float _pendingAimYaw;
+
+        public event Action<bool> OnTouching;
+
+        public void SetVisible(bool visible)
+        {
+            if (_canvasRoot != null) _canvasRoot.SetActive(visible);
+        }
 
         public AbilityInputProvider(MatchInputGate gate) => _gate = gate;
 
@@ -87,6 +94,7 @@ namespace ClashUp.Client.Gameplay
 
             _button = BuildAbilityButton(canvas);
             _button.InputEnabled = false;
+            _button.OnActiveChanged += active => OnTouching?.Invoke(active);
 
             _gate.OnChanged += OnGateChanged;
         }
@@ -172,8 +180,8 @@ namespace ClashUp.Client.Gameplay
             zoneRect.offsetMin = Vector2.zero;
             zoneRect.offsetMax = Vector2.zero;
 
-            // Default position: further right than center, mirroring movement joystick
-            var defaultPos = new Vector2(w * 0.35f, -h * 0.30f);
+            // Default position: center of right zone (60–100%)
+            var defaultPos = new Vector2(w * 0.30f, -h * 0.30f);
 
             var button = zoneGo.AddComponent<AbilityButton>();
             button.Initialize(zoneRect, bgRect, handleRect, arrowRect, arrowImage, cdImage,

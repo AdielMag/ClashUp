@@ -39,8 +39,8 @@ namespace ClashUp.Client.Match
             builder.Register<RemotePlayerInterpolator>(Lifetime.Singleton);
             builder.Register<ClientPredictionWorld>(Lifetime.Singleton);
 
-            builder.RegisterEntryPoint<JoystickInputProvider>().As<IMovementInput>();
-            builder.RegisterEntryPoint<AbilityInputProvider>().As<IAbilityInput>();
+            builder.RegisterEntryPoint<JoystickInputProvider>().AsSelf().As<IMovementInput>();
+            builder.RegisterEntryPoint<AbilityInputProvider>().AsSelf().As<IAbilityInput>();
             builder.RegisterEntryPoint<PlayerSpawner>();
             builder.RegisterEntryPoint<LocalInputPublisher>().AsSelf();
             builder.RegisterEntryPoint<PlayerViewSystem>().AsSelf();

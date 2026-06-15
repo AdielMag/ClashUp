@@ -100,7 +100,8 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\client\\\\ClashUp.Unity\\\\Assets\\\\Core\\\\Gameplay\\\\Art\" -Recurse -Directory)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\client\\\\ClashUp.Unity\\\\Assets\\\\Core\\\\Match\" -Recurse -Directory)",
       "Bash(curl -s -X POST https://api.monday.com/v2 -H \"Content-Type: application/json\" -H \"Authorization: eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY2ODk3Mjk1MCwiYWFpIjoxMSwidWlkIjoxMDQ5OTU5MTUsImlhZCI6IjIwMjYtMDYtMDlUMTk6MTA6NDAuNDI2WiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM1NDkxODkwLCJyZ24iOiJldWMxIn0.9X8yMNrgTZAr-fuxs60Trj-wtgzXW44BiYLZIuIA0j4\" -d \"{\\\\\"query\\\\\": \\\\\"{ items\\(ids: [2973730072]\\) { id name column_values { id type text value } updates\\(limit: 5\\) { text_body } subitems { id name column_values { id type text value } } } }\\\\\"}\")",
-      "PowerShell(& \"C:\\\\Program Files\\\\dotnet\\\\dotnet.exe\" build \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\src\\\\Server\\\\ClashUp.Server.sln\" --nologo -v quiet 2>&1)"
+      "PowerShell(& \"C:\\\\Program Files\\\\dotnet\\\\dotnet.exe\" build \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\src\\\\Server\\\\ClashUp.Server.sln\" --nologo -v quiet 2>&1)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Adiel\\\\Documents\\\\ClashUp\\\\client\\\\ClashUp.Unity\\\\Assets\\\\Core\\\\Gameplay\\\\Scripts\" -Recurse -Directory)"
     ]
   },
   "enableAllProjectMcpServers": true,

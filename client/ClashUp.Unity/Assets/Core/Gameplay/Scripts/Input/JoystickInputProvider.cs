@@ -22,6 +22,13 @@ namespace ClashUp.Client.Gameplay
         private Joystick _joystick;
         private GameObject _canvasRoot;
 
+        public event Action<bool> OnTouching;
+
+        public void SetVisible(bool visible)
+        {
+            if (_canvasRoot != null) _canvasRoot.SetActive(visible);
+        }
+
         public JoystickInputProvider(MatchInputGate gate)
         {
             _gate = gate;
@@ -64,6 +71,7 @@ namespace ClashUp.Client.Gameplay
 
             _joystick = BuildJoystick(canvas);
             _joystick.InputEnabled = false;
+            _joystick.OnActiveChanged += active => OnTouching?.Invoke(active);
 
             _gate.OnChanged += OnGateChanged;
         }

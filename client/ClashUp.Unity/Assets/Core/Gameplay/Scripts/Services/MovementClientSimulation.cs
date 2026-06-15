@@ -51,6 +51,16 @@ namespace ClashUp.Client.Gameplay
             return false;
         }
 
+        public void SnapLocalPosition(float x, float z)
+        {
+            var lid = LocalId.Value;
+            if (lid != null && _players.TryGetValue(lid, out var state))
+            {
+                state.X = x;
+                state.Z = z;
+            }
+        }
+
         public int ReconcileTo(int serverTick, WorldStatePacket packet)
         {
             CurrentTick = Math.Max(CurrentTick, serverTick);

@@ -41,6 +41,13 @@ namespace ClashUp.Client.Gameplay
         bool TryGetPhysicsPosition(out float x, out float z);
 
         /// <summary>
+        /// Snaps the local player's physics body to a position. Used to reject a
+        /// sub-threshold reconciliation — restoring the smooth local prediction instead
+        /// of importing collision-resolution noise from the snap-and-replay.
+        /// </summary>
+        void SnapLocalPosition(float x, float z);
+
+        /// <summary>
         /// Applies the authoritative state for the <b>local</b> player from a snapshot
         /// (remote players are handled by <see cref="RemotePlayerInterpolator"/>, not here).
         /// Returns the sequence id of the last local input the server processed, so the
