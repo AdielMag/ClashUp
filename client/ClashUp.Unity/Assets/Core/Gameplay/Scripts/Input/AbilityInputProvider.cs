@@ -24,6 +24,7 @@ namespace ClashUp.Client.Gameplay
         private GameObject _canvasRoot;
         private bool _pendingFire;
         private float _pendingAimYaw;
+        private bool _isTouching;
 
         public event Action<bool> OnTouching;
 
@@ -34,8 +35,9 @@ namespace ClashUp.Client.Gameplay
 
         public AbilityInputProvider(MatchInputGate gate) => _gate = gate;
 
-        public uint ButtonMask => _pendingFire ? (1u << ActiveSlotIndex) : 0u;
-        public float AimYaw    => _pendingAimYaw;
+        public uint ButtonMask  => _pendingFire ? (1u << ActiveSlotIndex) : 0u;
+        public float AimYaw     => _pendingAimYaw;
+        public float LiveAimYaw => ComputeLiveAimYaw();
 
         public void Poll()
         {
@@ -81,6 +83,28 @@ namespace ClashUp.Client.Gameplay
             _pendingAimYaw = 0f;
         }
 
+        private float ComputeLiveAimYaw()
+        {
+            if (_button != null && _isTouching)
+            {
+                var dir = _button.CurrentAimDirection;
+                if (dir.sqrMagnitude > 0.01f)
+                    return Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg;
+            }
+
+            // Desktop fallback: mouse offset from screen centre while LMB held
+            var mouse = Mouse.current;
+            if (mouse != null && mouse.leftButton.isPressed)
+            {
+                var screenCenter = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+                var dir = mouse.position.ReadValue() - screenCenter;
+                if (dir.sqrMagnitude > 400f)
+                    return Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg;
+            }
+
+            return 0f;
+        }
+
         public void Start()
         {
             _canvasRoot = new GameObject("AbilityCanvas");
@@ -94,7 +118,11 @@ namespace ClashUp.Client.Gameplay
 
             _button = BuildAbilityButton(canvas);
             _button.InputEnabled = false;
-            _button.OnActiveChanged += active => OnTouching?.Invoke(active);
+            _button.OnActiveChanged += active =>
+            {
+                _isTouching = active;
+                OnTouching?.Invoke(active);
+            };
 
             _gate.OnChanged += OnGateChanged;
         }

@@ -23,6 +23,7 @@ namespace ClashUp.Client.Gameplay
         private Vector3 _lastRenderedPos;
 
         public Transform LocalPlayerTransform { get; private set; }
+        public CharacterId LocalPlayerCharacterId { get; private set; }
 
         public PlayerViewSystem(
             IClientSimulation sim,
@@ -114,7 +115,12 @@ namespace ClashUp.Client.Gameplay
             go = SpawnPlayer(playerId);
             _views[playerId] = go;
             if (isLocal)
+            {
                 LocalPlayerTransform = go.transform;
+                LocalPlayerCharacterId = _characterIds.TryGetValue(playerId, out var cid)
+                    ? cid
+                    : _characters.Catalog.DefaultId;
+            }
             return go;
         }
 

@@ -109,7 +109,8 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Sequential chaining**: via `AbilityNode.Next` linked-list; root's output connects to first node, "Next" port chains the rest
 - **Parallel execution**: Parallel node's `Children[]` — all run simultaneously, `Next` runs after all finish
 - **No Sequence node**: sequential chaining is implicit via Next ports — Sequence node was removed
-- **Wire protocol**: abilities NOT sent over wire; loaded from JSON at match start by both client and server
+- **Wire protocol**: `AbilitiesConfig` sent over wire (Key 9 in `JoinResult`, Key 8 in `MatchProvision`) — thin client payload: `AbilityClientInfo { Id, TelegraphConfig, AutoRange, CastMode }`. Static `AbilitiesConfig.Default` is the fallback when server sends null (old containers). Full node trees still loaded from JSON locally by both server (`ServerAbilityStore`) and future client registry.
+- **`MatchAbilitiesHolder`**: client-side lookup (`Dictionary<string, AbilityClientInfo>`), initialized in `MatchSessionRunner` from `JoinResult.Abilities`. Always apply `config ?? AbilitiesConfig.Default` in `Initialize` — MessagePack returns null for missing keys, NOT C# init defaults.
 - **Server**: `ServerAbilityStore` loads `Abilities/Data/*.json`; `AbilityExecutor` (per-match) processes input and ticks nodes
 - **Executor**: `ActiveAbility.Flatten()` builds flat node array; `EvaluateChain()` follows `Next` pointers; `EvaluateParallel()` uses `Children[]`
 - **Telegraph shapes**: `CircleAroundCaster`, `TargetCircle`, `ForwardLine`, `ForwardCone` — direction always follows `AimYaw`
@@ -119,6 +120,8 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **AbilityVisualConfig**: one SO per ability (`CreateAssetMenu: ClashUp/Ability Visual Config`). Holds VFX prefabs, sounds, telegraph visuals. Connected in editor Root Node → GUID written to JSON as `VisualConfigGuid`.
 - **AbilityVisualRegistry**: SO (`ClashUp/Ability Visual Registry`) with `Entry[] { Guid, AbilityId, Config }`. `GetByGuid()`/`GetByAbilityId()` for lookups. Custom editor "Refresh GUIDs" button fills Guid strings from asset refs. `MatchLifetimeScope._abilityVisualRegistry` (was `_abilityVisualConfig` — inspector must be re-wired).
 - **AbilityVisualHandler**: injects `AbilityVisualRegistry`, resolves visuals by `GetByAbilityId` on `ability_cast` events.
+- **TelegraphController**: `IStartable/ITickable/IDisposable` VContainer service — owns two `TelegraphRenderer` GameObjects (auto + primary). Resolves configs from `MatchAbilitiesHolder` + `MatchCharactersHolder` by local player's `AutoAttackId`/`ActiveAbilityId`. Switches auto↔primary based on `IAbilityInput.OnTouching`. Primary yaw tracks `IAbilityInput.LiveAimYaw`. Registered in `MatchLifetimeScope`.
+- **Telegraph materials**: `Assets/Core/Gameplay/Content/Telegraphs/` — `M_AutoTelegraph.mat` (Sprites/Default, yellow 0.35α), `M_PrimaryTelegraph.mat` (Sprites/Default, orange 0.55α). Use `Sprites/Default` NOT `Unlit/Transparent` — the latter has no `_Color` support.
 - See [ability-authoring.md](ability-authoring.md) for full schema and examples
 
 ## Important Conventions

@@ -27,6 +27,7 @@ namespace ClashUp.Client.Match
             var flow = Parent.Container.Resolve<GameFlowController>();
             builder.RegisterInstance(new MatchHandoffHolder { Value = flow.PendingHandoff });
             builder.Register<MatchCharactersHolder>(Lifetime.Singleton);
+            builder.Register<MatchAbilitiesHolder>(Lifetime.Singleton);
 
             builder.Register<MatchHubReceiver>(Lifetime.Singleton);
             builder.Register<MatchSession>(Lifetime.Singleton);
@@ -49,7 +50,10 @@ namespace ClashUp.Client.Match
             builder.RegisterEntryPoint<MatchSessionRunner>();
 
             if (_abilityVisualRegistry != null)
+            {
                 builder.RegisterEntryPoint<AbilityVisualHandler>();
+                builder.RegisterEntryPoint<TelegraphController>();
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ClashUp.Shared.Abilities;
+using ClashUp.Shared.MessagePackObjects;
 
 namespace ClashUp.Server.GameServer.Abilities;
 
@@ -18,6 +19,17 @@ public sealed class ServerAbilityStore
         _abilities.TryGetValue(abilityId, out var def) ? def : null;
 
     public IEnumerable<AbilityDefinition> All => _abilities.Values;
+
+    public AbilitiesConfig BuildClientConfig() => new()
+    {
+        Abilities = _abilities.Values.Select(d => new AbilityClientInfo
+        {
+            Id = d.Id,
+            Telegraph = d.Telegraph,
+            AutoRange = d.AutoRange,
+            CastMode = d.CastMode,
+        }).ToList(),
+    };
 
     private void LoadAll()
     {

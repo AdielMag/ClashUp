@@ -501,6 +501,79 @@ PrefabUtility.UnloadPrefabContents(prefab);
 
 **Fix**: `docker compose down -v` removes volumes, then `docker compose up -d` starts fresh. Warning: this deletes all stored data.
 
+## MessagePack Missing Wire Keys — `init` Defaults Are NOT Applied
+
+**Symptom**: A new MessagePack field added to a shared object (e.g. `JoinResult.Abilities`) is `null` on the client even though the C# `init` expression has a default value.
+
+**Root cause**: MessagePack v3 **ignores** C# `init` property initializers when deserializing. A missing key in the wire payload deserializes as `null` (or `default(T)` for value types) — the `init` default is NEVER called.
+
+**Pattern**: Any `Initialize(T config)` method that receives a potentially-null payload must apply a fallback:
+```csharp
+public void Initialize(AbilitiesConfig config)
+{
+    var source = config ?? AbilitiesConfig.Default;
+    // ... use source, not config
+}
+```
+
+**Why it surfaces after server rebuild only**: The old Docker container doesn't include the new MessagePack key. Until the container is rebuilt (`docker compose build`), the key is absent from every payload and the field is always null — regardless of C# defaults.
+
+**Fix**: Always guard `Initialize` methods with `?? Default`. Rebuild Docker containers after adding new wire keys.
+
+## `Unlit/Transparent` Shader Has No `_Color` Property
+
+**Symptom**: Calling `mat.color = new Color(r, g, b, a)` on an `Unlit/Transparent` material is a silent no-op. The material renders as white (or the texture default) — the color/alpha is completely ignored.
+
+**Root cause**: `Unlit/Transparent` (fileID 10750, Unity built-in) does not expose a `_Color` property. Setting `Material.color` (which writes `_Color`) silently does nothing on this shader.
+
+**Fix**: Use `Sprites/Default` (fileID 10753) for colored overlays with alpha blending. It supports `_Color` and uses `Cull Off` so it renders from both sides (important for ground-plane quads viewed from above).
+
+**Material YAML**: `m_Shader: {fileID: 10753, guid: 0000000000000000f000000000000000, type: 0}`
+
+**When to use each**:
+- `Unlit/Transparent`: textured overlays where alpha comes from the texture; no `mat.color` tinting needed.
+- `Sprites/Default`: solid-color or tinted overlays — supports `_Color` including alpha. Works with `mat.color = new Color(r, g, b, alpha)`.
+
+## C# 9 String Interpolation — No Inline String Literals
+
+**Symptom**: `$"... {x ?? "null"} ..."` causes a compile error in C# 9 (Unity 2022/2023). Works fine in C# 11+.
+
+**Error**: `CS8967: Newlines inside a non-verbatim interpolated string not permitted in C# 9.0`
+
+**Root cause**: In C# 9, interpolation expression holes `{...}` do not allow `"` double-quote literals inside them. C# 11 relaxed this.
+
+**Fix**: Extract to local variable before the interpolation:
+```csharp
+// WRONG (C# 9):
+Debug.Log($"id={charDef.AutoAttackId.Value ?? "null"}");
+
+// RIGHT:
+var autoId = charDef.AutoAttackId.Value ?? "null";
+Debug.Log($"id={autoId}");
+```
+
+## CS0177 — `out` Parameter in Short-Circuit `&&`
+
+**Symptom**: `CS0177: The out parameter 'info' must be assigned to before control leaves the current method`
+
+**Broken pattern**:
+```csharp
+public bool TryGet(AbilityId id, out AbilityClientInfo info)
+{
+    return id.Value != null && _byId.TryGetValue(id.Value, out info);
+    // When id.Value == null, short-circuit skips TryGetValue, so info is never assigned
+}
+```
+
+**Fix**: Expand to block form so all paths assign `info`:
+```csharp
+public bool TryGet(AbilityId id, out AbilityClientInfo info)
+{
+    if (id.Value == null) { info = default; return false; }
+    return _byId.TryGetValue(id.Value, out info);
+}
+```
+
 ## Server JWT Configuration
 - `JwtKeyProvider` requires `Jwt:EndUserSigningKey` and `Jwt:InterTierSigningKey` (min 32 bytes each)
 - Dev keys are in `appsettings.Development.json` for both Services and GameServer

@@ -29,6 +29,7 @@ namespace ClashUp.Client.Match
         private readonly LocalInputPublisher _inputPublisher;
         private readonly MapRegistry _mapRegistry;
         private readonly MatchCharactersHolder _characters;
+        private readonly MatchAbilitiesHolder _abilities;
         private readonly JoystickInputProvider _joystickProvider;
         private readonly AbilityInputProvider _abilityProvider;
 
@@ -55,6 +56,7 @@ namespace ClashUp.Client.Match
             LocalInputPublisher inputPublisher,
             MapRegistry mapRegistry,
             MatchCharactersHolder characters,
+            MatchAbilitiesHolder abilities,
             JoystickInputProvider joystickProvider,
             AbilityInputProvider abilityProvider)
         {
@@ -69,6 +71,7 @@ namespace ClashUp.Client.Match
             _inputPublisher = inputPublisher;
             _mapRegistry = mapRegistry;
             _characters = characters;
+            _abilities = abilities;
             _joystickProvider = joystickProvider;
             _abilityProvider = abilityProvider;
         }
@@ -97,6 +100,7 @@ namespace ClashUp.Client.Match
             {
                 var join = await _session.ConnectAndJoinAsync(_handoff.Value, cancellation);
                 _characters.Initialize(join.Characters);
+                _abilities.Initialize(join.Abilities);
                 _durationSeconds = join.DurationSeconds;
                 _serverElapsedAtJoin = join.ElapsedSeconds;
                 _joinWallClock = DateTimeOffset.UtcNow;

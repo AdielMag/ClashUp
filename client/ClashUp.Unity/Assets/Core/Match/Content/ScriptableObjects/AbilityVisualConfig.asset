@@ -16,7 +16,7 @@ MonoBehaviour:
   ProjectilePrefab: {fileID: 0}
   HitVfxPrefab: {fileID: 0}
   Telegraph:
-    TelegraphMaterial: {fileID: 0}
+    TelegraphMaterial: {fileID: 2100000, guid: 30aab871e3de9d54bbe79fab2bbca5ab, type: 2}
     TelegraphColor: {r: 1, g: 0.8, b: 0, a: 0.5}
   CastSound: {fileID: 0}
   HitSound: {fileID: 0}

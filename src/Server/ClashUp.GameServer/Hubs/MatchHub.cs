@@ -1,5 +1,6 @@
 using System.Linq;
 using ClashUp.Server.Common.Auth;
+using ClashUp.Server.GameServer.Abilities;
 using ClashUp.Server.GameServer.Match;
 using ClashUp.Server.GameServer.Registration;
 using ClashUp.Server.GameServer.Simulation;
@@ -22,16 +23,18 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
     private readonly IMatchTokenValidator _tokens;
     private readonly GameServerIdentity _identity;
     private readonly IServicesRegistryClient _servicesClient;
+    private readonly ServerAbilityStore _abilityStore;
 
     private MatchContext? _context;
     private MatchTokenClaims _claims;
 
-    public MatchHub(IMatchRegistry matches, IMatchTokenValidator tokens, GameServerIdentity identity, IServicesRegistryClient servicesClient)
+    public MatchHub(IMatchRegistry matches, IMatchTokenValidator tokens, GameServerIdentity identity, IServicesRegistryClient servicesClient, ServerAbilityStore abilityStore)
     {
         _matches = matches;
         _tokens = tokens;
         _identity = identity;
         _servicesClient = servicesClient;
+        _abilityStore = abilityStore;
     }
 
     public async Task<JoinResult> JoinAsync(MatchJoinRequest request)
@@ -103,6 +106,7 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
             RandomSeed = context.Simulation.RandomSeed,
             MapId = context.Provision.MapId,
             Characters = context.Provision.Characters,
+            Abilities = _abilityStore.BuildClientConfig(),
         };
     }
 

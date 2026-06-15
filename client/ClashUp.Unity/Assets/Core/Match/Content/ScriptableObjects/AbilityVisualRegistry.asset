@@ -16,3 +16,6 @@ MonoBehaviour:
   - Guid: 
     AbilityId: brawler_punch
     Config: {fileID: 11400000, guid: 1f913f258874a2a429fbb726e49922a4, type: 2}
+  - Guid: 
+    AbilityId: brawler_charge
+    Config: {fileID: 11400000, guid: 71a4b64798c00c64f983492f05f884ac, type: 2}

@@ -29,6 +29,7 @@ namespace ClashUp.Client.Gameplay
 
         public bool WasFired { get; private set; }
         public Vector2 AimDirection { get; private set; }
+        public Vector2 CurrentAimDirection { get; private set; }
         public bool InputEnabled { get; set; }
         public bool IsOnCooldown => _cooldownRemaining > 0f;
 
@@ -199,6 +200,7 @@ namespace ClashUp.Client.Gameplay
             float norm = clamped.magnitude / _radius;
             if (norm >= AimThreshold)
             {
+                CurrentAimDirection = clamped.normalized;
                 SetArrowVisible(true);
                 float angle = Mathf.Atan2(-clamped.x, clamped.y) * Mathf.Rad2Deg;
                 _arrowRect.localRotation = Quaternion.Euler(0f, 0f, angle);
@@ -206,6 +208,7 @@ namespace ClashUp.Client.Gameplay
             }
             else
             {
+                CurrentAimDirection = Vector2.zero;
                 SetArrowVisible(false);
             }
         }
@@ -217,6 +220,7 @@ namespace ClashUp.Client.Gameplay
 
             WasFired = true;
             AimDirection = magnitude >= AimThreshold ? handleNorm.normalized : Vector2.zero;
+            CurrentAimDirection = Vector2.zero;
 
             _handleRect.anchoredPosition = Vector2.zero;
             _backgroundRect.anchoredPosition = _defaultAnchorPos;
@@ -233,6 +237,7 @@ namespace ClashUp.Client.Gameplay
 
         private void CancelDrag()
         {
+            CurrentAimDirection = Vector2.zero;
             _handleRect.anchoredPosition = Vector2.zero;
             _backgroundRect.anchoredPosition = _defaultAnchorPos;
             SetArrowVisible(false);

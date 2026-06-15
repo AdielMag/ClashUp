@@ -17,6 +17,7 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(5)] public string MapId { get; init; } = "arena_tdm";
         [Key(6)] public IReadOnlyList<PlayerAssignment> PlayerAssignments { get; init; } = System.Array.Empty<PlayerAssignment>();
         [Key(7)] public CharactersConfig Characters { get; init; } = CharactersConfig.Default;
+        [Key(8)] public AbilitiesConfig Abilities { get; init; } = AbilitiesConfig.Default;
     }
 
     [MessagePackObject]
