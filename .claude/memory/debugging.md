@@ -493,6 +493,20 @@ PrefabUtility.UnloadPrefabContents(prefab);
 
 **Lesson**: Any time a simulation adds per-player initialization logic (health, invulnerability, spawn slot, etc.), it must be guarded this way — `MatchPhysicsWorld`'s guard is NOT sufficient.
 
+## Server Change Seems Not Applied — Old Docker Binary
+
+**Symptom**: After editing server code and verifying local build succeeds, the game still shows old behavior (e.g., respawn happens immediately despite adding a 5-second delay).
+
+**Root cause**: Docker containers keep running from their last built image. `docker compose up` without `--build` does NOT rebuild images; the server binary inside the container is stale.
+
+**Fix**: Rebuild and restart the affected container:
+```bash
+docker compose -f ops/docker/docker-compose.yml up -d --build gameserver
+```
+Run this after ANY server-side change before testing. Check `docker ps` output — a container "Up 6 hours" after a code change is a red flag.
+
+**Rule**: If a server behavior looks unchanged despite clearly correct code, assume stale Docker binary first. Look for the `[DIED]` / `[RESPAWN]` log lines in `docker logs clashup-gameserver` to confirm the new code is running.
+
 ## Docker Volume Persistence
 
 **Symptom**: Changed MongoDB config but the change didn't take effect after container restart.

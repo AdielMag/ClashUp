@@ -40,6 +40,7 @@ Owned by both `AetherServerSimulation` and `AetherClientSimulation` as sibling t
 | PlayerStateDto | 4 | `float Health` | stat system |
 | PlayerStateDto | 5 | `int LastProcessedInputSeq` | netcode/reconciliation |
 | PlayerStateDto | 6 | `bool IsInvulnerable` | spawn invulnerability |
+| PlayerStateDto | 7 | `int RespawnInTicks` | respawn delay — 0=alive, >0=dead/counting down |
 | JoinResult | 6 | `uint RandomSeed` | stat system |
 | PlayerSummary | 4 | `CharacterId CharacterId` | stat system |
 
@@ -87,28 +88,43 @@ Server generates seed at `AetherServerSimulation` construction. Sent to client v
 
 ## Server Respawn System
 
-`AetherServerSimulation` manages respawning via two dictionaries:
+`AetherServerSimulation` manages respawning via three dictionaries:
 - `Dictionary<string, float> _maxHealth` — set in `EnsurePlayer` from `stats.MaxHealth`
 - `Dictionary<string, (float X, float Z)> _spawnPositions` — set in `EnsurePlayer` from `SpawnResolver`
+- `Dictionary<string, int> _respawnTimers` — set when player first dies, counts down to 0
 
-Post-tick loop in `Step()` (after `_abilities.Tick` and `CurrentTick++`):
+**Respawn delay**: `RespawnDelayTicks = 150` (5 seconds at 30 Hz). When a player dies, the timer starts. Each tick decrements it; respawn fires when it hits 0.
+
+**Dead player input gate**: `ApplyInput` still acks the sequence (`_lastSeq[id] = seq`) but returns early before physics/ability processing when `!_health.IsAlive(id)`. This drains the client's pending-input queue correctly while preventing dead-player movement.
+
+Post-tick loop in `Step()`:
 ```csharp
 foreach (var id in _world.PlayerIds)
 {
-    if (!_health.IsAlive(id) && _maxHealth.TryGetValue(id, out var max))
+    if (_health.IsAlive(id)) continue;
+    if (_respawnTimers.TryGetValue(id, out var ticks))
     {
-        _health.Initialize(id, max);
-        _health.SetInvulnerable(id, HealthTable.DefaultSpawnInvulnTicks);
-        if (_spawnPositions.TryGetValue(id, out var spawn))
-            _world.SnapPlayerPosition(id, spawn.X, spawn.Z);
+        ticks--;
+        if (ticks <= 0) { /* respawn: Initialize HP + invuln + SnapPosition */ }
+        else { _respawnTimers[id] = ticks; }
     }
+    else { _respawnTimers[id] = RespawnDelayTicks; } // just died
 }
 ```
 
-**Why needed**: `AbilityExecutor.FindNearestEnemyYaw` skips dead targets. Without respawn, auto-attacks stop permanently once all enemies are dead. Respawn brings targets back into range.
+`RespawnInTicks` is broadcast in every `PlayerStateDto` (Key 7): 0 = alive, >0 = dead counting down.
 
-**Client side**: Client's `ReconcileTo` receives the respawned position + full HP in the next `PlayerStateDto` and snaps accordingly. No client-side respawn logic needed.
+**Client side**: `AetherClientSimulation` stores `_respawnTicks` dict, populated from `dto.RespawnInTicks` in `ReconcileTo`, copied to `PlayerRenderState.RespawnInTicks` in `SyncRenderStates`. `PlayerViewSystem` hides the local player GO (`SetActive(false)`) when dead. Camera holds at last known position during the 5s window (Cinemachine handles inactive follow targets gracefully). `RespawnScreenController` shows "YOU DIED" overlay + countdown; also calls `SetVisible(false)` on `JoystickInputProvider` + `AbilityInputProvider`.
+
+## RespawnScreenController
+
+`Core/Gameplay/Scripts/UI/RespawnScreenController.cs` — `IStartable/ITickable/IDisposable` VContainer service. Injects `AetherClientSimulation`, `JoystickInputProvider`, `AbilityInputProvider`. Creates a canvas overlay in `Start()` (sortingOrder 20). Each `Tick()`:
+- Checks `sim.Players[localId].RespawnInTicks > 0`
+- Shows/hides overlay + toggles input visibility on state change (`_wasDead` flag prevents per-frame calls)
+- Updates `$"Respawning in {ticks/30f:F1}s"` countdown label
+
+Registered as `builder.RegisterEntryPoint<RespawnScreenController>()` in `MatchLifetimeScope`.
 
 ## Status
 
-`HealthTable.ApplyDamage` is wired with invulnerability guard; spawn invulnerability runs for 3s after join. Abilities NOW deal damage via shaped hitboxes (`AbilityExecutor.EvaluateHitbox` → `ApplyDamage`); Brawler Punch 10 / Charge 20. Health flows to clients in `PlayerStateDto.Health` every tick. **Respawn is live** — server respawns dead players to their team spawn with full HP + 3s invuln each tick after death.
+`HealthTable.ApplyDamage` wired with invulnerability guard; spawn invulnerability 3s. Abilities deal damage: Brawler Punch 10 / Charge 20. Health flows in `PlayerStateDto.Health` every tick. **Respawn has a 5-second delay** — server counts 150 ticks then restores HP + 3s invuln + snaps to spawn. Client shows death screen + countdown and hides all input controls while dead.

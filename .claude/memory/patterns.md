@@ -185,6 +185,23 @@ Two separate rendering paths for local vs remote players:
 - **Camera.main**: `MatchCameraRig.BuildMainCamera()` tags the camera as `MainCamera`. During match, `CameraService.ActiveCamera` returns the match camera directly (no Camera.main lookup needed).
 - **Old PlayerMaterialMap (deprecated)**: Still exists in codebase but no longer wired into DI. Color tinting was dropped in favor of character-specific prefabs.
 
+## Input Visibility — Hiding Controls During Death/Spectate
+
+Both `JoystickInputProvider` and `AbilityInputProvider` expose `SetVisible(bool)` which toggles `_canvasRoot.SetActive(visible)`. Use this to hide input UI in any non-play state.
+
+**Pattern** (used in `RespawnScreenController`):
+```csharp
+// Only call on state change — not every frame — to avoid redundant SetActive calls
+if (isDead != _wasDead)
+{
+    _joystick.SetVisible(!isDead);
+    _abilityInput.SetVisible(!isDead);
+    _wasDead = isDead;
+}
+```
+
+Both providers are registered `.AsSelf()` in `MatchLifetimeScope`, so inject by concrete type.
+
 ## Match Reconnection Pattern
 - Server: `MatchContext` tracks players as connected/disconnected (not removed on disconnect)
 - Server: `OnDisconnected` → `MarkDisconnected` + broadcast `OnPlayerLeft(Disconnect)`, keep in player list

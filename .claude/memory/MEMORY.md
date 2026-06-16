@@ -59,7 +59,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Coordinate mapping**: game (X, Z) ↔ Aether (x, y); gravity = zero for top-down
 - **Player bodies**: dynamic circles, velocity set from input each tick (kinematic move-and-slide style)
 - **Player radius**: `MatchPhysicsWorld` constructor parameter (default `0.5f`). Client reads from prefab's `AetherCircleCollider.Radius` (Player.prefab `_radius: 0.5`). Server uses default. **These MUST match** — a mismatch makes client/server resolve wall collisions at different distances → constant position disagreement → reconciliation shimmer against walls (was 0.4 server vs 0.5 prefab).
-- **Wire protocol**: `InputCommand` up, `SnapshotPacket → WorldStatePacket → PlayerStateDto{X,Z,Yaw,Health,LastProcessedInputSeq,IsInvulnerable}` down
+- **Wire protocol**: `InputCommand` up, `SnapshotPacket → WorldStatePacket → PlayerStateDto{X,Z,Yaw,Health,LastProcessedInputSeq,IsInvulnerable,RespawnInTicks}` down
 - **AetherNet.Shared**: `AetherNet.Shared.dll` (netstandard2.0, C# 10) committed in `Assets/Packages/AetherNet.Shared.0.1.0/`. Uses pre-built DLL — Unity can't compile C# 10 file-scoped namespaces.
 - **AetherNet.Unity**: Source-only package copied to `Assets/Packages/AetherNet.Unity/` by `setup-aethernet.ps1`. These files ARE C# 9 compatible (block-scoped namespaces). Has Runtime + Editor asmdefs. `AetherSceneBaker.cs` excluded (depends on `AetherNet.Server`).
 - **AetherNet.Unity asmdefs**: `AetherNet.Unity` (Runtime, unsafe, precompiled refs: AetherNet.Shared.dll + Aether.Physics2D.dll) and `AetherNet.Unity.Editor` (Editor-only, refs AetherNet.Unity)
@@ -87,7 +87,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Random seed**: `DeterministicRng` (Xorshift32) in Shared. Per-tick re-seeding via `ForTick(baseSeed, tick)` to avoid drift. Seed generated server-side, sent in `JoinResult.RandomSeed` (Key 6).
 - **PlayerSummary.CharacterId** (Key 4) — sent on join
 - **PlayerRenderState**: has `Health`, `MaxHealth`, and `Prev{X,Z,Yaw}` fields. Local player synced from `HealthTable` in `SyncRenderStates()`; remote health comes from `RemotePlayerInterpolator`.
-- **Combat is LIVE**: abilities deal damage — `AbilityExecutor.EvaluateHitbox` → `HealthTable.ApplyDamage` (Brawler Punch 10 / Charge 20). `WorldSpaceHealthBar` reflects it. Spawn invuln (3s) still guards. **Server respawn**: `AetherServerSimulation.Step()` post-tick loop — if `!_health.IsAlive`, restore HP + invuln + snap position from `_maxHealth`/`_spawnPositions` dicts per player.
+- **Combat is LIVE**: abilities deal damage — `AbilityExecutor.EvaluateHitbox` → `HealthTable.ApplyDamage` (Brawler Punch 10 / Charge 20). `WorldSpaceHealthBar` reflects it. Spawn invuln (3s) still guards. **Server respawn**: 5-second delay (`RespawnDelayTicks=150`). `_respawnTimers` dict counts down; at 0 restore HP + invuln + snap position. Dead player input acked but not applied. Client shows "YOU DIED" + countdown via `RespawnScreenController`; hides input controls. See [[stat-health-system]].
 - **Health bar UI**: `WorldSpaceHealthBar.cs` in `Core/Gameplay/Scripts/UI/` — uses `Slider _slider` (NOT `Image.fillAmount`). `SetHealth` sets `slider.value = current/max`. Player.prefab: HealthBar has Slider component + WorldSpaceHealthBar; Fill child Image is the Slider's fillRect. `PlayerViewSystem` caches per-player ref and calls `SetHealth(current, max)` each frame.
 
 ## Map System
