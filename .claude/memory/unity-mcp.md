@@ -122,6 +122,23 @@ npx unity-mcp-cli run-tool assets-refresh --input '{}'
 
 Or use Skill `editor-application-get-state` → Skill `editor-application-set-state` → Skill `assets-refresh`.
 
+## Verifying Procedural Meshes / Flat XZ Visuals Without Running the Game
+
+To validate code-generated meshes (telegraph/area-flash shapes, etc.) without a running server or play mode:
+1. `script-execute` to spawn the objects in the open scene, parented under one root GameObject (e.g. `FlashTestRoot`), giving meaningful positions.
+2. `screenshot-isolated` on that root with `cameraView: "Top"`, `isolated: true`, `includeChildren: true`, a solid dark `backgroundColor` — renders flat XZ-plane meshes straight down so you can eyeball the shapes.
+3. `script-execute` again to `DestroyImmediate` the root and clean up. **Don't `scene-save`** — leave the open scene untouched.
+
+Gotchas:
+- `screenshot-scene-view` / `screenshot-game-view` were NOT surfaced via ToolSearch in this environment — `screenshot-isolated` was. Reach for `screenshot-isolated` for object/mesh checks.
+- `MonoBehaviour.Update()` does NOT run in edit mode, so a self-destruct/fade component (e.g. `AbilityAreaFlash`) persists for the screenshot — pass a long duration anyway and clean up manually.
+
+## Adding a New Serialized Field to an Existing ScriptableObject
+
+When you add a `[SerializeField]`/public field WITH a C# initializer (e.g. `public Color CastFlashColor = new Color(1,0.85f,0.2f,0.6f);`) and `assets-refresh`, existing `.asset` files were observed to pick up the **C# initializer default** (not transparent-black zero). Still:
+- **Set the value explicitly** on assets that need a non-default via `assets-modify` `pathPatches` (`{"Path":"FieldName","Value":{"typeName":"UnityEngine.Color","value":{"r":..,"g":..,"b":..,"a":..}}}`) rather than relying on the initializer surviving.
+- **Guard in code** (e.g. treat `alpha <= 0` as "unset, use fallback") so old assets that serialized a zero value still behave.
+
 ## When to Use MCP vs Editor Scripts
 - **MCP first**: For one-time setup tasks (creating scenes, modifying build settings, adding components)
 - **Editor scripts**: Only when the setup needs to be repeatable by other team members without MCP

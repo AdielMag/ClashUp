@@ -87,4 +87,4 @@ Server generates seed at `AetherServerSimulation` construction. Sent to client v
 
 ## Status
 
-Infrastructure only — no combat mechanics. `HealthTable.ApplyDamage` is wired with invulnerability guard. Spawn invulnerability runs for 3s after join. Nothing deals damage yet.
+`HealthTable.ApplyDamage` is wired with invulnerability guard; spawn invulnerability runs for 3s after join. Abilities NOW deal damage via shaped hitboxes (`AbilityExecutor.EvaluateHitbox` → `ApplyDamage`); Brawler Punch 10 / Charge 20. Health flows to clients in `PlayerStateDto.Health` every tick.
