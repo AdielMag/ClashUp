@@ -30,10 +30,20 @@ Two modes:
 
 ## Tool Parameter Gotchas
 - `gameobject-component-add`: parameter is `componentNames` (not `componentTypes`)
+- `gameobject-component-add` **fails silently for complex Unity UI components** (e.g. `UnityEngine.UI.Slider`) — returns "No component names provided" or succeeds but the component isn't added. Use `script-execute` with `go.AddComponent<Slider>()` instead.
 - `scene-open`: works reliably with `assetPath` (e.g. `"Assets/Core/Lobby/Content/Scenes/Lobby.unity"`). Use `script-execute` fallback only if it fails.
 - `scene-set-active`: can fail on scenes that are already active/only scene — use script-execute fallback
 - `scene-create`: `setupMode: "EmptyScene"` creates a truly empty scene (no camera/light)
 - `assets-create-folder`: can fail with null ref if parent doesn't exist — verify parent folders first
+
+## Unity Slider Prefab Setup via script-execute
+
+Adding a `UnityEngine.UI.Slider` to a prefab via script:
+- Use `PrefabUtility.LoadPrefabContents` / `SaveAsPrefabAsset` / `UnloadPrefabContents` pattern
+- Set `slider.minValue = 0`, `slider.maxValue = 1`, `slider.interactable = false`
+- Set `slider.fillRect` to the Fill child's `RectTransform`
+- **Pitfall**: Using an existing Image's RectTransform as `fillRect` may not render — Unity Slider expects the standard `Fill Area > Fill` hierarchy. If the fill doesn't appear, recreate the Image child instead of reusing the existing one.
+- Set `slider.handleRect = null` (hide handle for a health bar)
 
 ## Recommended Workflow for Scene Setup
 1. `scene-create` to create the .unity file

@@ -87,8 +87,8 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **Random seed**: `DeterministicRng` (Xorshift32) in Shared. Per-tick re-seeding via `ForTick(baseSeed, tick)` to avoid drift. Seed generated server-side, sent in `JoinResult.RandomSeed` (Key 6).
 - **PlayerSummary.CharacterId** (Key 4) — sent on join
 - **PlayerRenderState**: has `Health`, `MaxHealth`, and `Prev{X,Z,Yaw}` fields. Local player synced from `HealthTable` in `SyncRenderStates()`; remote health comes from `RemotePlayerInterpolator`.
-- **Combat is LIVE**: abilities deal damage — `AbilityExecutor.EvaluateHitbox` → `HealthTable.ApplyDamage` (Brawler Punch 10 / Charge 20). `WorldSpaceHealthBar` reflects it. Spawn invuln (3s) still guards. (Was "no combat yet" — now wired via shaped hitboxes.)
-- **Health bar UI**: `WorldSpaceHealthBar.cs` in `Core/Gameplay/Scripts/UI/` — world-space filled Image under Player.prefab's NameLabel Canvas. `PlayerViewSystem` caches per-player reference and calls `SetHealth(current, max)` each frame.
+- **Combat is LIVE**: abilities deal damage — `AbilityExecutor.EvaluateHitbox` → `HealthTable.ApplyDamage` (Brawler Punch 10 / Charge 20). `WorldSpaceHealthBar` reflects it. Spawn invuln (3s) still guards. **Server respawn**: `AetherServerSimulation.Step()` post-tick loop — if `!_health.IsAlive`, restore HP + invuln + snap position from `_maxHealth`/`_spawnPositions` dicts per player.
+- **Health bar UI**: `WorldSpaceHealthBar.cs` in `Core/Gameplay/Scripts/UI/` — uses `Slider _slider` (NOT `Image.fillAmount`). `SetHealth` sets `slider.value = current/max`. Player.prefab: HealthBar has Slider component + WorldSpaceHealthBar; Fill child Image is the Slider's fillRect. `PlayerViewSystem` caches per-player ref and calls `SetHealth(current, max)` each frame.
 
 ## Map System
 - **Shared POCOs**: `MapData`, `BakedEntityDef`, `BakedFixtureDef`, `SpawnArea` in `ClashUp.Shared/Maps/`
@@ -187,18 +187,10 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - [folder-conventions.md](folder-conventions.md) — Script subfolder rules (Interfaces/, Services/, etc.)
 - [patterns.md](patterns.md) — Code patterns (IDebugLogger, canvas scaler, etc.)
 - [debugging.md](debugging.md) — Common pitfalls and solutions (incl. full match-end freeze sequence)
-- [feedback-client-authority.md](feedback-client-authority.md) — Never synthesize server state on the client
 - [unity-mcp.md](unity-mcp.md) — Unity MCP CLI usage patterns and gotchas
 - [dev-environment.md](dev-environment.md) — CLASHUP_DEV define, Tailscale phone testing, ServerEnvironment enum
-- [stat-health-system.md](stat-health-system.md) — Character stats, health table, deterministic RNG architecture
-- [feedback-scope-narrowing.md](feedback-scope-narrowing.md) — Start with minimum fields, ask before over-designing
-- [feedback-reread-before-edit.md](feedback-reread-before-edit.md) — Always re-read files before editing after plan phase
+- [stat-health-system.md](stat-health-system.md) — Character stats, health table, deterministic RNG architecture, respawn system
 - [netcode-architecture.md](netcode-architecture.md) — Gambetta netcode: prediction, reconciliation, entity interpolation
-- [monday-api.md](monday-api.md) — Monday.com API integration, board IDs, column gotchas
-- [mvp1-architecture.md](mvp1-architecture.md) — YARP gateway, session cache, write-behind persistence, version routing
-- [feedback-no-singletons.md](feedback-no-singletons.md) — Use DI-registered services, not singleton pattern
 - [feedback-ticket-status.md](feedback-ticket-status.md) — Never mark tickets Done without user confirmation it's working
 - [ability-authoring.md](ability-authoring.md) — How to create ability JSON files: editor tool, schema, node types, wiring to characters
 - [lobby-ui.md](lobby-ui.md) — Lobby pager UI: horizontal scroll, vertical per-page scroll, bottom bar, play button wiring, VContainer scope
-- [feedback-ui-scope.md](feedback-ui-scope.md) — "Hide UI" means input controls only, not informational HUD
-- [feedback-telegraph-vs-castvfx.md](feedback-telegraph-vs-castvfx.md) — "telegraph" = range indicator; ability "visual on trigger" = cast VFX (separate systems)

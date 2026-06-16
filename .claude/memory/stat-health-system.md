@@ -85,6 +85,30 @@ Server generates seed at `AetherServerSimulation` construction. Sent to client v
 
 **Pattern**: `_knownPlayers HashSet<string>` in `AetherServerSimulation`. `if (!_knownPlayers.Add(player.Value)) return;` at the top of `EnsurePlayer`. Also prevents `_teamSlotCounters` from incrementing on every tick.
 
+## Server Respawn System
+
+`AetherServerSimulation` manages respawning via two dictionaries:
+- `Dictionary<string, float> _maxHealth` — set in `EnsurePlayer` from `stats.MaxHealth`
+- `Dictionary<string, (float X, float Z)> _spawnPositions` — set in `EnsurePlayer` from `SpawnResolver`
+
+Post-tick loop in `Step()` (after `_abilities.Tick` and `CurrentTick++`):
+```csharp
+foreach (var id in _world.PlayerIds)
+{
+    if (!_health.IsAlive(id) && _maxHealth.TryGetValue(id, out var max))
+    {
+        _health.Initialize(id, max);
+        _health.SetInvulnerable(id, HealthTable.DefaultSpawnInvulnTicks);
+        if (_spawnPositions.TryGetValue(id, out var spawn))
+            _world.SnapPlayerPosition(id, spawn.X, spawn.Z);
+    }
+}
+```
+
+**Why needed**: `AbilityExecutor.FindNearestEnemyYaw` skips dead targets. Without respawn, auto-attacks stop permanently once all enemies are dead. Respawn brings targets back into range.
+
+**Client side**: Client's `ReconcileTo` receives the respawned position + full HP in the next `PlayerStateDto` and snaps accordingly. No client-side respawn logic needed.
+
 ## Status
 
-`HealthTable.ApplyDamage` is wired with invulnerability guard; spawn invulnerability runs for 3s after join. Abilities NOW deal damage via shaped hitboxes (`AbilityExecutor.EvaluateHitbox` → `ApplyDamage`); Brawler Punch 10 / Charge 20. Health flows to clients in `PlayerStateDto.Health` every tick.
+`HealthTable.ApplyDamage` is wired with invulnerability guard; spawn invulnerability runs for 3s after join. Abilities NOW deal damage via shaped hitboxes (`AbilityExecutor.EvaluateHitbox` → `ApplyDamage`); Brawler Punch 10 / Charge 20. Health flows to clients in `PlayerStateDto.Health` every tick. **Respawn is live** — server respawns dead players to their team spawn with full HP + 3s invuln each tick after death.
