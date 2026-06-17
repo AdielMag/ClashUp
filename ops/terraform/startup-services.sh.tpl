@@ -9,6 +9,11 @@ REGISTRY_HOST="${registry_host}"
 GATEWAY_IMAGE="${gateway_image}"
 SERVICES_REPO="${services_repo}"
 
+# COS has an iptables INPUT policy of DROP (only SSH allowed by default).
+# Open the gateway gRPC port + admin/health port for external traffic & health checks.
+iptables -A INPUT -p tcp --dport 5001 -j ACCEPT
+iptables -A INPUT -p tcp --dport 9001 -j ACCEPT
+
 # Wait for the Docker daemon (preinstalled on COS) to be ready.
 until docker info >/dev/null 2>&1; do sleep 1; done
 
