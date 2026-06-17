@@ -1,9 +1,11 @@
 # ClashUp GCP Infrastructure
 
 Terraform for the ClashUp server fleet on GCP: one Managed Instance Group per
-tier (Services, GameServer), each of identical **gateway** instances that spawn
-per-version backend containers on demand. Autoscaling is driven by CPU (80%),
-RAM (80%, via the Ops Agent), and a custom CCU metric (GameServer).
+tier (Services, GameServer), each of identical **gateway** instances (on
+Container-Optimized OS) that spawn per-version backend containers on demand.
+Autoscaling is driven by CPU (80%, native), RAM (80%, via the gateway's
+self-reported `custom.googleapis.com/instance/memory_utilization`), and a custom
+CCU metric (GameServer). No Ops Agent — the gateway reports host memory itself.
 
 ## Architecture recap
 

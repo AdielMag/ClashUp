@@ -20,7 +20,8 @@ resource "google_compute_instance_template" "services" {
   tags         = ["clashup-services"]
 
   disk {
-    source_image = "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts"
+    # Container-Optimized OS: minimal, hardened, auto-updating, Docker preinstalled.
+    source_image = "projects/cos-cloud/global/images/family/cos-stable"
     auto_delete  = true
     boot         = true
     disk_size_gb = 20
@@ -93,12 +94,12 @@ resource "google_compute_region_autoscaler" "services" {
       target = var.cpu_target_utilization
     }
 
-    # RAM via the Ops Agent memory metric.
+    # RAM via the gateway's self-reported host-memory metric (no Ops Agent needed,
+    # so instances can run on Container-Optimized OS).
     metric {
-      name   = "agent.googleapis.com/memory/percent_used"
+      name   = "custom.googleapis.com/instance/memory_utilization"
       type   = "GAUGE"
       target = var.ram_target_utilization * 100
-      filter = "metric.labels.state = \"used\""
     }
   }
 }

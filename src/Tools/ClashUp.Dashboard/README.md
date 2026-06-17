@@ -37,6 +37,7 @@ dotnet run --project src/Tools/ClashUp.Dashboard
 Open <http://localhost:8080>. The page auto-refreshes every 5 seconds.
 
 > Data sources: Compute Engine (instances/state), Cloud Monitoring
-> (`custom.googleapis.com/gameserver/ccu`, CPU, and the Ops Agent RAM metric),
-> and Artifact Registry (image tags). If a query fails (e.g. an API is not yet
-> enabled), the dashboard shows a banner and still renders what it could fetch.
+> (`custom.googleapis.com/gameserver/ccu`, native CPU, and the gateway's
+> `custom.googleapis.com/instance/memory_utilization` for RAM), and Artifact
+> Registry (image tags). If a query fails (e.g. an API is not yet enabled), the
+> dashboard shows a banner and still renders what it could fetch.

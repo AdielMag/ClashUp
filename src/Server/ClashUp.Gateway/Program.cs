@@ -1,4 +1,5 @@
 using ClashUp.Server.Gateway;
+using ClashUp.Server.Gateway.HostMetrics;
 using ClashUp.Server.Gateway.Routing;
 using ClashUp.Server.Gateway.Supervisor;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -30,6 +31,7 @@ builder.Services.AddSingleton(_ => gatewayOptions);
 builder.Services.AddSingleton<IProcessSupervisor, ProcessSupervisor>();
 builder.Services.AddSingleton<VersionForwarder>();
 builder.Services.AddHostedService<SupervisorHostedService>();
+builder.Services.AddHostedService<HostMetricsReporter>();
 builder.Services.AddHttpForwarder();
 
 var app = builder.Build();

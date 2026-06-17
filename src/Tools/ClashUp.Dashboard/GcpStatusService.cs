@@ -16,7 +16,7 @@ public sealed class GcpStatusService
 {
     private const string CcuMetric = "custom.googleapis.com/gameserver/ccu";
     private const string CpuMetric = "compute.googleapis.com/instance/cpu/utilization";
-    private const string RamMetric = "agent.googleapis.com/memory/percent_used";
+    private const string RamMetric = "custom.googleapis.com/instance/memory_utilization";
 
     private readonly DashboardOptions _options;
     private readonly ILogger<GcpStatusService> _logger;
@@ -46,7 +46,7 @@ public sealed class GcpStatusService
             ?? new Dictionary<string, List<VersionCcu>>();
         var cpu = await SafeAsync(() => QueryGaugeByInstanceAsync(CpuMetric, null, v => v * 100, cancellationToken), errors, "CPU")
             ?? new Dictionary<string, double>();
-        var ram = await SafeAsync(() => QueryGaugeByInstanceAsync(RamMetric, "metric.label.state = \"used\"", v => v, cancellationToken), errors, "RAM")
+        var ram = await SafeAsync(() => QueryGaugeByInstanceAsync(RamMetric, null, v => v, cancellationToken), errors, "RAM")
             ?? new Dictionary<string, double>();
 
         var tiers = new List<TierStatus>

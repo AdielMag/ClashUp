@@ -48,6 +48,9 @@ public sealed class GatewayOptions
     /// <summary>How often the maintenance loop health-checks backends and evicts idle ones.</summary>
     public int MaintenanceIntervalSeconds { get; init; } = 30;
 
+    /// <summary>How often host memory utilization is pushed to Cloud Monitoring, in seconds.</summary>
+    public int MetricsIntervalSeconds { get; init; } = 30;
+
     /// <summary>Versions to spawn eagerly at startup so common clients are never cold.</summary>
     public string[] PrewarmVersions { get; init; } = Array.Empty<string>();
 
