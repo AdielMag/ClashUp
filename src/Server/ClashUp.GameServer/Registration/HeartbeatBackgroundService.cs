@@ -1,3 +1,5 @@
+using ClashUp.Server.Common;
+using ClashUp.Server.GameServer.Ccu;
 using ClashUp.Server.GameServer.Match;
 using ClashUp.Shared.MessagePackObjects;
 using Microsoft.Extensions.Options;
@@ -14,6 +16,7 @@ public sealed class HeartbeatBackgroundService : BackgroundService
     private readonly IServicesRegistryClient _registry;
     private readonly IMatchRegistry _matches;
     private readonly GameServerIdentity _identity;
+    private readonly ICcuTracker _ccuTracker;
     private readonly GameServerOptions _options;
     private readonly ILogger<HeartbeatBackgroundService> _logger;
 
@@ -21,12 +24,14 @@ public sealed class HeartbeatBackgroundService : BackgroundService
         IServicesRegistryClient registry,
         IMatchRegistry matches,
         GameServerIdentity identity,
+        ICcuTracker ccuTracker,
         IOptions<GameServerOptions> options,
         ILogger<HeartbeatBackgroundService> logger)
     {
         _registry = registry;
         _matches = matches;
         _identity = identity;
+        _ccuTracker = ccuTracker;
         _options = options.Value;
         _logger = logger;
     }
@@ -48,17 +53,20 @@ public sealed class HeartbeatBackgroundService : BackgroundService
             {
                 try
                 {
-                    var internalEndpoint = string.IsNullOrWhiteSpace(_options.InternalEndpoint)
+                    var publicEndpoint = string.IsNullOrWhiteSpace(_identity.PublicEndpoint)
                         ? _options.PublicEndpoint
-                        : _options.InternalEndpoint;
+                        : _identity.PublicEndpoint;
+                    var internalEndpoint = string.IsNullOrWhiteSpace(_identity.InternalEndpoint)
+                        ? publicEndpoint
+                        : _identity.InternalEndpoint;
                     var token = await _registry.RegisterAsync(
                         new GsRegistration
                         {
                             InstanceId = _identity.InstanceId,
-                            PublicEndpoint = _options.PublicEndpoint,
+                            PublicEndpoint = publicEndpoint,
                             InternalEndpoint = internalEndpoint,
                             CapacityMax = _options.MaxConcurrentMatches,
-                            Version = "0.0.1",
+                            Version = ServerVersion.Current,
                         },
                         stoppingToken);
                     _identity.BearerJwt = token.BearerJwt;
@@ -79,6 +87,7 @@ public sealed class HeartbeatBackgroundService : BackgroundService
                         InstanceId = _identity.InstanceId,
                         CapacityUsed = _matches.Count,
                         CpuLoad = 0,
+                        Ccu = _ccuTracker.CurrentCcu,
                     },
                     stoppingToken);
             }

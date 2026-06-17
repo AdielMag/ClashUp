@@ -1,0 +1,59 @@
+name: Server Release
+
+# On a version tag (v1.2.0), build + push the three server images tagged with
+# the version AND `latest`. Shipping a game version is just this push — the
+# gateway supervisor pulls clashup-services:<v> / clashup-gameserver:<v> on
+# demand when a client sends that x-client-version. Old versions stay in the
+# registry for rollout windows.
+#
+# Rolling out a new GATEWAY build (rare) is a Terraform change, not part of this
+# workflow: `terraform apply -var="gateway_image_version=<v>"` (Services MIG
+# rolls proactively; GameServer MIG is OPPORTUNISTIC and drains naturally).
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/clashup-docker
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { name: services, dockerfile: ops/docker/services.Dockerfile }
+          - { name: gameserver, dockerfile: ops/docker/gameserver.Dockerfile }
+          - { name: gateway, dockerfile: ops/docker/gateway.Dockerfile }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push ${{ matrix.name }}
+        run: |
+          IMAGE="$REGISTRY/clashup-${{ matrix.name }}"
+          docker build -f ${{ matrix.dockerfile }} \
+            --build-arg VERSION=$VERSION \
+            -t "$IMAGE:$VERSION" \
+            -t "$IMAGE:latest" .
+          docker push "$IMAGE:$VERSION"
+          docker push "$IMAGE:latest"

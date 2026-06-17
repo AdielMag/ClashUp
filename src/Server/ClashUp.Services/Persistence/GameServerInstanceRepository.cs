@@ -28,10 +28,11 @@ public sealed class GameServerInstanceRepository : IGameServerInstanceRepository
             new ReplaceOptions { IsUpsert = true },
             cancellationToken);
 
-    public Task UpdateHeartbeatAsync(string instanceId, int capacityUsed, double cpuLoad, CancellationToken cancellationToken)
+    public Task UpdateHeartbeatAsync(string instanceId, int capacityUsed, double cpuLoad, int ccu, CancellationToken cancellationToken)
     {
         var update = Builders<GameServerInstanceDoc>.Update
             .Set(x => x.CapacityUsed, capacityUsed)
+            .Set(x => x.Ccu, ccu)
             .Set(x => x.LastHeartbeatAt, DateTime.UtcNow);
         return _collection.UpdateOneAsync(x => x.InstanceId == instanceId, update, cancellationToken: cancellationToken);
     }

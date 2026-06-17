@@ -1,0 +1,53 @@
+name: Server Dev Build
+
+# On every push to main, build + push the three server images tagged `latest`
+# to Artifact Registry. The gateway supervisor pulls these on demand.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "ops/docker/**"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - ".github/workflows/server-dev.yml"
+
+permissions:
+  contents: read
+  id-token: write # required for Workload Identity Federation
+
+env:
+  REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/clashup-docker
+  VERSION: 0.0.0-dev
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { name: services, dockerfile: ops/docker/services.Dockerfile }
+          - { name: gameserver, dockerfile: ops/docker/gameserver.Dockerfile }
+          - { name: gateway, dockerfile: ops/docker/gateway.Dockerfile }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push ${{ matrix.name }}
+        run: |
+          IMAGE="$REGISTRY/clashup-${{ matrix.name }}"
+          docker build -f ${{ matrix.dockerfile }} \
+            --build-arg VERSION=$VERSION \
+            -t "$IMAGE:latest" .
+          docker push "$IMAGE:latest"

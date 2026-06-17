@@ -23,4 +23,9 @@
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
+  <PropertyGroup Label="Versioning — overridden by CI via -p:Version / -p:InformationalVersion">
+    <Version>0.0.1</Version>
+    <InformationalVersion>0.0.1</InformationalVersion>
+  </PropertyGroup>
+
 </Project>

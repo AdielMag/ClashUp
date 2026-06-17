@@ -6,7 +6,7 @@ public interface IGameServerInstanceRepository
 
     Task UpsertAsync(GameServerInstanceDoc doc, CancellationToken cancellationToken);
 
-    Task UpdateHeartbeatAsync(string instanceId, int capacityUsed, double cpuLoad, CancellationToken cancellationToken);
+    Task UpdateHeartbeatAsync(string instanceId, int capacityUsed, double cpuLoad, int ccu, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<GameServerInstanceDoc>> ListHealthyAsync(CancellationToken cancellationToken);
 

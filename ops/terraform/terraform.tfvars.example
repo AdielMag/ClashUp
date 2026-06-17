@@ -1,0 +1,28 @@
+# Copy to terraform.tfvars and fill in. Do NOT commit terraform.tfvars (secrets).
+
+project_id = "my-clashup-project"
+region     = "us-central1"
+
+# Tag of the gateway image baked into the instance templates. Game-version
+# images (clashup-services / clashup-gameserver) are pulled on demand and are
+# NOT configured here — they are selected by the client's x-client-version.
+gateway_image_version = "latest"
+
+# Machine sizing
+services_machine_type   = "e2-standard-2"
+gameserver_machine_type = "e2-standard-4"
+
+# Autoscaling
+services_min_instances   = 1
+services_max_instances    = 5
+gameserver_min_instances = 1
+gameserver_max_instances = 10
+cpu_target_utilization   = 0.8
+ram_target_utilization   = 0.8
+ccu_per_instance_target  = 100
+
+# Secrets (MongoDB Atlas + JWT signing keys). Prefer passing via TF_VAR_* env
+# vars or a secrets manager rather than a plaintext tfvars file.
+mongo_connection_string    = "mongodb+srv://USER:PASS@cluster0.example.mongodb.net/clashup"
+jwt_end_user_signing_key   = "REPLACE-with-32+byte-key"
+jwt_inter_tier_signing_key = "REPLACE-with-32+byte-key"

@@ -20,10 +20,13 @@ COPY src/Shared/ClashUp.Shared/ src/Shared/ClashUp.Shared/
 COPY src/Server/ClashUp.Server.Common/ src/Server/ClashUp.Server.Common/
 COPY src/Server/ClashUp.Services/ src/Server/ClashUp.Services/
 
+ARG VERSION=0.0.1
 RUN dotnet publish src/Server/ClashUp.Services/ClashUp.Services.csproj \
     -c Release \
     -o /app/publish \
-    --no-restore
+    --no-restore \
+    -p:Version=$VERSION \
+    -p:InformationalVersion=$VERSION
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app

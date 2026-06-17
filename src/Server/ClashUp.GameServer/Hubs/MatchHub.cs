@@ -1,6 +1,7 @@
 using System.Linq;
 using ClashUp.Server.Common.Auth;
 using ClashUp.Server.GameServer.Abilities;
+using ClashUp.Server.GameServer.Ccu;
 using ClashUp.Server.GameServer.Match;
 using ClashUp.Server.GameServer.Registration;
 using ClashUp.Server.GameServer.Simulation;
@@ -24,17 +25,19 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
     private readonly GameServerIdentity _identity;
     private readonly IServicesRegistryClient _servicesClient;
     private readonly ServerAbilityStore _abilityStore;
+    private readonly ICcuTracker _ccuTracker;
 
     private MatchContext? _context;
     private MatchTokenClaims _claims;
 
-    public MatchHub(IMatchRegistry matches, IMatchTokenValidator tokens, GameServerIdentity identity, IServicesRegistryClient servicesClient, ServerAbilityStore abilityStore)
+    public MatchHub(IMatchRegistry matches, IMatchTokenValidator tokens, GameServerIdentity identity, IServicesRegistryClient servicesClient, ServerAbilityStore abilityStore, ICcuTracker ccuTracker)
     {
         _matches = matches;
         _tokens = tokens;
         _identity = identity;
         _servicesClient = servicesClient;
         _abilityStore = abilityStore;
+        _ccuTracker = ccuTracker;
     }
 
     public async Task<JoinResult> JoinAsync(MatchJoinRequest request)
@@ -90,6 +93,9 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
 
         context.Group?.All.OnPlayerJoined(summary);
 
+        // Count this player toward instance CCU (cancels any pending disconnect-grace removal).
+        _ccuTracker.PlayerConnected(_claims.PlayerId);
+
         // If the match already ended (client reconnected during the 2-second grace window),
         // replay OnMatchEnded directly to this client so it doesn't get stuck at 00:00.
         if (context.IsEnded && context.EndResult is { } endResult)
@@ -139,6 +145,8 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
         if (_context is not null)
         {
             _context.MarkDisconnected(_claims.PlayerId);
+            // Start the CCU grace timer; reconnecting before it elapses keeps the player counted.
+            _ccuTracker.PlayerDisconnected(_claims.PlayerId);
             _context.Group?.All.OnPlayerLeft(new PlayerId(_claims.PlayerId), LeaveReason.Disconnect);
             if (_context.Group is not null)
                 await _context.Group.RemoveAsync(Context);

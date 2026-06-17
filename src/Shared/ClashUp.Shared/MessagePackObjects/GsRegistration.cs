@@ -25,6 +25,9 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(0)] public string InstanceId { get; init; } = string.Empty;
         [Key(1)] public int CapacityUsed { get; init; }
         [Key(2)] public double CpuLoad { get; init; }
+
+        /// <summary>Concurrent connected users on this instance (with disconnect grace applied).</summary>
+        [Key(3)] public int Ccu { get; init; }
     }
 
     [MessagePackObject]

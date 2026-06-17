@@ -63,6 +63,7 @@ public sealed class GameServerRegistryImpl : ServiceBase<IGameServerRegistry>, I
             heartbeat.InstanceId,
             heartbeat.CapacityUsed,
             heartbeat.CpuLoad,
+            heartbeat.Ccu,
             Context.CallContext.CancellationToken);
     }
 

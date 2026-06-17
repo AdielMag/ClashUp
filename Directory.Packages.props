@@ -37,6 +37,17 @@
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.10.0" />
   </ItemGroup>
 
+  <ItemGroup Label="GCP client libraries">
+    <PackageVersion Include="Google.Cloud.Monitoring.V3" Version="3.9.0" />
+    <PackageVersion Include="Google.Cloud.Compute.V1" Version="3.10.0" />
+    <PackageVersion Include="Google.Cloud.ArtifactRegistry.V1" Version="2.15.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Gateway (YARP + Docker control)">
+    <PackageVersion Include="Yarp.ReverseProxy" Version="2.2.0" />
+    <PackageVersion Include="Docker.DotNet" Version="3.125.15" />
+  </ItemGroup>
+
   <ItemGroup Label="Physics">
     <PackageVersion Include="AetherNet.Shared" Version="0.1.0" />
     <PackageVersion Include="Aether.Physics2D" Version="2.2.0" />

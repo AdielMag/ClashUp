@@ -21,4 +21,14 @@ public sealed class GameServerOptions
     public string ServicesEndpoint { get; init; } = "http://localhost:5001";
 
     public int HeartbeatIntervalSeconds { get; init; } = 2;
+
+    /// <summary>
+    /// How long a disconnected player keeps counting toward CCU before being
+    /// removed (smooths brief mobile disconnects). Reconnecting within this
+    /// window cancels the pending removal. Default 300s (5 minutes).
+    /// </summary>
+    public int CcuGracePeriodSeconds { get; init; } = 300;
+
+    /// <summary>How often the CCU metric is pushed to Cloud Monitoring, in seconds.</summary>
+    public int CcuReportIntervalSeconds { get; init; } = 30;
 }

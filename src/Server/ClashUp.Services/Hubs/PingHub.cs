@@ -16,13 +16,8 @@ public sealed class PingHub : StreamingHubBase<IPingHub, IPingHubReceiver>, IPin
         {
             ClientStampMs = request.ClientStampMs,
             ServerStampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-            ServerVersion = ThisAssembly.InformationalVersion,
+            ServerVersion = ClashUp.Server.Common.ServerVersion.Current,
         };
         return Task.FromResult(result);
     }
-}
-
-internal static class ThisAssembly
-{
-    public const string InformationalVersion = "0.0.1";
 }

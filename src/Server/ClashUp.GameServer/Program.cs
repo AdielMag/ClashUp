@@ -2,6 +2,7 @@ using ClashUp.Server.Common.Auth;
 using ClashUp.Server.Common.Configuration;
 using ClashUp.Server.Common.Interceptors;
 using ClashUp.Server.GameServer.Abilities;
+using ClashUp.Server.GameServer.Ccu;
 using ClashUp.Server.GameServer.Maps;
 using ClashUp.Server.GameServer.Match;
 using ClashUp.Server.GameServer.Registration;
@@ -38,9 +39,11 @@ builder.Services.AddScoped<MatchClock>();
 
 builder.Services.AddSingleton<GameServerIdentity>();
 builder.Services.AddSingleton<IServicesRegistryClient, ServicesRegistryClient>();
+builder.Services.AddSingleton<ICcuTracker, CcuTracker>();
 builder.Services.AddHostedService<GameServerRegistrar>();
 builder.Services.AddHostedService<HeartbeatBackgroundService>();
 builder.Services.AddHostedService<GracefulDrainService>();
+builder.Services.AddHostedService<CcuMetricReporter>();
 
 builder.Services.AddGrpc();
 builder.Services.AddMagicOnion(options =>

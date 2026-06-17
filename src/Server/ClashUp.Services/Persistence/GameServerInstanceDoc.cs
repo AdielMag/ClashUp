@@ -15,6 +15,9 @@ public sealed class GameServerInstanceDoc
 
     public int CapacityUsed { get; set; }
 
+    /// <summary>Concurrent connected users on this instance (with disconnect grace applied).</summary>
+    public int Ccu { get; set; }
+
     public string Version { get; set; } = string.Empty;
 
     public DateTime LastHeartbeatAt { get; set; }

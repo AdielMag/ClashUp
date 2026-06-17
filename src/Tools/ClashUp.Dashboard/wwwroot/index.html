@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ClashUp Fleet Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f1419; --panel: #1a212b; --panel2: #222c38;
+      --text: #e6edf3; --muted: #8b98a5; --accent: #4da3ff;
+      --good: #3fb950; --warn: #d29922; --bad: #f85149; --border: #2d3744;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+           background: var(--bg); color: var(--text); }
+    header { display: flex; align-items: baseline; gap: 16px; padding: 18px 24px;
+             border-bottom: 1px solid var(--border); }
+    header h1 { font-size: 18px; margin: 0; }
+    header .meta { color: var(--muted); font-size: 13px; }
+    .wrap { padding: 24px; display: grid; gap: 24px; max-width: 1200px; margin: 0 auto; }
+    .tier h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em;
+               color: var(--accent); margin: 0 0 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+    .card .name { font-weight: 600; font-size: 14px; }
+    .card .id { color: var(--muted); font-size: 11px; margin-bottom: 10px; word-break: break-all; }
+    .state { font-size: 11px; padding: 2px 8px; border-radius: 999px; float: right; }
+    .state.RUNNING { background: rgba(63,185,80,.15); color: var(--good); }
+    .state.OTHER { background: rgba(210,153,34,.15); color: var(--warn); }
+    .bars { display: grid; gap: 8px; margin: 10px 0; }
+    .bar-row { display: grid; grid-template-columns: 40px 1fr 48px; align-items: center; gap: 8px; font-size: 12px; }
+    .bar { height: 8px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
+    .bar > span { display: block; height: 100%; background: var(--accent); }
+    .bar > span.hi { background: var(--bad); }
+    .bar > span.mid { background: var(--warn); }
+    .versions { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+    .vrow { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; }
+    .vrow .tag { font-family: ui-monospace, monospace; color: var(--accent); }
+    .pill { font-family: ui-monospace, monospace; font-size: 11px; background: var(--panel2);
+            border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; margin: 0 4px 4px 0; display: inline-block; }
+    .empty { color: var(--muted); font-size: 13px; }
+    .images { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .errors { background: rgba(248,81,73,.1); border: 1px solid var(--bad); color: #ffb3ae;
+              border-radius: 8px; padding: 10px 14px; font-size: 13px; }
+    .errors ul { margin: 6px 0 0; padding-left: 18px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ClashUp Fleet</h1>
+    <span class="meta" id="meta">connecting…</span>
+  </header>
+  <div class="wrap" id="root"></div>
+
+  <script>
+    const fmtPct = v => (v == null ? "—" : v.toFixed(0) + "%");
+    const barClass = v => v == null ? "" : v >= 85 ? "hi" : v >= 70 ? "mid" : "";
+
+    function bar(label, value) {
+      const pct = value == null ? 0 : Math.min(100, value);
+      return `<div class="bar-row"><span>${label}</span>
+        <div class="bar"><span class="${barClass(value)}" style="width:${pct}%"></span></div>
+        <span>${fmtPct(value)}</span></div>`;
+    }
+
+    function instanceCard(inst) {
+      const stateClass = inst.state === "RUNNING" ? "RUNNING" : "OTHER";
+      const versions = (inst.versions || []).length
+        ? inst.versions.map(v => `<div class="vrow"><span class="tag">${v.version}</span><span>${v.ccu} CCU</span></div>`).join("")
+        : `<div class="empty">no active backends</div>`;
+      return `<div class="card">
+        <span class="state ${stateClass}">${inst.state}</span>
+        <div class="name">${inst.name || "(pending)"}</div>
+        <div class="id">${inst.id || ""}</div>
+        <div class="bars">${bar("CPU", inst.cpuPercent)}${bar("RAM", inst.ramPercent)}</div>
+        <div class="versions">${versions}</div>
+      </div>`;
+    }
+
+    function tierBlock(tier) {
+      const cards = tier.instances.length
+        ? `<div class="grid">${tier.instances.map(instanceCard).join("")}</div>`
+        : `<div class="empty">no instances</div>`;
+      return `<section class="tier"><h2>${tier.tier} — ${tier.instances.length} instance(s)</h2>${cards}</section>`;
+    }
+
+    function imagesBlock(images) {
+      const cards = images.length
+        ? images.map(img => `<div class="card"><div class="name">${img.image}</div>
+            <div style="margin-top:8px">${img.tags.map(t => `<span class="pill">${t}</span>`).join("")}</div></div>`).join("")
+        : `<div class="empty">no images found</div>`;
+      return `<section class="tier"><h2>Available versions (registry)</h2><div class="images">${cards}</div></section>`;
+    }
+
+    function errorsBlock(errors) {
+      if (!errors || !errors.length) return "";
+      return `<div class="errors"><strong>Some data could not be loaded:</strong>
+        <ul>${errors.map(e => `<li>${e}</li>`).join("")}</ul></div>`;
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch("/api/status");
+        const data = await res.json();
+        document.getElementById("meta").textContent =
+          "updated " + new Date(data.generatedAt).toLocaleTimeString();
+        document.getElementById("root").innerHTML =
+          errorsBlock(data.errors) +
+          data.tiers.map(tierBlock).join("") +
+          imagesBlock(data.availableImages);
+      } catch (e) {
+        document.getElementById("meta").textContent = "error: " + e.message;
+      }
+    }
+
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>

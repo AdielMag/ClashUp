@@ -24,6 +24,7 @@
     <PackageReference Include="Grpc.AspNetCore.Server" />
     <PackageReference Include="Grpc.Net.Client" />
     <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Google.Cloud.Monitoring.V3" />
   </ItemGroup>
 
 </Project>
