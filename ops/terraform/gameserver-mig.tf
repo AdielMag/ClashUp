@@ -75,8 +75,10 @@ resource "google_compute_region_instance_group_manager" "gameserver" {
   # New templates apply only to instances the autoscaler newly creates; existing
   # ones drain naturally (GracefulDrainService) and are replaced when unhealthy.
   update_policy {
-    type           = "OPPORTUNISTIC"
-    minimal_action = "REPLACE"
+    type                  = "OPPORTUNISTIC"
+    minimal_action        = "REPLACE"
+    max_surge_fixed       = 3
+    max_unavailable_fixed = 3
   }
 }
 
@@ -103,11 +105,11 @@ resource "google_compute_region_autoscaler" "gameserver" {
     }
 
     # Concurrent users — the per-instance gauge pushed by CcuMetricReporter.
-    # single_instance_assignment = how many CCU one instance can serve; the
-    # autoscaler adds instances to keep the fleet under that per-instance load.
+    # target = max CCU per instance before the autoscaler adds capacity.
     metric {
-      name                       = "custom.googleapis.com/gameserver/ccu"
-      single_instance_assignment = var.ccu_per_instance_target
+      name   = "custom.googleapis.com/gameserver/ccu"
+      type   = "GAUGE"
+      target = var.ccu_per_instance_target
     }
   }
 }
