@@ -1,0 +1,3 @@
+# Shell scripts must keep LF endings — they execute on Linux (COS instances).
+*.sh.tpl text eol=lf
+*.sh text eol=lf
