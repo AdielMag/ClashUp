@@ -4,10 +4,10 @@
   "CooldownTicks": 30,
   "ButtonIndex": 0,
   "TriggerMode": "Auto",
-  "AutoRange": 2.5,
+  "AutoRange": 4.0,
   "Telegraph": {
     "Shape": "CircleAroundCaster",
-    "Radius": 1.5,
+    "Radius": 4.0,
     "Length": 0.0,
     "Angle": 0.0,
     "ShowDurationTicks": 0
@@ -18,8 +18,11 @@
     "Hitbox": {
       "Effect": "Damage",
       "Amount": 10.0,
-      "Radius": 1.5,
-      "OffsetForward": 1.0,
+      "Shape": "Capsule",
+      "Radius": 1.0,
+      "Length": 3.0,
+      "Angle": 0.0,
+      "OffsetForward": 0.0,
       "DurationTicks": 1,
       "HitIntervalTicks": 0,
       "HitSelf": false,

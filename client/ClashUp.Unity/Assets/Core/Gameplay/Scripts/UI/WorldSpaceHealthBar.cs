@@ -5,12 +5,12 @@ namespace ClashUp.Client.Gameplay
 {
     public sealed class WorldSpaceHealthBar : MonoBehaviour
     {
-        [SerializeField] private Image _fill;
+        [SerializeField] private Slider _slider;
 
         public void SetHealth(float current, float max)
         {
-            if (_fill == null || max <= 0f) return;
-            _fill.fillAmount = Mathf.Clamp01(current / max);
+            if (_slider == null || max <= 0f) return;
+            _slider.value = Mathf.Clamp01(current / max);
         }
     }
 }

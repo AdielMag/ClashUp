@@ -100,7 +100,7 @@ namespace ClashUp.Client.Gameplay
                 foreach (var dto in packet.Players)
                 {
                     if (dto.Id.Equals(localId)) continue;
-                    _interpolator.AddSample(dto.Id.Value, snapshot.ServerStampMs, dto.X, dto.Z, dto.Yaw, dto.Health);
+                    _interpolator.AddSample(dto.Id.Value, snapshot.ServerStampMs, dto.X, dto.Z, dto.Yaw, dto.Health, dto.RespawnInTicks);
                 }
             }
 

@@ -10,6 +10,13 @@ namespace ClashUp.Shared.MessagePackObjects
     [MessagePackObject]
     public sealed class InputCommand
     {
+        /// <summary>
+        /// High bit of <see cref="ButtonMask"/> requesting server-side auto-aim (nearest enemy)
+        /// for this cast — set when the player fires a manual ability without aiming past the
+        /// input dead zone. Does not collide with ability slot bits (slots are low bits).
+        /// </summary>
+        public const uint AutoAimFlag = 1u << 31;
+
         [Key(0)] public int Tick { get; init; }
         [Key(1)] public long ClientSendStampMs { get; init; }
         [Key(2)] public uint ButtonMask { get; init; }

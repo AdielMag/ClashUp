@@ -19,6 +19,12 @@ public sealed class AetherServerSimulation : IServerSimulation
     private readonly Dictionary<string, int> _lastSeq = new();
     private readonly Dictionary<int, int> _teamSlotCounters = new();
     private readonly HashSet<string> _knownPlayers = new();
+    private readonly Dictionary<string, float> _maxHealth = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (float X, float Z)> _spawnPositions = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _respawnTimers = new(StringComparer.Ordinal);
+
+    // 5 seconds at 30 Hz
+    private const int RespawnDelayTicks = 150;
     private MapData? _mapData;
 
     public int CurrentTick { get; private set; }
@@ -50,6 +56,8 @@ public sealed class AetherServerSimulation : IServerSimulation
         var (spawnX, spawnZ) = SpawnResolver.GetSpawnPosition(_mapData, teamId, slotIndex);
         _world.EnsurePlayer(player.Value, spawnX, spawnZ, stats.MoveSpeed);
         _health.Initialize(player.Value, stats.MaxHealth);
+        _maxHealth[player.Value] = stats.MaxHealth;
+        _spawnPositions[player.Value] = (spawnX, spawnZ);
         _health.SetInvulnerable(player.Value, HealthTable.DefaultSpawnInvulnTicks);
         _abilities.InitPlayer(player.Value, character.AutoAttackId, character.ActiveAbilityId);
 
@@ -59,6 +67,8 @@ public sealed class AetherServerSimulation : IServerSimulation
     public void ApplyInput(PlayerId player, InputCommand command)
     {
         _lastSeq[player.Value] = command.SequenceId;
+        if (!_health.IsAlive(player.Value)) return;
+
         _world.ApplyInput(player.Value,
             MovementModel.DecodeAxis(command.MoveX),
             MovementModel.DecodeAxis(command.MoveY));
@@ -76,6 +86,38 @@ public sealed class AetherServerSimulation : IServerSimulation
         _health.Tick();
         _abilities.Tick(_world, _health, CurrentTick);
         CurrentTick++;
+
+        // Manage respawn timers for dead players.
+        foreach (var id in _world.PlayerIds)
+        {
+            if (_health.IsAlive(id)) continue;
+
+            if (_respawnTimers.TryGetValue(id, out var ticks))
+            {
+                ticks--;
+                if (ticks <= 0)
+                {
+                    _respawnTimers.Remove(id);
+                    if (_maxHealth.TryGetValue(id, out var max))
+                    {
+                        _health.Initialize(id, max);
+                        _health.SetInvulnerable(id, HealthTable.DefaultSpawnInvulnTicks);
+                        if (_spawnPositions.TryGetValue(id, out var spawn))
+                            _world.SnapPlayerPosition(id, spawn.X, spawn.Z);
+                        Console.WriteLine($"[RESPAWN] {id[..6]} → spawn ({_spawnPositions.GetValueOrDefault(id)})");
+                    }
+                }
+                else
+                {
+                    _respawnTimers[id] = ticks;
+                }
+            }
+            else
+            {
+                _respawnTimers[id] = RespawnDelayTicks;
+                Console.WriteLine($"[DIED] {id[..6]} — respawning in {RespawnDelayTicks} ticks");
+            }
+        }
     }
 
     public IReadOnlyList<MatchEvent> DrainAbilityEvents() => _abilities.DrainEvents();
@@ -95,6 +137,7 @@ public sealed class AetherServerSimulation : IServerSimulation
                 Health = _health.GetHealth(id),
                 LastProcessedInputSeq = _lastSeq.TryGetValue(id, out var seq) ? seq : 0,
                 IsInvulnerable = _health.IsInvulnerable(id),
+                RespawnInTicks = _respawnTimers.TryGetValue(id, out var rt) ? rt : 0,
             });
         }
         return MessagePackSerializer.Serialize(new WorldStatePacket { Players = dtos.ToArray() });

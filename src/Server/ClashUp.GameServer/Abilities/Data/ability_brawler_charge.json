@@ -5,11 +5,12 @@
   "ButtonIndex": 1,
   "TriggerMode": "Manual",
   "CastMode": "Aimed",
+  "AutoRange": 4.0,
   "Telegraph": {
-    "Shape": "ForwardLine",
-    "Radius": 1.0,
-    "Length": 2.5,
-    "Angle": 0.0,
+    "Shape": "ForwardCone",
+    "Radius": 0.0,
+    "Length": 3.5,
+    "Angle": 90.0,
     "ShowDurationTicks": 0
   },
   "RootNode": {
@@ -18,8 +19,11 @@
     "Hitbox": {
       "Effect": "Damage",
       "Amount": 20.0,
-      "Radius": 1.0,
-      "OffsetForward": 2.5,
+      "Shape": "Cone",
+      "Radius": 0.0,
+      "Length": 3.5,
+      "Angle": 90.0,
+      "OffsetForward": 0.0,
       "DurationTicks": 1,
       "HitIntervalTicks": 0,
       "HitSelf": false,

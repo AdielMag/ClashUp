@@ -77,32 +77,43 @@ namespace ClashUp.Client.Gameplay
             if (localId != null && _sim.Players.TryGetValue(localId, out var local))
             {
                 var go = GetOrSpawn(localId, isLocal: true);
-                float alpha = _prediction.RenderAlpha;
-                var pos = new Vector3(
-                    Mathf.Lerp(local.PrevX, local.X, alpha) + _prediction.CorrectionX,
-                    1f,
-                    Mathf.Lerp(local.PrevZ, local.Z, alpha) + _prediction.CorrectionZ);
-                var rot = Quaternion.Euler(0f, Mathf.LerpAngle(local.PrevYaw, local.Yaw, alpha), 0f);
-                go.transform.SetPositionAndRotation(pos, rot);
+                bool isDead = local.RespawnInTicks > 0;
+                go.SetActive(!isDead);
 
-                if (_healthBars.TryGetValue(localId, out var localHb))
-                    localHb.SetHealth(local.Health, local.MaxHealth);
+                if (!isDead)
+                {
+                    float alpha = _prediction.RenderAlpha;
+                    var pos = new Vector3(
+                        Mathf.Lerp(local.PrevX, local.X, alpha) + _prediction.CorrectionX,
+                        1f,
+                        Mathf.Lerp(local.PrevZ, local.Z, alpha) + _prediction.CorrectionZ);
+                    var rot = Quaternion.Euler(0f, Mathf.LerpAngle(local.PrevYaw, local.Yaw, alpha), 0f);
+                    go.transform.SetPositionAndRotation(pos, rot);
+                    _lastRenderedPos = pos;
 
-                _lastRenderedPos = pos;
+                    if (_healthBars.TryGetValue(localId, out var localHb))
+                        localHb.SetHealth(local.Health, local.MaxHealth);
+                }
             }
 
             var remoteIds = _interpolator.PlayerIds;
             for (int i = 0; i < remoteIds.Count; i++)
             {
                 var id = remoteIds[i];
-                if (!_interpolator.TryGet(id, out var pos, out var yaw, out var health)) continue;
+                if (!_interpolator.TryGet(id, out var pos, out var yaw, out var health, out var respawnInTicks)) continue;
                 var go = GetOrSpawn(id, isLocal: false);
-                go.transform.SetPositionAndRotation(pos, Quaternion.Euler(0f, yaw, 0f));
+                bool isDead = respawnInTicks > 0;
+                go.SetActive(!isDead);
 
-                if (_healthBars.TryGetValue(id, out var remoteHb))
+                if (!isDead)
                 {
-                    var maxHealth = GetMaxHealth(id);
-                    remoteHb.SetHealth(health, maxHealth);
+                    go.transform.SetPositionAndRotation(pos, Quaternion.Euler(0f, yaw, 0f));
+
+                    if (_healthBars.TryGetValue(id, out var remoteHb))
+                    {
+                        var maxHealth = GetMaxHealth(id);
+                        remoteHb.SetHealth(health, maxHealth);
+                    }
                 }
             }
         }

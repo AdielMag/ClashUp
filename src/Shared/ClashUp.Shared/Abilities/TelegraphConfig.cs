@@ -8,6 +8,7 @@ namespace ClashUp.Shared.Abilities
         ForwardLine,
         ForwardCone,
         TargetCircle,
+        Capsule,
     }
 
     [MessagePackObject]
@@ -18,5 +19,8 @@ namespace ClashUp.Shared.Abilities
         [Key(2)] public float Length { get; init; }
         [Key(3)] public float Angle { get; init; }
         [Key(4)] public int ShowDurationTicks { get; init; }
+
+        // Full width (used by Capsule; ForwardLine falls back to a default when 0).
+        [Key(5)] public float Width { get; init; }
     }
 }

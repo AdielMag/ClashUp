@@ -28,6 +28,8 @@ namespace ClashUp.Client.Gameplay
                     if (c != null && c != _matchCamera)
                         c.enabled = false;
             }
+
+            SyncAudioListeners();
         }
 
         public void Unregister(Camera camera)
@@ -42,6 +44,42 @@ namespace ClashUp.Client.Gameplay
                     if (c != null)
                         c.enabled = true;
             }
+
+            SyncAudioListeners();
+        }
+
+        // Guarantees exactly one enabled AudioListener across all loaded scenes.
+        // Disabling a Camera leaves its sibling AudioListener active, so additive
+        // scenes (CoreStarter + Matchmaking/Match) otherwise stack up listeners and
+        // Unity warns "There are 2 audio listeners in the scene".
+        private void SyncAudioListeners()
+        {
+            var all = Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+            var active = ActiveCamera;
+            AudioListener chosen = active != null ? active.GetComponent<AudioListener>() : null;
+
+            // Active camera has no listener of its own — keep one existing listener
+            // alive rather than going silent (and only add one as a last resort).
+            if (chosen == null)
+            {
+                foreach (var l in all)
+                {
+                    if (l == null) continue;
+                    chosen = l;
+                    break;
+                }
+
+                if (chosen == null && active != null)
+                    chosen = active.gameObject.AddComponent<AudioListener>();
+            }
+
+            foreach (var l in all)
+                if (l != null && l != chosen)
+                    l.enabled = false;
+
+            if (chosen != null)
+                chosen.enabled = true;
         }
     }
 }

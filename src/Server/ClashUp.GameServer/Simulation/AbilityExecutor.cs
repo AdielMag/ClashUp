@@ -35,6 +35,8 @@ public sealed class AbilityExecutor
         if (!_playerSlots.TryGetValue(playerId, out var slots)) return;
         if (!health.IsAlive(playerId)) return;
 
+        bool autoAim = (buttonMask & InputCommand.AutoAimFlag) != 0;
+
         for (int i = 0; i < slots.Length; i++)
         {
             if ((buttonMask & (1u << i)) == 0) continue;
@@ -44,7 +46,15 @@ public sealed class AbilityExecutor
             if (slot.CooldownRemaining > 0) continue;
             if (slot.IsActive) continue;
 
-            ActivateSlot(playerId, i, aimYaw, def, currentTick);
+            // No manual aim → lock onto the nearest enemy inside the ability's range.
+            float castYaw = aimYaw;
+            if (autoAim && def.AutoRange > 0f)
+            {
+                float autoYaw = FindNearestEnemyYaw(playerId, world, health, def.AutoRange);
+                if (!float.IsNaN(autoYaw)) castYaw = autoYaw;
+            }
+
+            ActivateSlot(playerId, i, castYaw, def, currentTick);
         }
     }
 
@@ -109,7 +119,7 @@ public sealed class AbilityExecutor
         {
             Tick = currentTick,
             Kind = "ability_cast",
-            Payload = JsonSerializer.Serialize(new { caster = playerId, abilityId = def.Id.Value, tick = currentTick }),
+            Payload = JsonSerializer.Serialize(new { caster = playerId, abilityId = def.Id.Value, tick = currentTick, aimYaw }),
         });
     }
 
@@ -256,10 +266,31 @@ public sealed class AbilityExecutor
 
         var (cx, cz, _) = world.GetPlayerState(ability.CasterId);
         float yawRad = ability.AimYaw * (MathF.PI / 180f);
-        float hitX = cx + MathF.Sin(yawRad) * cfg.OffsetForward;
-        float hitZ = cz + MathF.Cos(yawRad) * cfg.OffsetForward;
+        float dirX = MathF.Sin(yawRad);
+        float dirZ = MathF.Cos(yawRad);
 
-        int hitCount = world.OverlapCircle(hitX, hitZ, cfg.Radius, _overlapScratch);
+        // Shape starts OffsetForward in front of the caster.
+        float startX = cx + dirX * cfg.OffsetForward;
+        float startZ = cz + dirZ * cfg.OffsetForward;
+
+        // Broad-phase circle that bounds the shape; refined per-target below for Capsule/Cone.
+        float queryX = startX, queryZ = startZ, queryRadius;
+        switch (cfg.Shape)
+        {
+            case HitboxShape.Capsule:
+                queryX = startX + dirX * (cfg.Length * 0.5f);
+                queryZ = startZ + dirZ * (cfg.Length * 0.5f);
+                queryRadius = cfg.Length * 0.5f + cfg.Radius;
+                break;
+            case HitboxShape.Cone:
+                queryRadius = cfg.Length;
+                break;
+            default: // Circle
+                queryRadius = cfg.Radius;
+                break;
+        }
+
+        int hitCount = world.OverlapCircle(queryX, queryZ, queryRadius, _overlapScratch);
 
         for (int i = 0; i < hitCount; i++)
         {
@@ -268,13 +299,22 @@ public sealed class AbilityExecutor
             if (targetId == null) continue;
             if (!cfg.HitSelf && targetId == ability.CasterId) continue;
 
+            // Refine the broad-phase circle against the exact Capsule/Cone footprint.
+            if (cfg.Shape != HitboxShape.Circle)
+            {
+                var (tx, tz, _) = world.GetPlayerState(targetId);
+                if (!ShapeContains(cfg, startX, startZ, dirX, dirZ, tx, tz))
+                    continue;
+            }
+
             var hitSet = ability.HitboxHitEntities[nodeIndex] ??= new HashSet<int>();
             if (cfg.HitIntervalTicks == 0 && !hitSet.Add(entityId)) continue;
 
             float amount = cfg.Amount;
             if (cfg.Effect == HitboxEffect.Damage)
             {
-                health.ApplyDamage(targetId, amount);
+                float newHealth = health.ApplyDamage(targetId, amount);
+                Console.WriteLine($"[HIT] {ability.CasterId[..6]}→{targetId[..6]} {ability.Definition.Id.Value} -{amount} hp={newHealth}");
                 _pendingEvents.Add(new MatchEvent
                 {
                     Tick = currentTick,
@@ -326,6 +366,48 @@ public sealed class AbilityExecutor
         }
 
         ability.NodeFinished[nodeIndex] = true;
+    }
+
+    // Exact containment test for Capsule / Cone footprints. dir is a unit vector.
+    private static bool ShapeContains(HitboxConfig cfg, float startX, float startZ,
+                                      float dirX, float dirZ, float targetX, float targetZ)
+    {
+        switch (cfg.Shape)
+        {
+            case HitboxShape.Capsule:
+            {
+                float endX = startX + dirX * cfg.Length;
+                float endZ = startZ + dirZ * cfg.Length;
+                float distSq = PointSegmentDistanceSq(targetX, targetZ, startX, startZ, endX, endZ);
+                return distSq <= cfg.Radius * cfg.Radius;
+            }
+            case HitboxShape.Cone:
+            {
+                float toX = targetX - startX;
+                float toZ = targetZ - startZ;
+                float distSq = toX * toX + toZ * toZ;
+                if (distSq > cfg.Length * cfg.Length) return false;
+                if (distSq < 1e-6f) return true; // target sitting on the apex
+                float invDist = 1f / MathF.Sqrt(distSq);
+                float dot = (toX * dirX + toZ * dirZ) * invDist; // cos(angle), dir is unit
+                float halfAngleRad = cfg.Angle * 0.5f * (MathF.PI / 180f);
+                return dot >= MathF.Cos(halfAngleRad);
+            }
+            default:
+                return true;
+        }
+    }
+
+    private static float PointSegmentDistanceSq(float px, float pz, float ax, float az, float bx, float bz)
+    {
+        float abx = bx - ax;
+        float abz = bz - az;
+        float abLenSq = abx * abx + abz * abz;
+        float t = abLenSq > 1e-6f ? ((px - ax) * abx + (pz - az) * abz) / abLenSq : 0f;
+        t = Math.Clamp(t, 0f, 1f);
+        float dx = px - (ax + abx * t);
+        float dz = pz - (az + abz * t);
+        return dx * dx + dz * dz;
     }
 
     private void MarkSlotInactive(string casterId, AbilityId abilityId)

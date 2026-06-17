@@ -48,6 +48,7 @@ namespace ClashUp.Client.Match
             builder.RegisterEntryPoint<MatchCameraRig>();
 
             builder.RegisterEntryPoint<MatchSessionRunner>();
+            builder.RegisterEntryPoint<RespawnScreenController>();
 
             if (_abilityVisualRegistry != null)
             {

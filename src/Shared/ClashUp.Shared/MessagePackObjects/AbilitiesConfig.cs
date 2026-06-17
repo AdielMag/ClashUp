@@ -11,6 +11,9 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(1)] public TelegraphConfig? Telegraph { get; init; }
         [Key(2)] public float AutoRange { get; init; }
         [Key(3)] public CastMode CastMode { get; init; }
+
+        // Damage footprint shown by the triggered cast flash (derived from the hitbox).
+        [Key(4)] public TelegraphConfig? CastShape { get; init; }
     }
 
     [MessagePackObject]
@@ -28,9 +31,15 @@ namespace ClashUp.Shared.MessagePackObjects
                     Telegraph = new TelegraphConfig
                     {
                         Shape = TelegraphShape.CircleAroundCaster,
-                        Radius = 1.5f,
+                        Radius = 4.0f,
                     },
-                    AutoRange = 2.5f,
+                    CastShape = new TelegraphConfig
+                    {
+                        Shape = TelegraphShape.Capsule,
+                        Length = 3.0f,
+                        Width = 2.0f,
+                    },
+                    AutoRange = 4.0f,
                     CastMode = CastMode.Instant,
                 },
                 new AbilityClientInfo
@@ -38,10 +47,17 @@ namespace ClashUp.Shared.MessagePackObjects
                     Id = new AbilityId("brawler_charge"),
                     Telegraph = new TelegraphConfig
                     {
-                        Shape = TelegraphShape.ForwardLine,
-                        Radius = 1.0f,
-                        Length = 2.5f,
+                        Shape = TelegraphShape.ForwardCone,
+                        Length = 3.5f,
+                        Angle = 90f,
                     },
+                    CastShape = new TelegraphConfig
+                    {
+                        Shape = TelegraphShape.ForwardCone,
+                        Length = 3.5f,
+                        Angle = 90f,
+                    },
+                    AutoRange = 4.0f,
                     CastMode = CastMode.Aimed,
                 },
             },

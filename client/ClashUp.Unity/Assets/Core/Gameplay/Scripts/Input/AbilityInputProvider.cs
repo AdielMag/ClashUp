@@ -1,4 +1,5 @@
 using System;
+using ClashUp.Shared.MessagePackObjects;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -24,6 +25,7 @@ namespace ClashUp.Client.Gameplay
         private GameObject _canvasRoot;
         private bool _pendingFire;
         private float _pendingAimYaw;
+        private bool _pendingAutoAim;
         private bool _isTouching;
 
         public event Action<bool> OnTouching;
@@ -35,7 +37,11 @@ namespace ClashUp.Client.Gameplay
 
         public AbilityInputProvider(MatchInputGate gate) => _gate = gate;
 
-        public uint ButtonMask  => _pendingFire ? (1u << ActiveSlotIndex) : 0u;
+        // Bit 1 = active slot. Bit 31 (AutoAimFlag) asks the server to auto-aim at the nearest
+        // enemy when the player fired without dragging past the aim dead zone.
+        public uint ButtonMask  => _pendingFire
+            ? ((1u << ActiveSlotIndex) | (_pendingAutoAim ? InputCommand.AutoAimFlag : 0u))
+            : 0u;
         public float AimYaw     => _pendingAimYaw;
         public float LiveAimYaw => ComputeLiveAimYaw();
 
@@ -46,10 +52,9 @@ namespace ClashUp.Client.Gameplay
             if (_button != null && _button.WasFired)
             {
                 _pendingFire = true;
+                // AimDirection is zero when the drag stayed inside the dead zone → auto-aim.
                 var dir = _button.AimDirection;
-                _pendingAimYaw = dir.sqrMagnitude > 0.01f
-                    ? Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg
-                    : 0f;
+                SetAim(dir.sqrMagnitude > 0.01f, Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg);
                 _button.Consume();
                 _button.StartCooldown(CooldownSeconds);
                 return;
@@ -65,22 +70,28 @@ namespace ClashUp.Client.Gameplay
                 {
                     var screenCenter = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
                     var dir = mouse.position.ReadValue() - screenCenter;
-                    _pendingAimYaw = dir.sqrMagnitude > 400f
-                        ? Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg
-                        : 0f;
+                    SetAim(dir.sqrMagnitude > 400f, Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg);
                 }
                 else
                 {
-                    _pendingAimYaw = 0f;
+                    SetAim(false, 0f);
                 }
                 _button.StartCooldown(CooldownSeconds);
             }
         }
 
+        // aimed == true: use the supplied yaw. aimed == false: request server auto-aim.
+        private void SetAim(bool aimed, float yaw)
+        {
+            _pendingAimYaw  = aimed ? yaw : 0f;
+            _pendingAutoAim = !aimed;
+        }
+
         public void ConsumeInput()
         {
-            _pendingFire   = false;
-            _pendingAimYaw = 0f;
+            _pendingFire    = false;
+            _pendingAimYaw  = 0f;
+            _pendingAutoAim = false;
         }
 
         private float ComputeLiveAimYaw()

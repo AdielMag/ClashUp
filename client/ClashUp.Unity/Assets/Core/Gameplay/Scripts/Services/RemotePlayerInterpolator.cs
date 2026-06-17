@@ -21,6 +21,7 @@ namespace ClashUp.Client.Gameplay
             public float Z;
             public float Yaw;
             public float Health;
+            public int RespawnInTicks;
         }
 
         private sealed class Track
@@ -50,7 +51,7 @@ namespace ClashUp.Client.Gameplay
         }
 
         /// <summary>Appends one authoritative sample for a remote player.</summary>
-        public void AddSample(string playerId, double serverStampMs, float x, float z, float yaw, float health)
+        public void AddSample(string playerId, double serverStampMs, float x, float z, float yaw, float health, int respawnInTicks = 0)
         {
             if (!_tracks.TryGetValue(playerId, out var track))
             {
@@ -59,7 +60,7 @@ namespace ClashUp.Client.Gameplay
                 _playerIds.Add(playerId);
             }
 
-            Append(track, new Sample { TimeMs = serverStampMs, X = x, Z = z, Yaw = yaw, Health = health });
+            Append(track, new Sample { TimeMs = serverStampMs, X = x, Z = z, Yaw = yaw, Health = health, RespawnInTicks = respawnInTicks });
 
             if (serverStampMs > _latestServerMs) _latestServerMs = serverStampMs;
             if (!_initialized)
@@ -92,11 +93,12 @@ namespace ClashUp.Client.Gameplay
         }
 
         /// <summary>Interpolated transform for a remote player at the current render clock.</summary>
-        public bool TryGet(string playerId, out Vector3 position, out float yaw, out float health)
+        public bool TryGet(string playerId, out Vector3 position, out float yaw, out float health, out int respawnInTicks)
         {
             position = default;
             yaw = 0f;
             health = 0f;
+            respawnInTicks = 0;
 
             if (!_tracks.TryGetValue(playerId, out var track) || track.Count == 0)
                 return false;
@@ -106,12 +108,12 @@ namespace ClashUp.Client.Gameplay
 
             if (_renderClockMs <= oldest.TimeMs)
             {
-                Write(oldest, out position, out yaw, out health);
+                Write(oldest, out position, out yaw, out health, out respawnInTicks);
                 return true;
             }
             if (_renderClockMs >= newest.TimeMs)
             {
-                Write(newest, out position, out yaw, out health);
+                Write(newest, out position, out yaw, out health, out respawnInTicks);
                 return true;
             }
 
@@ -126,19 +128,21 @@ namespace ClashUp.Client.Gameplay
                     position = new Vector3(Mathf.Lerp(a.X, b.X, t), 1f, Mathf.Lerp(a.Z, b.Z, t));
                     yaw = Mathf.LerpAngle(a.Yaw, b.Yaw, t);
                     health = Mathf.Lerp(a.Health, b.Health, t);
+                    respawnInTicks = b.RespawnInTicks;
                     return true;
                 }
             }
 
-            Write(newest, out position, out yaw, out health);
+            Write(newest, out position, out yaw, out health, out respawnInTicks);
             return true;
         }
 
-        private static void Write(Sample s, out Vector3 position, out float yaw, out float health)
+        private static void Write(Sample s, out Vector3 position, out float yaw, out float health, out int respawnInTicks)
         {
             position = new Vector3(s.X, 1f, s.Z);
             yaw = s.Yaw;
             health = s.Health;
+            respawnInTicks = s.RespawnInTicks;
         }
 
         private static Sample Get(Track track, int index)

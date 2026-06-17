@@ -1,10 +1,10 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEditor;
 
-public class HorizontalScrollerCreator : MonoBehaviour
+public static class HorizontalScrollerCreator
 {
-    // This method creates a prefab called HorizontalScroller in Resources/Pages
     [MenuItem("Tools/Create Horizontal Scroller Prefab")]
     public static void CreateHorizontalScrollerPrefab()
     {
@@ -43,3 +43,4 @@ public class HorizontalScrollerCreator : MonoBehaviour
         // EditorApplication.delayCall += () => DestroyImmediate(root);
     }
 }
+#endif

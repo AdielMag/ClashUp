@@ -24,5 +24,6 @@ namespace ClashUp.Shared.MessagePackObjects
         /// </summary>
         [Key(5)] public int LastProcessedInputSeq { get; init; }
         [Key(6)] public bool IsInvulnerable { get; init; }
+        [Key(7)] public int RespawnInTicks { get; init; }
     }
 }

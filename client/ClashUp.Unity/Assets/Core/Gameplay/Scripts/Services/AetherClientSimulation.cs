@@ -15,6 +15,7 @@ namespace ClashUp.Client.Gameplay
         private readonly MatchPhysicsWorld _world;
         private readonly HealthTable _health = new();
         private readonly Dictionary<string, PlayerRenderState> _players = new();
+        private readonly Dictionary<string, int> _respawnTicks = new();
         private uint _randomSeed;
 
         public AetherClientSimulation(GameObject playerPrefab, MatchCharactersHolder characters)
@@ -94,6 +95,7 @@ namespace ClashUp.Client.Gameplay
                 _world.SnapPlayerPosition(dto.Id.Value, dto.X, dto.Z);
                 _health.Initialize(dto.Id.Value, stats.MaxHealth);
                 _health.SnapHealth(dto.Id.Value, dto.Health);
+                _respawnTicks[dto.Id.Value] = dto.RespawnInTicks;
                 // Do NOT touch render state here. Replay uses StepPhysicsOnly so
                 // PrevX/X stay untouched. Only normal Predict→Step updates them.
                 return dto.LastProcessedInputSeq;
@@ -120,6 +122,7 @@ namespace ClashUp.Client.Gameplay
                 rs.Yaw = yaw;
                 rs.Health = _health.GetHealth(id);
                 rs.MaxHealth = maxHealth;
+                rs.RespawnInTicks = _respawnTicks.TryGetValue(id, out var rt) ? rt : 0;
             }
         }
 

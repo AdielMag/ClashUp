@@ -28,8 +28,38 @@ public sealed class ServerAbilityStore
             Telegraph = d.Telegraph,
             AutoRange = d.AutoRange,
             CastMode = d.CastMode,
+            CastShape = DeriveCastShape(d.RootNode),
         }).ToList(),
     };
+
+    // The triggered cast flash should render the exact damage footprint, so derive its shape
+    // directly from the ability's root hitbox (single source of truth with the damage logic).
+    private static TelegraphConfig? DeriveCastShape(AbilityNode? root)
+    {
+        if (root is not { Type: AbilityNodeType.Hitbox, Hitbox: { } hitbox })
+            return null;
+
+        return hitbox.Shape switch
+        {
+            HitboxShape.Capsule => new TelegraphConfig
+            {
+                Shape = TelegraphShape.Capsule,
+                Length = hitbox.Length,
+                Width = hitbox.Radius * 2f,
+            },
+            HitboxShape.Cone => new TelegraphConfig
+            {
+                Shape = TelegraphShape.ForwardCone,
+                Length = hitbox.Length,
+                Angle = hitbox.Angle,
+            },
+            _ => new TelegraphConfig
+            {
+                Shape = TelegraphShape.TargetCircle,
+                Radius = hitbox.Radius,
+            },
+        };
+    }
 
     private void LoadAll()
     {

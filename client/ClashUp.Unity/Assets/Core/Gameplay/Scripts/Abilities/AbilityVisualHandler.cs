@@ -1,5 +1,6 @@
 using System;
 using ClashUp.Client.Networking;
+using ClashUp.Shared.Abilities;
 using ClashUp.Shared.MessagePackObjects;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -12,12 +13,15 @@ namespace ClashUp.Client.Gameplay
         private readonly AbilityVisualRegistry _registry;
         private readonly MatchHubReceiver _receiver;
         private readonly PlayerViewSystem _views;
+        private readonly MatchAbilitiesHolder _abilities;
 
-        public AbilityVisualHandler(AbilityVisualRegistry registry, MatchHubReceiver receiver, PlayerViewSystem views)
+        public AbilityVisualHandler(AbilityVisualRegistry registry, MatchHubReceiver receiver,
+                                    PlayerViewSystem views, MatchAbilitiesHolder abilities)
         {
             _registry = registry;
             _receiver = receiver;
             _views = views;
+            _abilities = abilities;
         }
 
         public void Start()
@@ -51,23 +55,49 @@ namespace ClashUp.Client.Gameplay
             string abilityId = obj["abilityId"]?.Value<string>();
             string caster = obj["caster"]?.Value<string>();
             if (abilityId == null) return;
+            float aimYaw = obj["aimYaw"]?.Value<float>() ?? 0f;
+
+            if (!_views.TryGetPosition(caster, out var pos)) return;
 
             var visual = _registry?.GetByAbilityId(abilityId);
-            if (visual?.CastVfxPrefab != null)
+
+            // Triggered area flash: render the exact damage footprint. Prefer the server-derived
+            // CastShape; fall back to AbilitiesConfig.Default so it still shows against older/stale
+            // servers that don't send CastShape over the wire.
+            TelegraphConfig castShape = null;
+            if (_abilities != null && _abilities.TryGet(new AbilityId(abilityId), out var info))
+                castShape = info.CastShape;
+            castShape ??= DefaultCastShape(abilityId);
+
+            bool spawnedFlash = false;
+            if (castShape != null)
             {
-                _views.TryGetPosition(caster, out var pos);
-                UnityEngine.Object.Instantiate(visual.CastVfxPrefab, pos, Quaternion.identity);
-            }
-            else
-            {
-                SpawnFallbackFlash(caster);
+                Color flashColor = visual != null && visual.CastFlashColor.a > 0f
+                    ? visual.CastFlashColor
+                    : new Color(1f, 0.85f, 0.2f, 0.6f);
+                float duration = visual != null && visual.CastFlashDuration > 0f ? visual.CastFlashDuration : 0.22f;
+
+                var flashOrigin = pos;
+                flashOrigin.y = 0.03f;
+                AbilityAreaFlash.Spawn(castShape, flashOrigin, aimYaw, flashColor, duration);
+                spawnedFlash = true;
             }
 
+            if (visual?.CastVfxPrefab != null)
+                UnityEngine.Object.Instantiate(visual.CastVfxPrefab, pos, Quaternion.Euler(0f, aimYaw, 0f));
+            else if (!spawnedFlash)
+                SpawnFallbackFlash(caster);
+
             if (visual?.CastSound != null)
-            {
-                _views.TryGetPosition(caster, out var pos);
                 AudioSource.PlayClipAtPoint(visual.CastSound, pos);
-            }
+        }
+
+        private static TelegraphConfig DefaultCastShape(string abilityId)
+        {
+            foreach (var a in AbilitiesConfig.Default.Abilities)
+                if (a.Id.Value == abilityId)
+                    return a.CastShape;
+            return null;
         }
 
         private void SpawnFallbackFlash(string casterId)
