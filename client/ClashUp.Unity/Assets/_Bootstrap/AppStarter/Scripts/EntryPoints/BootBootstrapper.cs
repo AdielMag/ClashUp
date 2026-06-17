@@ -79,6 +79,14 @@ namespace ClashUp.Client.AppStarter
                 {
                     throw;
                 }
+                catch (Exception ex) when (ClientVersionGate.IsUpgradeRequired(ex))
+                {
+                    // Server has no backend for this client version. Block entry —
+                    // the player must update; retrying would never succeed.
+                    _log.LogWarning("[Boot] Client version rejected by server — update required.");
+                    loadingScreen.SetStepText("Please update your game to continue.");
+                    await UniTask.Never(cancellation);
+                }
                 catch (Exception ex)
                 {
                     _log.LogWarning($"[Boot] Ping failed, retrying in 3s: {ex.Message}");

@@ -2,6 +2,8 @@ using Cysharp.Net.Http;
 
 using Grpc.Net.Client;
 
+using UnityEngine;
+
 namespace ClashUp.Client.Networking
 {
     /// <summary>
@@ -21,7 +23,8 @@ namespace ClashUp.Client.Networking
                 endpoint,
                 new GrpcChannelOptions
                 {
-                    HttpHandler = new YetAnotherHttpHandler { Http2Only = true },
+                    HttpHandler = new ClientVersionHttpHandler(
+                        new YetAnotherHttpHandler { Http2Only = true }, Application.version),
                     DisposeHttpClient = true,
                 });
         }
