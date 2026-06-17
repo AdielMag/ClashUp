@@ -1,6 +1,16 @@
 output "services_lb_ip" {
-  description = "Public IP of the Services load balancer. Clients connect here first (port 5001)."
-  value       = google_compute_global_address.services.address
+  description = "Public IP of the Services load balancer. Clients connect here first."
+  value       = local.services_lb_ip
+}
+
+output "services_endpoint" {
+  description = "Full Services endpoint clients/GameServer use (http://IP:5001 or https://domain)."
+  value       = local.services_endpoint
+}
+
+output "nat_ip" {
+  description = "Static egress IP for Services instances. Allowlist this in MongoDB Atlas → Network Access."
+  value       = google_compute_address.nat.address
 }
 
 output "artifact_registry" {

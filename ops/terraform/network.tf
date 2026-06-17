@@ -8,6 +8,10 @@ resource "google_compute_subnetwork" "subnet" {
   ip_cidr_range = "10.0.0.0/24"
   region        = var.region
   network       = google_compute_network.vpc.id
+
+  # Lets instances without an external IP (Services tier) reach Google APIs —
+  # Artifact Registry, Cloud Monitoring, metadata — over Google's private path.
+  private_ip_google_access = true
 }
 
 # Services instances are reached only via the external LB, whose proxies use the

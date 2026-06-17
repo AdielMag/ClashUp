@@ -15,6 +15,12 @@ variable "gateway_image_version" {
   default     = "latest"
 }
 
+variable "services_domain" {
+  type        = string
+  description = "Domain for the Services tier. Empty = external passthrough L4 NLB on IP:5001 (plaintext h2c gRPC, no domain). Set = external HTTPS Application LB on :443 with a Google-managed cert (point the domain's A record at the LB IP after apply)."
+  default     = ""
+}
+
 # --- Machine sizing ---------------------------------------------------------
 
 variable "services_machine_type" {

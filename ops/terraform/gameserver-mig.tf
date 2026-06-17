@@ -41,7 +41,7 @@ resource "google_compute_instance_template" "gameserver" {
       registry_host              = local.registry_host
       gateway_image              = local.gateway_image
       gameserver_repo            = local.gameserver_repo
-      services_endpoint          = "http://${google_compute_global_address.services.address}"
+      services_endpoint          = local.services_endpoint
       jwt_end_user_signing_key   = var.jwt_end_user_signing_key
       jwt_inter_tier_signing_key = var.jwt_inter_tier_signing_key
     })
