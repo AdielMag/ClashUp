@@ -11,22 +11,23 @@ It authenticates with a **read-only service account** and never mutates anything
 
 ## Setup
 
-1. Create the dashboard service account and download its key (see
+`appsettings.json` is already pointed at this project (`clashup-499716` /
+`us-central1`) and looks for its credentials at `dashboard-sa.json` **next to the
+project** (a relative `CredentialsPath` is resolved against the content root, so it
+works regardless of the launch directory). So the only thing you need locally is
+the key file:
+
+1. Create the dashboard service account and download its key as
+   `src/Tools/ClashUp.Dashboard/dashboard-sa.json` (see
    [`../../../ops/terraform/README.md`](../../../ops/terraform/README.md) → bootstrap).
    It needs `compute.viewer`, `monitoring.viewer`, `artifactregistry.reader`.
+   The file is **gitignored** — never commit it.
 
-2. Point the dashboard at your project. Either edit `appsettings.json`:
+That's it. If `dashboard-sa.json` is missing, the dashboard falls back to ambient
+ADC (`gcloud auth application-default login` / `GOOGLE_APPLICATION_CREDENTIALS`).
 
-   ```json
-   "Gcp": {
-     "ProjectId": "my-clashup-project",
-     "Region": "us-central1",
-     "CredentialsPath": "C:/path/to/dashboard-sa.json"
-   }
-   ```
-
-   …or set env vars (override config): `Gcp__ProjectId`, `Gcp__Region`,
-   `Gcp__CredentialsPath` (or the standard `GOOGLE_APPLICATION_CREDENTIALS`).
+> For a different project, override via env vars (they win over `appsettings.json`):
+> `Gcp__ProjectId`, `Gcp__Region`, `Gcp__CredentialsPath`.
 
 ## Run
 

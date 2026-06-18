@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - "src/**"
+      - "!src/Tools/**" # dashboard/tools aren't part of the server images
       - "ops/docker/**"
       - "Directory.Build.props"
       - "Directory.Packages.props"

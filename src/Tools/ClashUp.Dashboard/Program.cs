@@ -6,11 +6,18 @@ builder.Services.Configure<DashboardOptions>(builder.Configuration.GetSection("G
 builder.Services.AddSingleton<GcpStatusService>();
 
 // Export the configured key path as ADC so the Google client libraries pick it
-// up. If unset, ambient ADC (GOOGLE_APPLICATION_CREDENTIALS / gcloud login) wins.
+// up. A relative path is resolved against the content root so the dashboard works
+// no matter the launch directory (e.g. `dotnet run --project ...` from repo root).
+// If the resolved file is missing, fall back to ambient ADC (GOOGLE_APPLICATION_
+// CREDENTIALS / `gcloud auth application-default login`).
 var credentialsPath = builder.Configuration["Gcp:CredentialsPath"];
 if (!string.IsNullOrWhiteSpace(credentialsPath))
 {
-    Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialsPath);
+    if (!Path.IsPathRooted(credentialsPath))
+        credentialsPath = Path.Combine(builder.Environment.ContentRootPath, credentialsPath);
+
+    if (File.Exists(credentialsPath))
+        Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialsPath);
 }
 
 var app = builder.Build();
