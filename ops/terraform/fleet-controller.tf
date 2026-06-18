@@ -125,6 +125,14 @@ resource "google_cloud_run_v2_service_iam_member" "dashboard_invoker" {
   member   = "serviceAccount:clashup-dashboard@${var.project_id}.iam.gserviceaccount.com"
 }
 
+# Read-only: lets the dashboard read the idle-check job's state + next-run time for
+# its "next check in X" countdown (hidden once the job is paused / fleet asleep).
+resource "google_project_iam_member" "dashboard_scheduler_viewer" {
+  project = var.project_id
+  role    = "roles/cloudscheduler.viewer"
+  member  = "serviceAccount:clashup-dashboard@${var.project_id}.iam.gserviceaccount.com"
+}
+
 # --- Cloud Scheduler idle check ---------------------------------------------
 resource "google_cloud_scheduler_job" "idle_check" {
   name             = "clashup-idle-check"

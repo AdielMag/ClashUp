@@ -66,7 +66,8 @@
   <header>
     <h1>ClashUp Fleet</h1>
     <span class="meta" id="meta">connecting…</span>
-    <span class="meta" id="countdown" style="margin-left:auto"></span>
+    <span class="meta" id="idlecheck" style="margin-left:auto"></span>
+    <span class="meta" id="countdown"></span>
   </header>
   <div class="wrap" id="root"></div>
 
@@ -196,6 +197,7 @@
 
     const REFRESH_MS = 5000;
     let nextRefreshAt = 0;
+    let idleCheckAt = 0; // ms epoch of the next idle check, or 0 when paused/asleep.
 
     async function refresh() {
       try {
@@ -203,6 +205,13 @@
         const data = await res.json();
         document.getElementById("meta").textContent =
           "updated " + new Date(data.generatedAt).toLocaleTimeString();
+
+        // Show the countdown only while the idle check is armed (job ENABLED). Once
+        // the fleet sleeps the controller pauses the job, so we hide it.
+        const ic = data.idleCheck;
+        idleCheckAt = (ic && (ic.state || "").toUpperCase() === "ENABLED" && ic.nextRunUtc)
+          ? new Date(ic.nextRunUtc).getTime()
+          : 0;
         // Once instances are back, clear the waking latch so the banner disappears.
         if (!data.asleep) waking = false;
         document.getElementById("root").innerHTML =
@@ -222,6 +231,17 @@
       const secs = Math.max(0, Math.ceil((nextRefreshAt - Date.now()) / 1000));
       document.getElementById("countdown").textContent =
         `auto-refresh every ${REFRESH_MS / 1000}s · next in ${secs}s`;
+
+      const idleEl = document.getElementById("idlecheck");
+      if (idleCheckAt > 0) {
+        const left = Math.max(0, idleCheckAt - Date.now());
+        const m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
+        idleEl.textContent = left > 0
+          ? `💤 idle check in ${m}m ${String(s).padStart(2, "0")}s`
+          : "💤 idle check running…";
+      } else {
+        idleEl.textContent = "";
+      }
     }, 250);
 
     refresh();

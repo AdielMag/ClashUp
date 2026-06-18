@@ -4,9 +4,16 @@ namespace ClashUp.Tools.Dashboard;
 public sealed record FleetStatus(
     DateTimeOffset GeneratedAt,
     bool Asleep,
+    IdleCheckStatus? IdleCheck,
     IReadOnlyList<TierStatus> Tiers,
     IReadOnlyList<ImageVersions> AvailableImages,
     IReadOnlyList<string> Errors);
+
+/// <summary>
+/// State of the Cloud Scheduler idle-check job. <c>State</c> is "Enabled" while the
+/// fleet is awake (and counting down to the next check) or "Paused" once it has slept.
+/// </summary>
+public sealed record IdleCheckStatus(string State, DateTimeOffset? NextRunUtc);
 
 public sealed record TierStatus(string Tier, IReadOnlyList<InstanceStatus> Instances);
 

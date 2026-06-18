@@ -18,6 +18,9 @@ public sealed class DashboardOptions
     public string ServicesMig { get; set; } = "clashup-services-mig";
     public string GameServerMig { get; set; } = "clashup-gameserver-mig";
 
+    /// <summary>Cloud Scheduler idle-check job — read for the "next check in X" countdown.</summary>
+    public string SchedulerJob { get; set; } = "clashup-idle-check";
+
     /// <summary>
     /// Base URL of the Cloud Run fleet controller (from <c>terraform output
     /// fleet_controller_url</c>). The Wake button POSTs to <c>{url}/wake</c> with an

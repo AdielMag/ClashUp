@@ -3,6 +3,7 @@ using Google.Apis.Auth.OAuth2;
 using Google.Cloud.ArtifactRegistry.V1;
 using Google.Cloud.Compute.V1;
 using Google.Cloud.Monitoring.V3;
+using Google.Cloud.Scheduler.V1;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Options;
 
@@ -27,6 +28,7 @@ public sealed class GcpStatusService
     private readonly Lazy<Task<RegionInstanceGroupManagersClient>> _migClient;
     private readonly Lazy<Task<MetricServiceClient>> _metricClient;
     private readonly Lazy<Task<ArtifactRegistryClient>> _registryClient;
+    private readonly Lazy<Task<CloudSchedulerClient>> _schedulerClient;
 
     public GcpStatusService(IOptions<DashboardOptions> options, ILogger<GcpStatusService> logger)
     {
@@ -39,6 +41,7 @@ public sealed class GcpStatusService
         _migClient = new(() => new RegionInstanceGroupManagersClientBuilder().BuildAsync());
         _metricClient = new(() => new MetricServiceClientBuilder().BuildAsync());
         _registryClient = new(() => new ArtifactRegistryClientBuilder().BuildAsync());
+        _schedulerClient = new(() => new CloudSchedulerClientBuilder().BuildAsync());
     }
 
     public async Task<FleetStatus> GetFleetStatusAsync(CancellationToken cancellationToken = default)
@@ -72,7 +75,24 @@ public sealed class GcpStatusService
             errors.Add($"Fleet state: {ex.Message}");
         }
 
-        return new FleetStatus(DateTimeOffset.UtcNow, asleep, tiers, images, errors);
+        var idleCheck = await SafeAsync(() => QueryIdleCheckAsync(cancellationToken), errors, "Idle check");
+
+        return new FleetStatus(DateTimeOffset.UtcNow, asleep, idleCheck, tiers, images, errors);
+    }
+
+    /// <summary>
+    /// State + next-run time of the Cloud Scheduler idle-check job, for the dashboard's
+    /// "next check in X" countdown. Returns "Paused" once the fleet has slept (the
+    /// controller pauses the job), which the UI uses to hide the countdown.
+    /// </summary>
+    private async Task<IdleCheckStatus> QueryIdleCheckAsync(CancellationToken cancellationToken)
+    {
+        var client = await _schedulerClient.Value;
+        var name = JobName.FromProjectLocationJob(_options.ProjectId, _options.Region, _options.SchedulerJob);
+        var job = await client.GetJobAsync(name, cancellationToken);
+
+        DateTimeOffset? next = job.ScheduleTime is { } ts ? ts.ToDateTimeOffset() : null;
+        return new IdleCheckStatus(job.State.ToString(), next);
     }
 
     /// <summary>
