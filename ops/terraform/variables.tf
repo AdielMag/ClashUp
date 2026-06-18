@@ -22,15 +22,22 @@ variable "services_domain" {
 }
 
 # --- Machine sizing ---------------------------------------------------------
+# The fleet is idle most of the time and each MIG keeps >=1 instance always on,
+# so the always-on box size is the dominant idle cost. We run small instances and
+# let the autoscaler add MORE instances under load (GCP autoscalers scale
+# horizontally — instance count — not up to bigger machine types). Sizes are
+# variables so they're trivial to bump if an instance runs hot or OOMs.
 
 variable "services_machine_type" {
-  type    = string
-  default = "e2-standard-2"
+  type        = string
+  description = "Services-tier instance size. Lobby/matchmaking/auth is light and not latency-critical, so a small shared-core box is fine. Bump to e2-medium if multi-version windows (two backends + gateway) pressure the 2GB."
+  default     = "e2-small"
 }
 
 variable "gameserver_machine_type" {
-  type    = string
-  default = "e2-standard-4"
+  type        = string
+  description = "GameServer-tier instance size. Kept on DEDICATED vCPUs (e2-standard-*) rather than shared-core so the 30Hz physics sim has a steady CPU budget. e2-standard-2 halves the idle cost of e2-standard-4 while keeping 2 dedicated cores."
+  default     = "e2-standard-2"
 }
 
 # --- Autoscaling bounds -----------------------------------------------------
