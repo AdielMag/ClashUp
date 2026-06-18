@@ -246,17 +246,6 @@ public sealed class ProcessSupervisor : IProcessSupervisor
             try
             {
                 await EnsureVersionAsync(version, cancellationToken).ConfigureAwait(false);
-
-                // Pin the prewarmed backend so the maintenance loop never idle-evicts
-                // it. On the GameServer tier this backend holds the instance's
-                // registration + heartbeat with Services; evicting it (after which it
-                // marks itself Draining on SIGTERM) drops the instance out of the
-                // matchmaker's healthy set and breaks matchmaking once the fleet goes
-                // idle. On-demand backends for other versions are NOT pinned.
-                if (_backends.TryGetValue(NormalizeVersion(version), out var backend))
-                {
-                    backend.Pinned = true;
-                }
             }
             catch (Exception ex)
             {
@@ -353,9 +342,14 @@ public sealed class ProcessSupervisor : IProcessSupervisor
             cancellationToken.ThrowIfCancellationRequested();
 
             // Evict idle backends — the next request will respawn on demand.
-            // Pinned (prewarmed) backends are exempt: they keep the instance
-            // registered with Services even when no client is connected.
-            if (idleCutoff is { } cutoff && !backend.Pinned && backend.LastUsedUtc < cutoff)
+            // BUT never evict the last remaining backend: on the GameServer tier it
+            // holds the instance's registration + heartbeat with Services (and marks
+            // itself Draining on SIGTERM), so dropping to zero backends would pull the
+            // instance out of the matchmaker's healthy set and break matchmaking once
+            // the fleet goes idle. Keeping exactly one alive costs ~one idle process
+            // and guarantees the instance stays matchable. (_backends.Count is live —
+            // it drops as we remove, so this naturally stops at one.)
+            if (idleCutoff is { } cutoff && backend.LastUsedUtc < cutoff && _backends.Count > 1)
             {
                 _logger.LogInformation("Stopping idle backend {Version} (idle since {LastUsed:o}).", backend.Version, backend.LastUsedUtc);
                 await RemoveBackendAsync(backend).ConfigureAwait(false);
