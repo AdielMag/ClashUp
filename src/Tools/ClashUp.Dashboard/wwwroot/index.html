@@ -37,7 +37,12 @@
     .vrow { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; }
     .vrow .tag { font-family: ui-monospace, monospace; color: var(--accent); }
     .pill { font-family: ui-monospace, monospace; font-size: 11px; background: var(--panel2);
-            border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; margin: 0 4px 4px 0; display: inline-block; }
+            border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; margin: 0 4px 4px 0;
+            display: inline-flex; align-items: center; gap: 6px; }
+    .pill button { background: none; border: none; color: var(--muted); cursor: pointer;
+                   font-size: 13px; line-height: 1; padding: 0; }
+    .pill button:hover:not(:disabled) { color: var(--bad); }
+    .pill button:disabled { opacity: .25; cursor: not-allowed; }
     .empty { color: var(--muted); font-size: 13px; }
     .images { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
     .errors { background: rgba(248,81,73,.1); border: 1px solid var(--bad); color: #ffb3ae;
@@ -49,6 +54,7 @@
   <header>
     <h1>ClashUp Fleet</h1>
     <span class="meta" id="meta">connecting…</span>
+    <span class="meta" id="countdown" style="margin-left:auto"></span>
   </header>
   <div class="wrap" id="root"></div>
 
@@ -84,12 +90,43 @@
       return `<section class="tier"><h2>${tier.tier} — ${tier.instances.length} instance(s)</h2>${cards}</section>`;
     }
 
+    function tagPill(image, tag) {
+      // 'latest' backs header-less routing — not deletable from here.
+      const deletable = tag.toLowerCase() !== "latest";
+      const btn = deletable
+        ? `<button title="Remove ${image}:${tag} from registry"
+             onclick="deleteTag('${image}','${tag}')">✕</button>`
+        : `<button disabled title="'latest' can't be deleted">✕</button>`;
+      return `<span class="pill">${tag}${btn}</span>`;
+    }
+
     function imagesBlock(images) {
       const cards = images.length
         ? images.map(img => `<div class="card"><div class="name">${img.image}</div>
-            <div style="margin-top:8px">${img.tags.map(t => `<span class="pill">${t}</span>`).join("")}</div></div>`).join("")
+            <div style="margin-top:8px">${img.tags.map(t => tagPill(img.image, t)).join("")}</div></div>`).join("")
         : `<div class="empty">no images found</div>`;
       return `<section class="tier"><h2>Available versions (registry)</h2><div class="images">${cards}</div></section>`;
+    }
+
+    async function deleteTag(image, tag) {
+      if (!confirm(`Permanently remove ${image}:${tag} from the registry?\n\nThis cannot be undone. Old clients on this version will no longer be able to connect.`)) {
+        return;
+      }
+      try {
+        const res = await fetch("/api/registry/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image, tag }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert("Delete failed: " + (data.error || res.statusText));
+          return;
+        }
+        refresh();
+      } catch (e) {
+        alert("Delete failed: " + e.message);
+      }
     }
 
     function errorsBlock(errors) {
@@ -97,6 +134,9 @@
       return `<div class="errors"><strong>Some data could not be loaded:</strong>
         <ul>${errors.map(e => `<li>${e}</li>`).join("")}</ul></div>`;
     }
+
+    const REFRESH_MS = 5000;
+    let nextRefreshAt = 0;
 
     async function refresh() {
       try {
@@ -110,11 +150,20 @@
           imagesBlock(data.availableImages);
       } catch (e) {
         document.getElementById("meta").textContent = "error: " + e.message;
+      } finally {
+        nextRefreshAt = Date.now() + REFRESH_MS;
       }
     }
 
+    // Live countdown so it's obvious the view auto-refreshes (and when).
+    setInterval(() => {
+      const secs = Math.max(0, Math.ceil((nextRefreshAt - Date.now()) / 1000));
+      document.getElementById("countdown").textContent =
+        `auto-refresh every ${REFRESH_MS / 1000}s · next in ${secs}s`;
+    }, 250);
+
     refresh();
-    setInterval(refresh, 5000);
+    setInterval(refresh, REFRESH_MS);
   </script>
 </body>
 </html>

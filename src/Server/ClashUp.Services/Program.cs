@@ -1,7 +1,9 @@
 using ClashUp.Server.Common.Auth;
+using ClashUp.Server.Common.Ccu;
 using ClashUp.Server.Common.Configuration;
 using ClashUp.Server.Common.Interceptors;
 using ClashUp.Server.Common.Mongo;
+using ClashUp.Server.Services.Ccu;
 using ClashUp.Server.Services.Matchmaking;
 using ClashUp.Server.Services.Persistence;
 using ClashUp.Shared.Services;
@@ -49,6 +51,16 @@ builder.Services.AddSingleton<MatchmakingQueue>();
 builder.Services.AddSingleton<GameServerAdminClientFactory>();
 builder.Services.AddSingleton<IGameServerProvisioner, GameServerProvisionerStub>();
 builder.Services.AddHostedService<Matchmaker>();
+
+// CCU = live client hub connections. Push it to Cloud Monitoring for the
+// Services autoscaler (each tier reports its own CCU series).
+builder.Services.AddSingleton<ServicesCcuTracker>();
+builder.Services.AddSingleton<ICcuSource>(sp => sp.GetRequiredService<ServicesCcuTracker>());
+builder.Services.AddHostedService(sp => new CcuMetricReporter(
+    sp.GetRequiredService<ICcuSource>(),
+    "custom.googleapis.com/services/ccu",
+    30,
+    sp.GetRequiredService<ILogger<CcuMetricReporter>>()));
 
 builder.Services.AddGrpc();
 builder.Services.AddMagicOnion(options =>

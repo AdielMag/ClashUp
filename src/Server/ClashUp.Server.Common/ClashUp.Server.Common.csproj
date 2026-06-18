@@ -16,6 +16,7 @@
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Google.Cloud.Monitoring.V3" />
   </ItemGroup>
 
   <ItemGroup>

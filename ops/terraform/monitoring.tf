@@ -1,11 +1,27 @@
-# Descriptor for the custom CCU gauge pushed by CcuMetricReporter and consumed by
-# the GameServer autoscaler + local dashboard.
-resource "google_monitoring_metric_descriptor" "ccu" {
+# Descriptor for the GameServer CCU gauge pushed by CcuMetricReporter and consumed
+# by the GameServer autoscaler + local dashboard.
+resource "google_monitoring_metric_descriptor" "gameserver_ccu" {
   type         = "custom.googleapis.com/gameserver/ccu"
   metric_kind  = "GAUGE"
   value_type   = "INT64"
   display_name = "GameServer Concurrent Users"
-  description  = "Concurrent connected users on a GameServer instance (5-min disconnect grace applied)."
+  description  = "Concurrent connected match players on a GameServer instance (5-min disconnect grace applied)."
+
+  labels {
+    key         = "version"
+    value_type  = "STRING"
+    description = "Server version of the backend process reporting CCU."
+  }
+}
+
+# Descriptor for the Services CCU gauge — live client hub connections per Services
+# instance, consumed by the Services autoscaler + local dashboard.
+resource "google_monitoring_metric_descriptor" "services_ccu" {
+  type         = "custom.googleapis.com/services/ccu"
+  metric_kind  = "GAUGE"
+  value_type   = "INT64"
+  display_name = "Services Concurrent Users"
+  description  = "Concurrent client streaming-hub connections on a Services instance."
 
   labels {
     key         = "version"

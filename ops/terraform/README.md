@@ -5,7 +5,10 @@ tier (Services, GameServer), each of identical **gateway** instances (on
 Container-Optimized OS) that spawn per-version backend containers on demand.
 Autoscaling is driven by CPU (80%, native), RAM (80%, via the gateway's
 self-reported `custom.googleapis.com/instance/memory_utilization`), and a custom
-CCU metric (GameServer). No Ops Agent — the gateway reports host memory itself.
+per-tier CCU metric — **each tier reports its own**: GameServer reports match
+players (`custom.googleapis.com/gameserver/ccu`), Services reports live client
+hub connections (`custom.googleapis.com/services/ccu`). No Ops Agent — the
+gateway reports host memory itself.
 
 ## Architecture recap
 
@@ -15,9 +18,12 @@ CCU metric (GameServer). No Ops Agent — the gateway reports host memory itself
   Application LB on `:443`** with a Google-managed cert. Stateless.
 - **GameServer tier** — no LB; each instance has a public IP and clients connect
   directly on `:5101` after matchmaking.
-- **Egress** — Services instances have no external IP: Private Google Access
-  reaches Google APIs, and a Cloud NAT (with a reserved static IP) reaches
-  MongoDB Atlas. Allowlist `terraform output nat_ip` in Atlas.
+- **Egress / database access** — only the **Services** tier talks to MongoDB.
+  Services instances have **no external IP**: Private Google Access reaches
+  Google APIs, and a Cloud NAT (with a reserved static IP) reaches MongoDB Atlas.
+  The GameServer tier **never connects to Mongo** (it talks only to Services over
+  gRPC), so the Atlas IP-access list should contain **only** the NAT IP
+  (`terraform output nat_ip`, as a `/32`) — never `0.0.0.0/0`.
 - **Versions are processes, not instances.** Each instance runs the gateway,
   which pulls `clashup-<tier>:<client-version>` on demand and routes by the
   `x-client-version` gRPC header. Unknown version → gRPC `FAILED_PRECONDITION` +

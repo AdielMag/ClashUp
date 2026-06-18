@@ -222,7 +222,26 @@ public sealed class ProcessSupervisor : IProcessSupervisor
 
     public async Task PrewarmAsync(CancellationToken cancellationToken)
     {
-        foreach (var version in _options.PrewarmVersions.Where(v => !string.IsNullOrWhiteSpace(v)))
+        var versions = new HashSet<string>(
+            _options.PrewarmVersions.Where(v => !string.IsNullOrWhiteSpace(v)),
+            StringComparer.Ordinal);
+
+        if (_options.PrewarmDiscoveredVersions)
+        {
+            // Prewarm ONLY the newest published version. One warm backend is enough
+            // to register the instance with Services (the bootstrap requirement);
+            // older clients still spawn their version on demand. Prewarming every
+            // discovered tag would resurrect retired versions on each fresh VM until
+            // their images are deleted — so we deliberately don't.
+            var newest = SelectNewestVersion(
+                await DiscoverVersionTagsAsync(cancellationToken).ConfigureAwait(false));
+            if (newest is not null)
+            {
+                versions.Add(newest);
+            }
+        }
+
+        foreach (var version in versions)
         {
             try
             {
@@ -234,6 +253,83 @@ public sealed class ProcessSupervisor : IProcessSupervisor
             }
         }
     }
+
+    /// <summary>
+    /// Lists the published image tags in the configured repository via the Docker
+    /// Registry v2 API, keeping only real version tags (drops "latest" and the
+    /// default dev tag). Used by the GameServer tier to bootstrap: prewarming each
+    /// published version starts a backend that registers the instance with
+    /// Services. Returns empty on any failure (off-GCE, no token, transient) — the
+    /// caller still honours the explicit PrewarmVersions list.
+    /// </summary>
+    private async Task<IReadOnlyList<string>> DiscoverVersionTagsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var registryHost = _options.ImageRepository.Split('/', 2)[0];
+            var repoPath = _options.ImageRepository[(registryHost.Length + 1)..];
+            var token = await GceMetadataHelper.GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(token))
+            {
+                _logger.LogInformation("No registry token (off-GCE?) — skipping version discovery.");
+                return Array.Empty<string>();
+            }
+
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get, $"https://{registryHost}/v2/{repoPath}/tags/list");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            using var response = await http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Tag list request failed ({Status}) — skipping version discovery.", response.StatusCode);
+                return Array.Empty<string>();
+            }
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("tags", out var tagsElement)
+                || tagsElement.ValueKind != System.Text.Json.JsonValueKind.Array)
+            {
+                return Array.Empty<string>();
+            }
+
+            var tags = tagsElement.EnumerateArray()
+                .Select(t => t.GetString())
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Select(t => t!)
+                .Where(IsVersionTag)
+                .ToArray();
+
+            _logger.LogInformation("Discovered {Count} version tag(s) to prewarm: {Tags}", tags.Length, string.Join(", ", tags));
+            return tags;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Version discovery failed — skipping (explicit PrewarmVersions still apply).");
+            return Array.Empty<string>();
+        }
+    }
+
+    /// <summary>
+    /// Picks the highest semantic version from a set of release tags. Tags that
+    /// parse as <see cref="Version"/> (e.g. "1.2.0") sort numerically and outrank
+    /// any non-parsing tags, which fall back to ordinal comparison.
+    /// </summary>
+    private static string? SelectNewestVersion(IReadOnlyList<string> tags) =>
+        tags
+            .OrderByDescending(t => System.Version.TryParse(t, out var v) ? v : null)
+            .ThenByDescending(t => t, StringComparer.Ordinal)
+            .FirstOrDefault();
+
+    // A real release tag, not a moving/dev pointer. CI publishes semver tags
+    // (e.g. "1.2.0") plus "latest"; the dev fallback is "0.0.1".
+    private static bool IsVersionTag(string tag) =>
+        !string.Equals(tag, "latest", StringComparison.OrdinalIgnoreCase)
+        && tag != "0.0.1"
+        && tag.Length > 0
+        && char.IsDigit(tag[0]);
 
     public async Task RunMaintenanceAsync(CancellationToken cancellationToken)
     {

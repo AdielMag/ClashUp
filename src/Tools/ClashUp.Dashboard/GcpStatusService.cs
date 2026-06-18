@@ -14,7 +14,8 @@ namespace ClashUp.Tools.Dashboard;
 /// </summary>
 public sealed class GcpStatusService
 {
-    private const string CcuMetric = "custom.googleapis.com/gameserver/ccu";
+    private const string GameServerCcuMetric = "custom.googleapis.com/gameserver/ccu";
+    private const string ServicesCcuMetric = "custom.googleapis.com/services/ccu";
     private const string CpuMetric = "compute.googleapis.com/instance/cpu/utilization";
     private const string RamMetric = "custom.googleapis.com/instance/memory_utilization";
 
@@ -98,24 +99,30 @@ public sealed class GcpStatusService
 
     private async Task<Dictionary<string, List<VersionCcu>>> QueryCcuAsync(CancellationToken cancellationToken)
     {
+        // Both tiers report CCU under their own metric type; merge by instance id
+        // (instances are unique across tiers, so one map serves both). Cloud
+        // Monitoring forbids OR across metric.type, so query each type separately.
         var result = new Dictionary<string, List<VersionCcu>>(StringComparer.Ordinal);
-        await foreach (var series in ListSeriesAsync($"metric.type = \"{CcuMetric}\"", cancellationToken))
+        foreach (var metricType in new[] { GameServerCcuMetric, ServicesCcuMetric })
         {
-            if (series.Points.Count == 0)
+            await foreach (var series in ListSeriesAsync($"metric.type = \"{metricType}\"", cancellationToken))
             {
-                continue;
+                if (series.Points.Count == 0)
+                {
+                    continue;
+                }
+
+                var instanceId = Label(series.Resource.Labels, "instance_id");
+                var version = Label(series.Metric.Labels, "version", "unknown");
+                var ccu = series.Points[0].Value.Int64Value;
+
+                if (!result.TryGetValue(instanceId, out var list))
+                {
+                    result[instanceId] = list = new List<VersionCcu>();
+                }
+
+                list.Add(new VersionCcu(version, ccu));
             }
-
-            var instanceId = Label(series.Resource.Labels, "instance_id");
-            var version = Label(series.Metric.Labels, "version", "unknown");
-            var ccu = series.Points[0].Value.Int64Value;
-
-            if (!result.TryGetValue(instanceId, out var list))
-            {
-                result[instanceId] = list = new List<VersionCcu>();
-            }
-
-            list.Add(new VersionCcu(version, ccu));
         }
 
         return result;
@@ -168,6 +175,62 @@ public sealed class GcpStatusService
         {
             yield return series;
         }
+    }
+
+    /// <summary>
+    /// Deletes a specific image version (by image name + tag) from Artifact
+    /// Registry — the manual "retire this version" action behind the dashboard's
+    /// delete button. Refuses anything tagged <c>latest</c> (it backs header-less
+    /// internal routing and the active build), so only retired versions can go.
+    /// Requires the running credentials to have delete rights
+    /// (<c>roles/artifactregistry.repoAdmin</c>); the read-only dashboard SA does not
+    /// by default.
+    /// </summary>
+    public async Task DeleteImageVersionAsync(string image, string tag, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(image) || string.IsNullOrWhiteSpace(tag))
+        {
+            throw new ArgumentException("image and tag are required.");
+        }
+
+        if (string.Equals(tag, "latest", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Refusing to delete the 'latest' tag — it backs header-less internal routing.");
+        }
+
+        var client = await _registryClient.Value;
+        var parent = $"projects/{_options.ProjectId}/locations/{_options.Region}/repositories/{_options.Repository}";
+
+        string? digest = null;
+        await foreach (var img in client.ListDockerImagesAsync(parent).WithCancellation(cancellationToken))
+        {
+            if (ParseImageName(img.Name) != image || !img.Tags.Contains(tag))
+            {
+                continue;
+            }
+
+            // The version a CI build publishes is double-tagged (e.g. "1.0.1" + "latest").
+            // Deleting it by digest would take "latest" with it — refuse the active build.
+            if (img.Tags.Any(t => string.Equals(t, "latest", StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException(
+                    $"Refusing to delete '{image}:{tag}' — this version is also tagged 'latest' (the active build).");
+            }
+
+            var at = img.Name.IndexOf('@');
+            digest = at >= 0 ? img.Name[(at + 1)..] : null;
+            break;
+        }
+
+        if (string.IsNullOrEmpty(digest))
+        {
+            throw new InvalidOperationException($"No image '{image}' with tag '{tag}' found in the registry.");
+        }
+
+        var versionName = $"{parent}/packages/{image}/versions/{digest}";
+        var op = await client.DeleteVersionAsync(versionName, cancellationToken);
+        await op.PollUntilCompletedAsync();
+        _logger.LogInformation("Deleted registry version {Image}:{Tag} ({Version})", image, tag, versionName);
     }
 
     private async Task<List<ImageVersions>> ListAvailableImagesAsync(CancellationToken cancellationToken)

@@ -14,6 +14,22 @@ SERVICES_REPO="${services_repo}"
 iptables -A INPUT -p tcp --dport 5001 -j ACCEPT
 iptables -A INPUT -p tcp --dport 9001 -j ACCEPT
 
+# Retry a command until it succeeds (egress via Cloud NAT may not be ready the
+# instant Docker is — without this the one-shot login/pull races NAT readiness
+# and `set -e` aborts the whole script, leaving the gateway unstarted).
+retry() {
+  local n=0 max=30
+  until "$@"; do
+    n=$((n + 1))
+    if [ "$n" -ge "$max" ]; then
+      echo "FATAL: command failed after $max attempts: $*" >&2
+      return 1
+    fi
+    echo "retry $n/$max: $*" >&2
+    sleep 5
+  done
+}
+
 # Wait for the Docker daemon (preinstalled on COS) to be ready.
 until docker info >/dev/null 2>&1; do sleep 1; done
 
@@ -21,13 +37,18 @@ until docker info >/dev/null 2>&1; do sleep 1; done
 # writable config dir because the COS root filesystem is read-only.
 export DOCKER_CONFIG=/var/lib/gateway-docker
 mkdir -p "$DOCKER_CONFIG"
-TOKEN=$(curl -s -H "Metadata-Flavor: Google" \
-  "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" \
-  | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
-echo "$TOKEN" | docker --config "$DOCKER_CONFIG" login -u oauth2accesstoken --password-stdin "https://$REGISTRY_HOST"
+ar_login() {
+  local token
+  token=$(curl -s -H "Metadata-Flavor: Google" \
+    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token" \
+    | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+  [ -n "$token" ] || return 1
+  echo "$token" | docker --config "$DOCKER_CONFIG" login -u oauth2accesstoken --password-stdin "https://$REGISTRY_HOST"
+}
+retry ar_login
 
 # Run the gateway. /proc is mounted so it can report host (VM) memory.
-docker --config "$DOCKER_CONFIG" pull "$GATEWAY_IMAGE"
+retry docker --config "$DOCKER_CONFIG" pull "$GATEWAY_IMAGE"
 docker rm -f clashup-gateway >/dev/null 2>&1 || true
 docker run -d --name clashup-gateway \
   --network host \

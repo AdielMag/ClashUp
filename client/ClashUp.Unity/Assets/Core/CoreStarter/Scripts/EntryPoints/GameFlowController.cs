@@ -20,6 +20,7 @@ namespace ClashUp.Client.CoreStarter
         private readonly AuthClient _auth;
         private readonly IDeviceIdStore _deviceIdStore;
         private readonly LifetimeScope _scope;
+        private readonly ServicesPresence _presence;
 
         private SceneHandle _lobbyHandle;
         private SceneHandle _matchmakingHandle;
@@ -32,13 +33,15 @@ namespace ClashUp.Client.CoreStarter
             IDebugLogger log,
             AuthClient auth,
             IDeviceIdStore deviceIdStore,
-            LifetimeScope scope)
+            LifetimeScope scope,
+            ServicesPresence presence)
         {
             _sceneLoader = sceneLoader;
             _log = log;
             _auth = auth;
             _deviceIdStore = deviceIdStore;
             _scope = scope;
+            _presence = presence;
         }
 
         public async UniTask StartAsync(CancellationToken cancellation)
@@ -63,6 +66,9 @@ namespace ClashUp.Client.CoreStarter
 
             await loadingScreen.WaitForProgressComplete(cancellation);
             await loadingScreen.HideAsync(cancellation);
+
+            // In the menus now → count this player on the Services tier.
+            _presence.Start();
         }
 
         public void EnterMatchmaking()
@@ -119,6 +125,9 @@ namespace ClashUp.Client.CoreStarter
             var loadingScreen = Object.FindAnyObjectByType<LoadingScreenPresenter>();
             await loadingScreen.ShowAsync();
 
+            // Entering a match → stop counting on Services (now counted on the GameServer).
+            _presence.Stop();
+
             loadingScreen.SetStepText("Reconnecting to match...");
             await _sceneLoader.UnloadAsync(_lobbyHandle);
 
@@ -141,6 +150,9 @@ namespace ClashUp.Client.CoreStarter
         {
             var loadingScreen = Object.FindAnyObjectByType<LoadingScreenPresenter>();
             await loadingScreen.ShowAsync();
+
+            // Entering a match → stop counting on Services (now counted on the GameServer).
+            _presence.Stop();
 
             loadingScreen.SetStepText("Entering match...");
             await _sceneLoader.UnloadAsync(_matchmakingHandle);
@@ -168,6 +180,9 @@ namespace ClashUp.Client.CoreStarter
                 _lobbyHandle = await _sceneLoader.LoadAdditiveAsync("Lobby");
             }
             SceneManager.SetActiveScene(_lobbyHandle.Scene);
+
+            // Back in the menus → resume counting on the Services tier.
+            _presence.Start();
 
             await loadingScreen.HideAsync();
         }

@@ -41,10 +41,17 @@ namespace ClashUp.Client.Networking
             _log.Log($"[PingHub] heartbeat {serverStampMs}");
         }
 
-        public void Dispose()
+        /// <summary>
+        /// Close the boot-time connection. The lobby presence connection
+        /// (<see cref="ServicesPresence"/>) takes over the Services CCU signal once
+        /// the session scene loads, so the boot ping must not linger as a phantom.
+        /// </summary>
+        public void Disconnect()
         {
             _hub?.DisposeAsync().AsUniTask().Forget();
             _hub = null;
         }
+
+        public void Dispose() => Disconnect();
     }
 }

@@ -109,7 +109,7 @@ resource "google_compute_region_autoscaler" "gameserver" {
     metric {
       name   = "custom.googleapis.com/gameserver/ccu"
       type   = "GAUGE"
-      target = var.ccu_per_instance_target
+      target = var.gameserver_ccu_per_instance_target
     }
   }
 }

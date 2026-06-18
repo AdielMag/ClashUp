@@ -67,10 +67,16 @@ variable "ram_target_utilization" {
   default     = 0.8
 }
 
-variable "ccu_per_instance_target" {
+variable "gameserver_ccu_per_instance_target" {
   type        = number
-  description = "Target concurrent users per GameServer instance before scaling out."
+  description = "Target concurrent users (match players) per GameServer instance before scaling out."
   default     = 100
+}
+
+variable "services_ccu_per_instance_target" {
+  type        = number
+  description = "Target concurrent users (live client hub connections) per Services instance before scaling out. Services load per user is lighter (lobby/matchmaking), so this is higher than the GameServer target."
+  default     = 500
 }
 
 # --- Backend runtime configuration (injected into version containers) -------

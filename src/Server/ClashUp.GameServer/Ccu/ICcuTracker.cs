@@ -1,3 +1,5 @@
+using ClashUp.Server.Common.Ccu;
+
 namespace ClashUp.Server.GameServer.Ccu;
 
 /// <summary>
@@ -7,11 +9,8 @@ namespace ClashUp.Server.GameServer.Ccu;
 /// counted. This is the per-instance scaling signal consumed by the GCP MIG
 /// autoscaler (via <c>custom.googleapis.com/gameserver/ccu</c>).
 /// </summary>
-public interface ICcuTracker
+public interface ICcuTracker : ICcuSource
 {
-    /// <summary>Current number of counted players (live + within disconnect grace).</summary>
-    int CurrentCcu { get; }
-
     /// <summary>
     /// Record that a player connected/joined. Cancels any pending grace-period
     /// removal (reconnect); counts a brand-new player exactly once.

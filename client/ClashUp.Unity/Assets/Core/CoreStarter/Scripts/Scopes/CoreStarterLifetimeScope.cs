@@ -23,6 +23,7 @@ namespace ClashUp.Client.CoreStarter
             builder.Register<MatchmakingClient>(Lifetime.Singleton);
             builder.Register<ResolveMatchClient>(Lifetime.Singleton);
             builder.Register<GameServerChannelFactory>(Lifetime.Singleton);
+            builder.Register<ServicesPresence>(Lifetime.Singleton);
 
             builder.Register<AuthClient>(Lifetime.Singleton);
             builder.Register<IDeviceIdStore, PlayerPrefsDeviceIdStore>(Lifetime.Singleton);

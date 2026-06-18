@@ -21,4 +21,19 @@ app.UseStaticFiles();
 app.MapGet("/api/status", async (GcpStatusService svc, CancellationToken ct) =>
     Results.Json(await svc.GetFleetStatusAsync(ct)));
 
+app.MapPost("/api/registry/delete", async (GcpStatusService svc, DeleteVersionRequest req, CancellationToken ct) =>
+{
+    try
+    {
+        await svc.DeleteImageVersionAsync(req.Image, req.Tag, ct);
+        return Results.Ok(new { ok = true });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
 app.Run();
+
+internal sealed record DeleteVersionRequest(string Image, string Tag);

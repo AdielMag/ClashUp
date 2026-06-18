@@ -1,38 +1,42 @@
-using ClashUp.Server.Common;
 using ClashUp.Server.Common.Gce;
-using ClashUp.Server.GameServer.Match;
 using Google.Api;
 using Google.Api.Gax.ResourceNames;
 using Google.Cloud.Monitoring.V3;
 using Google.Protobuf.WellKnownTypes;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-namespace ClashUp.Server.GameServer.Ccu;
+namespace ClashUp.Server.Common.Ccu;
 
 /// <summary>
-/// Pushes this instance's CCU to Google Cloud Monitoring as the custom gauge
-/// <c>custom.googleapis.com/gameserver/ccu</c>, labelled by server version. The
-/// GCP MIG autoscaler consumes this metric as a per-instance scaling signal, and
-/// the local dashboard reads it to show players-per-version.
+/// Pushes an instance's CCU (from an <see cref="ICcuSource"/>) to Google Cloud
+/// Monitoring as a custom gauge, labelled by server version. The GCP MIG
+/// autoscaler consumes the gauge as a per-instance scaling signal and the local
+/// dashboard reads it to show players-per-version.
+///
+/// The metric type is supplied per tier (e.g. <c>custom.googleapis.com/gameserver/ccu</c>
+/// or <c>custom.googleapis.com/services/ccu</c>) so both tiers reuse this reporter
+/// while reporting independent series.
 ///
 /// No-ops when the GCE metadata server is unreachable (local/dev), so the host
 /// runs identically off-cloud.
 /// </summary>
 public sealed class CcuMetricReporter : BackgroundService
 {
-    private const string MetricType = "custom.googleapis.com/gameserver/ccu";
-
-    private readonly ICcuTracker _ccuTracker;
-    private readonly GameServerOptions _options;
+    private readonly ICcuSource _source;
+    private readonly string _metricType;
+    private readonly int _intervalSeconds;
     private readonly ILogger<CcuMetricReporter> _logger;
 
     public CcuMetricReporter(
-        ICcuTracker ccuTracker,
-        IOptions<GameServerOptions> options,
+        ICcuSource source,
+        string metricType,
+        int intervalSeconds,
         ILogger<CcuMetricReporter> logger)
     {
-        _ccuTracker = ccuTracker;
-        _options = options.Value;
+        _source = source;
+        _metricType = metricType;
+        _intervalSeconds = intervalSeconds;
         _logger = logger;
     }
 
@@ -45,7 +49,7 @@ public sealed class CcuMetricReporter : BackgroundService
         if (instanceId is null || zone is null || projectId is null)
         {
             _logger.LogInformation(
-                "Not running on GCE (no metadata server) — CCU metric reporting disabled.");
+                "Not running on GCE (no metadata server) — CCU metric reporting disabled for {Metric}.", _metricType);
             return;
         }
 
@@ -56,24 +60,24 @@ public sealed class CcuMetricReporter : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to create Cloud Monitoring client — CCU reporting disabled.");
+            _logger.LogWarning(ex, "Failed to create Cloud Monitoring client — CCU reporting disabled for {Metric}.", _metricType);
             return;
         }
 
         var projectName = new ProjectName(projectId);
         var version = ServerVersion.Current;
-        var interval = TimeSpan.FromSeconds(Math.Max(5, _options.CcuReportIntervalSeconds));
+        var interval = TimeSpan.FromSeconds(Math.Max(5, _intervalSeconds));
         using var timer = new PeriodicTimer(interval);
 
         _logger.LogInformation(
-            "CCU metric reporting enabled (instance {InstanceId}, zone {Zone}, version {Version}, every {Interval}s).",
-            instanceId, zone, version, interval.TotalSeconds);
+            "CCU metric reporting enabled for {Metric} (instance {InstanceId}, zone {Zone}, version {Version}, every {Interval}s).",
+            _metricType, instanceId, zone, version, interval.TotalSeconds);
 
         do
         {
             try
             {
-                var series = BuildTimeSeries(instanceId, zone, projectId, version, _ccuTracker.CurrentCcu);
+                var series = BuildTimeSeries(instanceId, zone, projectId, version, _source.CurrentCcu);
                 await client.CreateTimeSeriesAsync(projectName, new[] { series }, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -82,20 +86,20 @@ public sealed class CcuMetricReporter : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to push CCU metric");
+                _logger.LogWarning(ex, "Failed to push CCU metric {Metric}", _metricType);
             }
         }
         while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false));
     }
 
-    private static TimeSeries BuildTimeSeries(
+    private TimeSeries BuildTimeSeries(
         string instanceId, string zone, string projectId, string version, int ccu)
     {
         return new TimeSeries
         {
             Metric = new Metric
             {
-                Type = MetricType,
+                Type = _metricType,
                 Labels = { { "version", version } },
             },
             Resource = new MonitoredResource

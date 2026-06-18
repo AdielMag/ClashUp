@@ -12,13 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ca66e6b7208a5340967a933542019d6, type: 3}
   m_Name: EnvironmentConfig
   m_EditorClassIdentifier: 
-  current: 0
+  current: 3
   servicesUrls:
     pairs:
     - key: 0
       value: http://localhost:5001
     - key: 1
-      value: http://100.68.118.109:5001
+      value: http://10.0.2.2:5001
     - key: 2
-      value: https://dev.clashup.example.com
+      value: http://100.68.118.109:5001
+    - key: 3
+      value: http://35.232.52.146:5001
     error: 0

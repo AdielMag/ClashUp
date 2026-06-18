@@ -25,9 +25,11 @@ public sealed class GameServerOptions
     /// <summary>
     /// How long a disconnected player keeps counting toward CCU before being
     /// removed (smooths brief mobile disconnects). Reconnecting within this
-    /// window cancels the pending removal. Default 300s (5 minutes).
+    /// window cancels the pending removal. Default 45s — long enough to ride out
+    /// a transient mobile reconnect without thrashing the autoscaler, short enough
+    /// that leaving a match drops the count promptly.
     /// </summary>
-    public int CcuGracePeriodSeconds { get; init; } = 300;
+    public int CcuGracePeriodSeconds { get; init; } = 45;
 
     /// <summary>How often the CCU metric is pushed to Cloud Monitoring, in seconds.</summary>
     public int CcuReportIntervalSeconds { get; init; } = 30;

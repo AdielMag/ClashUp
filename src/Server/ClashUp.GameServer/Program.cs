@@ -1,4 +1,5 @@
 using ClashUp.Server.Common.Auth;
+using ClashUp.Server.Common.Ccu;
 using ClashUp.Server.Common.Configuration;
 using ClashUp.Server.Common.Interceptors;
 using ClashUp.Server.GameServer.Abilities;
@@ -8,6 +9,7 @@ using ClashUp.Server.GameServer.Match;
 using ClashUp.Server.GameServer.Registration;
 using ClashUp.Server.GameServer.Simulation;
 using MagicOnion.Server;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,10 +42,17 @@ builder.Services.AddScoped<MatchClock>();
 builder.Services.AddSingleton<GameServerIdentity>();
 builder.Services.AddSingleton<IServicesRegistryClient, ServicesRegistryClient>();
 builder.Services.AddSingleton<ICcuTracker, CcuTracker>();
+builder.Services.AddSingleton<ICcuSource>(sp => sp.GetRequiredService<ICcuTracker>());
 builder.Services.AddHostedService<GameServerRegistrar>();
 builder.Services.AddHostedService<HeartbeatBackgroundService>();
 builder.Services.AddHostedService<GracefulDrainService>();
-builder.Services.AddHostedService<CcuMetricReporter>();
+
+// Push this instance's match CCU to Cloud Monitoring for the GameServer autoscaler.
+builder.Services.AddHostedService(sp => new CcuMetricReporter(
+    sp.GetRequiredService<ICcuSource>(),
+    "custom.googleapis.com/gameserver/ccu",
+    sp.GetRequiredService<IOptions<GameServerOptions>>().Value.CcuReportIntervalSeconds,
+    sp.GetRequiredService<ILogger<CcuMetricReporter>>()));
 
 builder.Services.AddGrpc();
 builder.Services.AddMagicOnion(options =>

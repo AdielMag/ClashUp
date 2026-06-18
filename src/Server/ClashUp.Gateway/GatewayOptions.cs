@@ -55,6 +55,21 @@ public sealed class GatewayOptions
     public string[] PrewarmVersions { get; init; } = Array.Empty<string>();
 
     /// <summary>
+    /// When true, the gateway lists the published image tags in
+    /// <see cref="ImageRepository"/> at startup and prewarms the SINGLE newest
+    /// version tag (in addition to <see cref="PrewarmVersions"/>). This is how the
+    /// GameServer tier bootstraps: a backend must be running to register the
+    /// instance with Services before matchmaking can place a match on it, but no
+    /// client can connect to a GameServer until matchmaking hands out its endpoint.
+    /// Only the newest tag is prewarmed so retired versions aren't resurrected on
+    /// every fresh VM — older clients still spawn their version on demand. Discovery
+    /// keeps this version-agnostic: pushing a new image is picked up with no infra
+    /// change. The Services tier leaves this off (clients spawn its backends on
+    /// demand).
+    /// </summary>
+    public bool PrewarmDiscoveredVersions { get; init; }
+
+    /// <summary>
     /// Environment variables injected into every backend container, each as a
     /// literal "KEY=VALUE" string (e.g. "Mongo__ConnectionString=mongodb+srv://…").
     /// A list of strings — not a dictionary — so backend var names containing

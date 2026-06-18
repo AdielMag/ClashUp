@@ -101,5 +101,13 @@ resource "google_compute_region_autoscaler" "services" {
       type   = "GAUGE"
       target = var.ram_target_utilization * 100
     }
+
+    # Concurrent users — live client hub connections, the per-instance gauge
+    # pushed by the Services CcuMetricReporter.
+    metric {
+      name   = "custom.googleapis.com/services/ccu"
+      type   = "GAUGE"
+      target = var.services_ccu_per_instance_target
+    }
   }
 }

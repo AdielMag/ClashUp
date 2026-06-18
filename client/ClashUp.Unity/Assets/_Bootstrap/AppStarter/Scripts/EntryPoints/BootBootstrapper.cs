@@ -96,6 +96,11 @@ namespace ClashUp.Client.AppStarter
             }
             loadingScreen.SetProgress(0.7f);
 
+            // Boot connectivity check done. Close it so it doesn't linger as a
+            // phantom Services CCU connection — ServicesPresence (in the session
+            // scope) owns the lobby presence/keepalive from here on.
+            _pingHub.Disconnect();
+
             // 5. Load CoreStarter scene (standalone — not a child of AppStarter)
             loadingScreen.SetStepText("Loading session...");
             await _sceneLoader.LoadAdditiveAsync("CoreStarter", ct: cancellation);
