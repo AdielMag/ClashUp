@@ -59,7 +59,7 @@ builder.Services.AddSingleton<ICcuSource>(sp => sp.GetRequiredService<ServicesCc
 builder.Services.AddHostedService(sp => new CcuMetricReporter(
     sp.GetRequiredService<ICcuSource>(),
     "custom.googleapis.com/services/ccu",
-    30,
+    10, // 10s push so the dashboard reflects lobby connects within ~10-20s
     sp.GetRequiredService<ILogger<CcuMetricReporter>>()));
 
 builder.Services.AddGrpc();
