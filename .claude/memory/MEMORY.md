@@ -194,3 +194,5 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - [feedback-ticket-status.md](feedback-ticket-status.md) — Never mark tickets Done without user confirmation it's working
 - [ability-authoring.md](ability-authoring.md) — How to create ability JSON files: editor tool, schema, node types, wiring to characters
 - [lobby-ui.md](lobby-ui.md) — Lobby pager UI: horizontal scroll, vertical per-page scroll, bottom bar, play button wiring, VContainer scope
+- [gcp-ops-gotchas.md](gcp-ops-gotchas.md) — Deploy/verify gotchas: GITHUB_TOKEN env breaks push (use `env -u`), MIG update policies (Services PROACTIVE / GameServer OPPORTUNISTIC), verifying GS via MIG health + Monitoring REST API, CI dev-vs-release paths
+- [deployment-architecture.md](deployment-architecture.md) — Version-aware gateway (one image, two tiers), on-demand backend spawning, prewarm-newest + version-transition lifecycle, mutually-exclusive CCU model, dashboard delete/hidden-latest

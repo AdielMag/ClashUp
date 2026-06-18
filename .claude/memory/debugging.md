@@ -284,15 +284,17 @@ Server input-consumption cadence. The client predicts ONE physics step per input
 
 **Symptom**: Build fails with "Minimum SDK of AndroidApiLevel23 but the latest installed SDK on the system is 0" even though SDK platforms are installed.
 
-**Root cause**: `C:\Windows\System32` was missing from Unity's process PATH. Unity's `AndroidSDKTools.ListTargetPlatforms()` shells out to external tools (and `powershell` for sdkmanager) that need System32 binaries like `findstr.exe`. Without System32 in PATH, platform detection returns 0.
+**Root cause**: `sdkmanager.bat` (cmdline-tools 16.0) uses a `FOR /F ... |findstr "version"` pipe to parse the Java version. If `findstr.exe` (in `C:\Windows\System32`) is not in PATH when the bat file's subprocess runs, the version string stays empty → check fails with "Java version 17 or higher is required" → `ListTargetPlatforms()` returns 0. This happens even when System32 IS in the machine-level PATH if Unity was launched before the PATH change took effect.
 
-**Secondary issue**: Platform directories also lacked `package.xml` files (had `android.jar` and `source.properties` but not `package.xml`). These can be created manually but require admin access to `C:\Program Files\Unity\...`.
+**Permanent fix**: `Assets/Editor/AndroidSdkPathFix.cs` — `[InitializeOnLoad]` script that prepends System32 to PATH every domain reload so all child processes (including sdkmanager.bat subshells) can find it. **This file must not be deleted.**
+
+**Secondary issue (historical)**: Platform directories also lacked `package.xml` files. Now present (android-34/35/36 all have package.xml + android.jar).
 
 **Diagnosis steps**:
 1. Check `AndroidExternalToolsSettings.sdkRootPath` — is it set?
-2. Check `EditorPrefs.GetBool("SdkUseEmbedded")` — should be true for Unity Hub installs
-3. Check `System.Environment.GetEnvironmentVariable("PATH")` inside Unity — does it include `C:\Windows\System32`?
-4. Use reflection: `AndroidSDKTools.CreateAndroidSDKTools(sdkRoot)` then `ListTargetPlatforms()` to test detection
+2. Check `System.Environment.GetEnvironmentVariable("PATH")` inside Unity — does it include `C:\Windows\System32`?
+3. Run sdkmanager.bat manually with `JAVA_HOME` set to Unity's JDK — if `findstr` not found in stderr, that's the issue
+4. Check cmdline-tools subfolder name (must be `latest` or a version number like `16.0`)
 
 **Runtime fix** (process-level, lost on restart):
 ```csharp
