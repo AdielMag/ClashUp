@@ -1,3 +1,5 @@
+using System.Net.Http.Headers;
+using Google.Apis.Auth.OAuth2;
 using Google.Cloud.ArtifactRegistry.V1;
 using Google.Cloud.Compute.V1;
 using Google.Cloud.Monitoring.V3;
@@ -59,7 +61,67 @@ public sealed class GcpStatusService
         var images = await SafeAsync(() => ListAvailableImagesAsync(cancellationToken), errors, "Artifact Registry")
             ?? new List<ImageVersions>();
 
-        return new FleetStatus(DateTimeOffset.UtcNow, tiers, images, errors);
+        bool asleep = false;
+        try
+        {
+            asleep = await QueryAsleepAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Fleet state query failed");
+            errors.Add($"Fleet state: {ex.Message}");
+        }
+
+        return new FleetStatus(DateTimeOffset.UtcNow, asleep, tiers, images, errors);
+    }
+
+    /// <summary>
+    /// The fleet is "asleep" when both MIGs have been scaled to 0 by the controller.
+    /// Read-only — uses the same Compute credentials as the instance listing.
+    /// </summary>
+    private async Task<bool> QueryAsleepAsync(CancellationToken cancellationToken)
+    {
+        var client = await _migClient.Value;
+        foreach (var mig in new[] { _options.ServicesMig, _options.GameServerMig })
+        {
+            var m = await client.GetAsync(_options.ProjectId, _options.Region, mig, cancellationToken);
+            if (m.TargetSize != 0)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Triggers the Cloud Run fleet controller's <c>/wake</c> endpoint. The dashboard
+    /// holds no compute-write rights itself — it mints an OIDC token for the controller's
+    /// audience (its SA just needs <c>roles/run.invoker</c>) and lets the controller do the
+    /// scaling. Throws if <see cref="DashboardOptions.FleetControllerUrl"/> is unset.
+    /// </summary>
+    public async Task WakeFleetAsync(CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_options.FleetControllerUrl))
+        {
+            throw new InvalidOperationException("Gcp:FleetControllerUrl is not configured — run `terraform output fleet_controller_url` and set it.");
+        }
+
+        var url = _options.FleetControllerUrl.TrimEnd('/');
+        var credential = await GoogleCredential.GetApplicationDefaultAsync(cancellationToken);
+        var oidcToken = await credential.GetOidcTokenAsync(OidcTokenOptions.FromTargetAudience(url), cancellationToken);
+        var token = await oidcToken.GetAccessTokenAsync(cancellationToken: cancellationToken);
+
+        using var http = new HttpClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await http.PostAsync($"{url}/wake", content: null, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException($"Controller /wake returned {(int)response.StatusCode}: {body}");
+        }
+
+        _logger.LogInformation("Wake request sent to fleet controller at {Url}", url);
     }
 
     private async Task<TierStatus> BuildTierAsync(

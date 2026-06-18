@@ -7,7 +7,12 @@ A local, read-only web dashboard for the ClashUp GCP fleet. Shows, per tier:
 - CCU per instance, broken down by the server version each backend is running,
 - and the image versions available in Artifact Registry.
 
-It authenticates with a **read-only service account** and never mutates anything.
+It authenticates with a **read-only service account**. The one exception is the
+**Wake fleet** button: when the fleet has auto-slept (both MIGs scaled to 0 to save
+cost), the dashboard shows a 💤 banner and the button POSTs to the Cloud Run
+[fleet controller](../ClashUp.FleetController/) — which holds the compute-write
+rights. The dashboard itself only needs `roles/run.invoker` on that service; it never
+touches compute directly.
 
 ## Setup
 
@@ -28,6 +33,11 @@ ADC (`gcloud auth application-default login` / `GOOGLE_APPLICATION_CREDENTIALS`)
 
 > For a different project, override via env vars (they win over `appsettings.json`):
 > `Gcp__ProjectId`, `Gcp__Region`, `Gcp__CredentialsPath`.
+
+To enable the **Wake** button, set `Gcp:FleetControllerUrl` (in `appsettings.json` or
+`Gcp__FleetControllerUrl`) to the controller's Cloud Run URL — `terraform output
+fleet_controller_url`. Leave it empty to hide/disable waking. The dashboard SA must
+have `roles/run.invoker` on the controller (granted by Terraform).
 
 ## Run
 

@@ -110,4 +110,10 @@ resource "google_compute_region_autoscaler" "services" {
       target = var.services_ccu_per_instance_target
     }
   }
+
+  # The fleet controller flips mode ON/OFF at runtime to sleep/wake the tier.
+  # Don't let `terraform apply` revert a slept fleet back to ON.
+  lifecycle {
+    ignore_changes = [autoscaling_policy[0].mode]
+  }
 }

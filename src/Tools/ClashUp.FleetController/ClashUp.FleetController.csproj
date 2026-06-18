@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>ClashUp.Tools.FleetController</RootNamespace>
+    <AssemblyName>ClashUp.FleetController</AssemblyName>
+    <!-- Deployed to Cloud Run via its own image; not part of the server images. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Cloud.Compute.V1" />
+    <PackageReference Include="Google.Cloud.Monitoring.V3" />
+    <PackageReference Include="Google.Cloud.Scheduler.V1" />
+  </ItemGroup>
+
+</Project>

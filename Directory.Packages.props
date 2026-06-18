@@ -41,6 +41,8 @@
     <PackageVersion Include="Google.Cloud.Monitoring.V3" Version="3.9.0" />
     <PackageVersion Include="Google.Cloud.Compute.V1" Version="3.10.0" />
     <PackageVersion Include="Google.Cloud.ArtifactRegistry.V1" Version="2.15.0" />
+    <PackageVersion Include="Google.Cloud.Scheduler.V1" Version="3.6.0" />
+    <PackageVersion Include="Google.Apis.Auth" Version="1.72.0" />
   </ItemGroup>
 
   <ItemGroup Label="Gateway (YARP + Docker control)">

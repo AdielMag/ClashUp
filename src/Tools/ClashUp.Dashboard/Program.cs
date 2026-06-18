@@ -41,6 +41,19 @@ app.MapPost("/api/registry/delete", async (GcpStatusService svc, DeleteVersionRe
     }
 });
 
+app.MapPost("/api/wake", async (GcpStatusService svc, CancellationToken ct) =>
+{
+    try
+    {
+        await svc.WakeFleetAsync(ct);
+        return Results.Ok(new { ok = true });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
 app.Run();
 
 internal sealed record DeleteVersionRequest(string Image, string Tag);

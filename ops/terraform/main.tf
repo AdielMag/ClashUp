@@ -28,4 +28,7 @@ locals {
   gateway_image   = "${local.registry_base}/clashup-gateway:${var.gateway_image_version}"
   services_repo   = "${local.registry_base}/clashup-services"
   gameserver_repo = "${local.registry_base}/clashup-gameserver"
+
+  # Idle-fleet sleep/wake controller (Cloud Run).
+  fleet_controller_image = "${local.registry_base}/clashup-fleet-controller:latest"
 }

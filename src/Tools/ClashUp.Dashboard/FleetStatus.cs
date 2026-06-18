@@ -3,6 +3,7 @@ namespace ClashUp.Tools.Dashboard;
 /// <summary>The full snapshot returned by <c>GET /api/status</c>.</summary>
 public sealed record FleetStatus(
     DateTimeOffset GeneratedAt,
+    bool Asleep,
     IReadOnlyList<TierStatus> Tiers,
     IReadOnlyList<ImageVersions> AvailableImages,
     IReadOnlyList<string> Errors);

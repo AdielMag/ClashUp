@@ -1,0 +1,46 @@
+name: Fleet Controller Build
+
+# Builds + pushes the idle-fleet sleep/wake controller image. Separate from the
+# server image workflows (which exclude src/Tools/**) so controller changes don't
+# rebuild the server images and vice-versa. Terraform's Cloud Run service pins
+# clashup-fleet-controller:latest.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/Tools/ClashUp.FleetController/**"
+      - "ops/docker/fleet-controller.Dockerfile"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - ".github/workflows/fleet-controller.yml"
+
+permissions:
+  contents: read
+  id-token: write # required for Workload Identity Federation
+
+env:
+  REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/clashup-docker
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push fleet-controller
+        run: |
+          IMAGE="$REGISTRY/clashup-fleet-controller"
+          docker build -f ops/docker/fleet-controller.Dockerfile -t "$IMAGE:latest" .
+          docker push "$IMAGE:latest"

@@ -17,4 +17,11 @@ public sealed class DashboardOptions
 
     public string ServicesMig { get; set; } = "clashup-services-mig";
     public string GameServerMig { get; set; } = "clashup-gameserver-mig";
+
+    /// <summary>
+    /// Base URL of the Cloud Run fleet controller (from <c>terraform output
+    /// fleet_controller_url</c>). The Wake button POSTs to <c>{url}/wake</c> with an
+    /// OIDC token minted for this audience. Empty = Wake disabled.
+    /// </summary>
+    public string? FleetControllerUrl { get; set; }
 }
