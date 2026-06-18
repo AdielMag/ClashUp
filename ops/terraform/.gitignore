@@ -7,6 +7,11 @@
 .terraform.lock.hcl
 *.tfstate
 *.tfstate.*
+# Saved plan files (terraform plan -out) bundle the full state + variable values,
+# including the Mongo string and JWT keys, in plaintext. Never commit them.
+tfplan
+*.tfplan
+*.plan
 crash.log
 crash.*.log
 override.tf
