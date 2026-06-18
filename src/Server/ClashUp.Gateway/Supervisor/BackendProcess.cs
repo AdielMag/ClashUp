@@ -12,6 +12,16 @@ public sealed class BackendProcess
 
     /// <summary>Latest result of the maintenance-loop health probe.</summary>
     public bool Healthy { get; set; } = true;
+
+    /// <summary>
+    /// Pinned backends are exempt from idle eviction. The GameServer tier prewarms
+    /// one backend whose sole job is to keep the instance registered + heartbeating
+    /// with Services; if it idle-evicted, the instance would fall out of the
+    /// registry (the backend marks itself Draining on SIGTERM) and matchmaking would
+    /// have nowhere to place matches. Pinning keeps that backend alive for the life
+    /// of the gateway.
+    /// </summary>
+    public bool Pinned { get; set; }
 }
 
 /// <summary>Lightweight view of a running backend for the /admin/status endpoint.</summary>
