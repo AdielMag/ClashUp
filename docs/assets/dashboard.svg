@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" font-family="Segoe UI, system-ui, -apple-system, Roboto, sans-serif">
+  <!-- Faithful render of src/Tools/ClashUp.Dashboard (real palette + layout); shown under load to illustrate per-version CCU -->
+  <defs>
+    <style>
+      .mut { fill: #8b98a5; }
+      .txt { fill: #e6edf3; }
+      .acc { fill: #4da3ff; }
+      .good{ fill: #3fb950; }
+      .mono{ font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
+      .h2  { fill: #4da3ff; font-size: 13px; font-weight: 700; letter-spacing: 1.4px; }
+      .name{ fill: #e6edf3; font-size: 14px; font-weight: 600; }
+      .id  { fill: #8b98a5; font-size: 10.5px; }
+    </style>
+  </defs>
+
+  <!-- backdrop -->
+  <rect width="900" height="600" fill="#0f1419"/>
+
+  <!-- header -->
+  <rect x="0" y="0" width="900" height="46" fill="#1a212b"/>
+  <line x1="0" y1="46" x2="900" y2="46" stroke="#2d3744"/>
+  <text x="24" y="29" class="txt" font-size="17" font-weight="700">ClashUp Fleet</text>
+  <text x="150" y="29" class="mut" font-size="12.5">updated 16:42:08</text>
+  <text x="876" y="29" class="mut" font-size="12.5" text-anchor="end">auto-refresh every 5s · next in 3s</text>
+
+  <!-- ============ SERVICES ============ -->
+  <text x="24" y="78" class="h2">SERVICES — 2 INSTANCE(S)</text>
+
+  <!-- card S1 -->
+  <g transform="translate(24,90)">
+    <rect width="419" height="162" rx="10" fill="#1a212b" stroke="#2d3744"/>
+    <text x="16" y="28" class="name">clashup-services-c8vr</text>
+    <text x="16" y="44" class="id mono">8222582584754703480</text>
+    <rect x="341" y="14" width="62" height="20" rx="10" fill="#163021"/>
+    <text x="372" y="28" class="good" font-size="10.5" font-weight="600" text-anchor="middle">RUNNING</text>
+    <!-- CPU 34% -->
+    <text x="16" y="74" class="mut" font-size="12">CPU</text>
+    <rect x="56" y="66" width="311" height="8" rx="4" fill="#222c38"/>
+    <rect x="56" y="66" width="106" height="8" rx="4" fill="#4da3ff"/>
+    <text x="403" y="74" class="txt" font-size="12" text-anchor="end">34%</text>
+    <!-- RAM 41% -->
+    <text x="16" y="98" class="mut" font-size="12">RAM</text>
+    <rect x="56" y="90" width="311" height="8" rx="4" fill="#222c38"/>
+    <rect x="56" y="90" width="128" height="8" rx="4" fill="#4da3ff"/>
+    <text x="403" y="98" class="txt" font-size="12" text-anchor="end">41%</text>
+    <line x1="16" y1="114" x2="403" y2="114" stroke="#2d3744"/>
+    <text x="16" y="134" class="acc mono" font-size="12">1.0.1</text>
+    <text x="403" y="134" class="txt" font-size="12" text-anchor="end">312 CCU</text>
+    <text x="16" y="153" class="acc mono" font-size="12">1.0.0</text>
+    <text x="403" y="153" class="txt" font-size="12" text-anchor="end">47 CCU</text>
+  </g>
+
+  <!-- card S2 -->
+  <g transform="translate(457,90)">
+    <rect width="419" height="162" rx="10" fill="#1a212b" stroke="#2d3744"/>
+    <text x="16" y="28" class="name">clashup-services-7m2p</text>
+    <text x="16" y="44" class="id mono">5140098233771204852</text>
+    <rect x="341" y="14" width="62" height="20" rx="10" fill="#163021"/>
+    <text x="372" y="28" class="good" font-size="10.5" font-weight="600" text-anchor="middle">RUNNING</text>
+    <text x="16" y="74" class="mut" font-size="12">CPU</text>
+    <rect x="56" y="66" width="311" height="8" rx="4" fill="#222c38"/>
+    <rect x="56" y="66" width="68" height="8" rx="4" fill="#4da3ff"/>
+    <text x="403" y="74" class="txt" font-size="12" text-anchor="end">22%</text>
+    <text x="16" y="98" class="mut" font-size="12">RAM</text>
+    <rect x="56" y="90" width="311" height="8" rx="4" fill="#222c38"/>
+    <rect x="56" y="90" width="118" height="8" rx="4" fill="#4da3ff"/>
+    <text x="403" y="98" class="txt" font-size="12" text-anchor="end">38%</text>
+    <line x1="16" y1="114" x2="403" y2="114" stroke="#2d3744"/>
+    <text x="16" y="134" class="acc mono" font-size="12">1.0.1</text>
+    <text x="403" y="134" class="txt" font-size="12" text-anchor="end">196 CCU</text>
+  </g>
+
+  <!-- ============ GAMESERVER ============ -->
+  <text x="24" y="288" class="h2">GAMESERVER — 2 INSTANCE(S)</text>
+
+  <!-- card G1 (hot) -->
+  <g transform="translate(24,300)">
+    <rect width="419" height="162" rx="10" fill="#1a212b" stroke="#2d3744"/>
+    <text x="16" y="28" class="name">clashup-gameserver-n4ks</text>
+    <text x="16" y="44" class="id mono">4922386524040812635</text>
+    <rect x="341" y="14" width="62" height="20" rx="10" fill="#163021"/>
+    <text x="372" y="28" class="good" font-size="10.5" font-weight="600" text-anchor="middle">RUNNING</text>
+    <!-- CPU 72% -> warn -->
+    <text x="16" y="74" class="mut" font-size="12">CPU</text>
+    <rect x="56" y="66" width="311" height="8" rx="4" fill="#222c38"/>
+    <rect x="56" y="66" width="224" height="8" rx="4" fill="#d29922"/>
+    <text x="403" y="74" class="txt" font-size="12" text-anchor="end">72%</text>
+    <text x="16" y="98" class="mut" font-size="12">RAM</text>
+    <rect x="56" y="90" width="311" height="8" rx="4" fill="#222c38"/>
+    <rect x="56" y="90" width="199" height="8" rx="4" fill="#4da3ff"/>
+    <text x="403" y="98" class="txt" font-size="12" text-anchor="end">64%</text>
+    <line x1="16" y1="114" x2="403" y2="114" stroke="#2d3744"/>
+    <text x="16" y="134" class="acc mono" font-size="12">1.0.1</text>
+    <text x="403" y="134" class="txt" font-size="12" text-anchor="end">88 CCU</text>
+  </g>
+
+  <!-- card G2 -->
+  <g transform="translate(457,300)">
+    <rect width="419" height="162" rx="10" fill="#1a212b" stroke="#2d3744"/>
+    <text x="16" y="28" class="name">clashup-gameserver-q9x7</text>
+    <text x="16" y="44" class="id mono">7710523846100294471</text>
+    <rect x="341" y="14" width="62" height="20" rx="10" fill="#163021"/>
+    <text x="372" y="28" class="good" font-size="10.5" font-weight="600" text-anchor="middle">RUNNING</text>
+    <text x="16" y="74" class="mut" font-size="12">CPU</text>
+    <rect x="56" y="66" width="311" height="8" rx="4" fill="#222c38"/>
+    <rect x="56" y="66" width="34" height="8" rx="4" fill="#4da3ff"/>
+    <text x="403" y="74" class="txt" font-size="12" text-anchor="end">11%</text>
+    <text x="16" y="98" class="mut" font-size="12">RAM</text>
+    <rect x="56" y="90" width="311" height="8" rx="4" fill="#222c38"/>
+    <rect x="56" y="90" width="84" height="8" rx="4" fill="#4da3ff"/>
+    <text x="403" y="98" class="txt" font-size="12" text-anchor="end">27%</text>
+    <line x1="16" y1="114" x2="403" y2="114" stroke="#2d3744"/>
+    <text x="16" y="134" class="acc mono" font-size="12">1.0.0</text>
+    <text x="403" y="134" class="txt" font-size="12" text-anchor="end">6 CCU</text>
+  </g>
+
+  <!-- ============ REGISTRY ============ -->
+  <text x="24" y="498" class="h2">AVAILABLE VERSIONS (REGISTRY)</text>
+
+  <g transform="translate(24,510)">
+    <rect width="274" height="74" rx="10" fill="#1a212b" stroke="#2d3744"/>
+    <text x="14" y="28" class="name">clashup-gameserver</text>
+    <g transform="translate(14,42)">
+      <rect width="62" height="22" rx="6" fill="#222c38" stroke="#2d3744"/>
+      <text x="12" y="15" class="mono txt" font-size="11">1.0.0</text><text x="50" y="15" class="mut" font-size="12">✕</text>
+      <rect x="72" width="62" height="22" rx="6" fill="#222c38" stroke="#2d3744"/>
+      <text x="84" y="15" class="mono txt" font-size="11">1.0.1</text><text x="122" y="15" class="mut" font-size="12">✕</text>
+    </g>
+  </g>
+  <g transform="translate(312,510)">
+    <rect width="274" height="74" rx="10" fill="#1a212b" stroke="#2d3744"/>
+    <text x="14" y="28" class="name">clashup-gateway</text>
+    <g transform="translate(14,42)">
+      <rect width="62" height="22" rx="6" fill="#222c38" stroke="#2d3744"/>
+      <text x="12" y="15" class="mono txt" font-size="11">1.0.0</text><text x="50" y="15" class="mut" font-size="12">✕</text>
+      <rect x="72" width="62" height="22" rx="6" fill="#222c38" stroke="#2d3744"/>
+      <text x="84" y="15" class="mono txt" font-size="11">1.0.1</text><text x="122" y="15" class="mut" font-size="12">✕</text>
+    </g>
+  </g>
+  <g transform="translate(600,510)">
+    <rect width="274" height="74" rx="10" fill="#1a212b" stroke="#2d3744"/>
+    <text x="14" y="28" class="name">clashup-services</text>
+    <g transform="translate(14,42)">
+      <rect width="62" height="22" rx="6" fill="#222c38" stroke="#2d3744"/>
+      <text x="12" y="15" class="mono txt" font-size="11">1.0.0</text><text x="50" y="15" class="mut" font-size="12">✕</text>
+      <rect x="72" width="62" height="22" rx="6" fill="#222c38" stroke="#2d3744"/>
+      <text x="84" y="15" class="mono txt" font-size="11">1.0.1</text><text x="122" y="15" class="mut" font-size="12">✕</text>
+    </g>
+  </g>
+</svg>

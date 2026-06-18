@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 800" font-family="Segoe UI, system-ui, -apple-system, Roboto, sans-serif">
+  <defs>
+    <marker id="aBlue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#4da3ff"/></marker>
+    <marker id="aPurple" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#a371f7"/></marker>
+    <marker id="aGreen" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#3fb950"/></marker>
+    <marker id="aMut" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8b98a5"/></marker>
+    <style>
+      text { fill: #e6edf3; }
+      .t   { font-size: 14px; font-weight: 600; }
+      .s   { font-size: 11px; fill: #8b98a5; }
+      .mono{ font-family: ui-monospace, Consolas, monospace; font-size: 12px; fill: #4da3ff; }
+      .lbl { font-size: 11px; fill: #c9d4df; }
+      .hdr { font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+    </style>
+  </defs>
+
+  <rect width="1040" height="800" fill="#0f1419"/>
+  <text x="32" y="40" font-size="20" font-weight="700">ClashUp — Client ↔ Fleet ↔ Internal Server Architecture</text>
+  <text x="32" y="60" class="s">One version-aware gateway image fronts both tiers. Game versions are container images pulled on demand — never machines.</text>
+
+  <!-- ===== GCP boundary ===== -->
+  <rect x="250" y="84" width="760" height="690" rx="14" fill="#0d141c" stroke="#4da3ff" stroke-dasharray="6 5" stroke-opacity="0.5"/>
+  <text x="270" y="110" class="hdr" fill="#4da3ff">☁  GOOGLE CLOUD · us-central1</text>
+
+  <!-- ===== Unity client ===== -->
+  <rect x="34" y="350" width="178" height="104" rx="12" fill="#1a212b" stroke="#a371f7"/>
+  <text x="123" y="386" class="t" text-anchor="middle">🎮 Unity Client</text>
+  <text x="123" y="408" class="s" text-anchor="middle">Unity 6 · VContainer · UniTask</text>
+  <text x="123" y="428" class="s" text-anchor="middle">sends build version as</text>
+  <text x="123" y="444" class="mono" text-anchor="middle">x-client-version</text>
+
+  <!-- ===== SERVICES tier ===== -->
+  <rect x="290" y="130" width="420" height="188" rx="12" fill="#16202b" stroke="#4da3ff"/>
+  <text x="308" y="156" class="hdr" fill="#4da3ff">SERVICES TIER</text>
+  <text x="406" y="156" class="s">regional MIG · stateless · behind LB</text>
+  <!-- LB -->
+  <rect x="306" y="168" width="120" height="40" rx="8" fill="#222c38" stroke="#2d3744"/>
+  <text x="366" y="186" class="lbl" text-anchor="middle" font-weight="600">L4 NLB</text>
+  <text x="366" y="200" class="s" text-anchor="middle">:5001 h2c</text>
+  <!-- gateway -->
+  <rect x="306" y="222" width="120" height="80" rx="8" fill="#1d2733" stroke="#4da3ff"/>
+  <text x="366" y="250" class="lbl" text-anchor="middle" font-weight="600">Gateway</text>
+  <text x="366" y="268" class="s" text-anchor="middle">Process</text>
+  <text x="366" y="282" class="s" text-anchor="middle">Supervisor</text>
+  <!-- backends -->
+  <rect x="452" y="200" width="240" height="36" rx="7" fill="#15212e" stroke="#2d6cad"/>
+  <text x="466" y="223" class="mono">clashup-services:1.2</text>
+  <rect x="452" y="244" width="240" height="36" rx="7" fill="#15212e" stroke="#2d6cad"/>
+  <text x="466" y="267" class="mono">clashup-services:1.1</text>
+  <path d="M426,238 L452,218" stroke="#4da3ff" stroke-width="1.5" fill="none" marker-end="url(#aBlue)"/>
+  <path d="M426,262 L452,262" stroke="#4da3ff" stroke-width="1.5" fill="none" marker-end="url(#aBlue)"/>
+
+  <!-- ===== GAMESERVER tier ===== -->
+  <rect x="290" y="396" width="420" height="244" rx="12" fill="#16202b" stroke="#3fb950"/>
+  <text x="308" y="422" class="hdr" fill="#3fb950">GAMESERVER TIER</text>
+  <text x="420" y="422" class="s">regional MIG · public IPs · no LB</text>
+  <rect x="306" y="436" width="120" height="80" rx="8" fill="#1d2733" stroke="#3fb950"/>
+  <text x="366" y="464" class="lbl" text-anchor="middle" font-weight="600">Gateway</text>
+  <text x="366" y="482" class="s" text-anchor="middle">Process</text>
+  <text x="366" y="496" class="s" text-anchor="middle">Supervisor</text>
+  <rect x="452" y="436" width="240" height="36" rx="7" fill="#16271a" stroke="#2f7d40"/>
+  <text x="466" y="459" class="mono" fill="#56c96a">clashup-gameserver:1.2</text>
+  <path d="M426,470 L452,456" stroke="#3fb950" stroke-width="1.5" fill="none" marker-end="url(#aGreen)"/>
+  <!-- matches -->
+  <rect x="452" y="486" width="74" height="32" rx="6" fill="#222c38" stroke="#2d3744"/>
+  <text x="489" y="506" class="s" text-anchor="middle">match A</text>
+  <rect x="535" y="486" width="74" height="32" rx="6" fill="#222c38" stroke="#2d3744"/>
+  <text x="572" y="506" class="s" text-anchor="middle">match B</text>
+  <rect x="618" y="486" width="74" height="32" rx="6" fill="#222c38" stroke="#2d3744"/>
+  <text x="655" y="506" class="s" text-anchor="middle">match C</text>
+  <text x="452" y="540" class="s">one process hosts N authoritative matches · 30 Hz deterministic sim</text>
+  <text x="452" y="558" class="s">in-memory match state — every player in a match lands here</text>
+
+  <!-- ===== MongoDB ===== -->
+  <g transform="translate(828,150)">
+    <ellipse cx="65" cy="10" rx="65" ry="14" fill="#16271a" stroke="#3fb950"/>
+    <path d="M0,10 L0,86 A65,14 0 0 0 130,86 L130,10" fill="#16271a" stroke="#3fb950"/>
+    <ellipse cx="65" cy="10" rx="65" ry="14" fill="#16271a" stroke="#3fb950"/>
+    <text x="65" y="48" class="t" text-anchor="middle" fill="#56c96a">MongoDB</text>
+    <text x="65" y="68" class="s" text-anchor="middle">Atlas</text>
+  </g>
+
+  <!-- ===== Monitoring + autoscaler ===== -->
+  <rect x="730" y="470" width="262" height="170" rx="12" fill="#16202b" stroke="#d29922"/>
+  <text x="748" y="496" class="hdr" fill="#d29922">CLOUD MONITORING</text>
+  <text x="748" y="520" class="s">custom CCU series (per tier)</text>
+  <text x="748" y="538" class="mono" fill="#d29922" font-size="11">…/services/ccu · …/gameserver/ccu</text>
+  <text x="748" y="558" class="s">CPU · gateway memory_utilization</text>
+  <line x1="748" y1="572" x2="974" y2="572" stroke="#2d3744"/>
+  <text x="748" y="594" class="lbl" font-weight="600">→ Autoscaler</text>
+  <text x="748" y="612" class="s">scales each MIG out on</text>
+  <text x="748" y="628" class="s">CPU / RAM / CCU targets</text>
+
+  <!-- ===== arrows ===== -->
+  <!-- (1) client -> services LB -->
+  <path d="M212,378 C 250,330 270,210 304,190" stroke="#a371f7" stroke-width="2" fill="none" marker-end="url(#aPurple)"/>
+  <text x="150" y="300" class="lbl" fill="#c4b1ee">① gRPC h2c</text>
+  <text x="150" y="316" class="s">lobby · auth · matchmaking</text>
+
+  <!-- (2) matchmaker assigns GS : services gateway down to gameserver gateway -->
+  <path d="M352,302 L352,436" stroke="#4da3ff" stroke-width="1.8" fill="none" marker-end="url(#aBlue)"/>
+  <text x="258" y="348" class="lbl">② matchmaker picks GS,</text>
+  <text x="258" y="363" class="s">writes GsInstanceId +</text>
+  <text x="258" y="377" class="s">mints MatchToken (JWT)</text>
+
+  <!-- internal: gameserver -> services register/heartbeat -->
+  <path d="M398,436 L398,302" stroke="#8b98a5" stroke-width="1.6" stroke-dasharray="5 4" fill="none" marker-end="url(#aMut)"/>
+  <text x="406" y="350" class="s">internal s2s:</text>
+  <text x="406" y="364" class="s">register +</text>
+  <text x="406" y="378" class="s">heartbeat</text>
+
+  <!-- (3) client -> gameserver direct -->
+  <path d="M150,454 C 150,640 220,560 304,500" stroke="#a371f7" stroke-width="2" fill="none" marker-end="url(#aPurple)"/>
+  <text x="60" y="600" class="lbl" fill="#c4b1ee">③ direct connect</text>
+  <text x="60" y="616" class="s">to the assigned</text>
+  <text x="60" y="630" class="s">instance · IP:5101</text>
+  <text x="60" y="644" class="s">(token-gated join)</text>
+
+  <!-- services -> mongo -->
+  <path d="M692,212 C 760,205 790,200 826,200" stroke="#3fb950" stroke-width="1.8" fill="none" marker-end="url(#aGreen)"/>
+  <text x="700" y="180" class="s">only tier with DB access</text>
+  <text x="700" y="195" class="s">· egress via Cloud NAT /32</text>
+
+  <!-- telemetry dashed to monitoring -->
+  <path d="M710,250 C 800,300 840,420 858,468" stroke="#d29922" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#aMut)"/>
+  <path d="M710,520 L728,524" stroke="#d29922" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#aMut)"/>
+  <text x="724" y="430" class="s">CCU · CPU · RAM</text>
+
+  <!-- legend -->
+  <g transform="translate(34,720)">
+    <line x1="0" y1="0" x2="34" y2="0" stroke="#a371f7" stroke-width="2"/>
+    <text x="42" y="4" class="s">client traffic</text>
+    <line x1="150" y1="0" x2="184" y2="0" stroke="#4da3ff" stroke-width="2"/>
+    <text x="192" y="4" class="s">control / placement</text>
+    <line x1="330" y1="0" x2="364" y2="0" stroke="#8b98a5" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="372" y="4" class="s">internal server-to-server</text>
+    <line x1="560" y1="0" x2="594" y2="0" stroke="#d29922" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="602" y="4" class="s">telemetry → autoscale</text>
+  </g>
+</svg>

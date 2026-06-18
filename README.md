@@ -1,194 +1,232 @@
-# ClashUp
+<div align="center">
 
-A real-time multiplayer arena game — Unity client, server-authoritative C# backend,
-deployed on GCP as an autoscaling, version-aware fleet.
+# ⚔️ ClashUp
 
-| Layer | Tech |
-|-------|------|
-| **Client** | Unity 6 LTS · VContainer (DI) · UniTask (async) · NuGetForUnity |
-| **Server** | C# / .NET 8 · ASP.NET Core · MagicOnion 7 (unary gRPC + StreamingHub) |
-| **Physics** | AetherNet (internal package) — deterministic 2D, authoritative on server, predicted on client |
-| **Data** | MongoDB (Atlas in prod) |
-| **Auth** | JWT issued by the Services tier; phase-1 login = device ID in `PlayerPrefs` |
-| **Infra** | GCP — regional MIGs on Container-Optimized OS, Cloud NAT, Artifact Registry, Cloud Monitoring; Terraform + GitHub Actions |
+### A real-time multiplayer arena game — Unity client, server-authoritative C# backend, deployed on GCP as an autoscaling, **version-aware** fleet.
 
----
+<br/>
 
-## Table of contents
+![Unity](https://img.shields.io/badge/Unity-6_LTS-000000?style=for-the-badge&logo=unity&logoColor=white)
+![.NET](https://img.shields.io/badge/.NET-8-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
+![MagicOnion](https://img.shields.io/badge/MagicOnion-7.10-2088FF?style=for-the-badge&logo=grpc&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
 
-1. [Core principles](#core-principles)
-2. [Architecture at a glance](#architecture-at-a-glance)
-3. [The version-aware gateway](#the-version-aware-gateway)
-4. [Match → instance routing](#match--instance-routing)
-5. [Netcode & physics](#netcode--physics)
-6. [Autoscaling & CCU](#autoscaling--ccu)
-7. [Repo layout](#repo-layout)
-8. [Local development](#local-development)
-9. [Deployment (GCP)](#deployment-gcp)
-10. [Monitoring](#monitoring)
-11. [Configuration & secrets](#configuration--secrets)
-12. [Security](#security)
-13. [Further reading](#further-reading)
+![GCP](https://img.shields.io/badge/Google_Cloud-MIGs_·_NAT_·_Monitoring-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Container_Optimized_OS-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![CI](https://img.shields.io/badge/CI%2FCD-GitHub_Actions_·_WIF-181717?style=for-the-badge&logo=githubactions&logoColor=white)
+
+</div>
 
 ---
 
-## Core principles
+## 📑 Table of contents
 
-- **Server-authoritative.** The server is the single source of truth for all game
-  state. Match start/end, scoring, damage, respawns — all decided server-side.
-- **Dumb client.** The client is a thin display layer. It renders what the server
-  tells it and never synthesizes authoritative state (e.g. it never decides a
-  match ended — it waits for the server's `OnMatchEnded`).
-- **Versions are processes, not machines.** A game version is a container image,
-  not a dedicated VM. One fleet serves every live client version simultaneously.
+| | | | |
+|---|---|---|---|
+| [🎯 Core principles](#-core-principles) | [🗺️ Architecture at a glance](#️-architecture-at-a-glance) | [🚪 Version-aware gateway](#-the-version-aware-gateway) | [🎯 Match → instance routing](#-match--instance-routing) |
+| [🔌 Internal server-to-server](#-internal-server-to-server) | [🕹️ Netcode & physics](#️-netcode--physics) | [📈 Autoscaling & CCU](#-autoscaling--ccu) | [📊 Fleet dashboard](#-fleet-dashboard) |
+| [🗂️ Repo layout](#️-repo-layout) | [💻 Local development](#-local-development) | [🚀 Deployment (GCP)](#-deployment-gcp) | [🔐 Configuration & security](#-configuration--security) |
 
 ---
 
-## Architecture at a glance
+## 🎯 Core principles
 
+> Three rules that explain almost every design decision in this repo.
+
+- **🛡️ Server-authoritative.** The server is the single source of truth for all game state. Match start/end, scoring, damage, respawns — all decided server-side.
+- **🪶 Dumb client.** The client is a thin display layer. It renders what the server tells it and **never** synthesizes authoritative state (e.g. it never decides a match ended — it waits for the server's `OnMatchEnded`).
+- **📦 Versions are processes, not machines.** A game version is a *container image*, not a dedicated VM. **One fleet serves every live client version simultaneously.**
+
+---
+
+## 🗺️ Architecture at a glance
+
+<div align="center">
+
+![ClashUp architecture — client, fleet, and internal server-to-server](docs/assets/architecture.svg)
+
+</div>
+
+Two server tiers, each a **regional Managed Instance Group** of identical **gateway** instances running on Container-Optimized OS:
+
+| Tier | Project | Role | Talks to DB? | Reached via |
+|------|---------|------|:---:|-------------|
+| **🟦 Services** | [`ClashUp.Services`](src/Server/ClashUp.Services) | Everything *outside* a match: auth, profile, lobby, matchmaking, GS registry, config | ✅ **only tier** | Load balancer |
+| **🟩 GameServer** | [`ClashUp.GameServer`](src/Server/ClashUp.GameServer) | Runs N concurrent authoritative matches per process | ❌ never | **Direct** public IP after matchmaking |
+
+<details>
+<summary><b>Supporting projects</b></summary>
+
+- **[`ClashUp.Server.Common`](src/Server/ClashUp.Server.Common)** — shared server library: JWT auth, Mongo context, GCE metadata helpers, interceptors, and the reusable **CCU reporting** infrastructure (`Ccu/` — `ICcuSource`, `GraceCcuCounter`, `CcuMetricReporter`).
+- **[`ClashUp.Gateway`](src/Server/ClashUp.Gateway)** — the version-aware reverse proxy that fronts **both** tiers (same image, different config).
+- **[`ClashUp.Shared`](src/Shared/ClashUp.Shared)** — cross-tier wire contracts (hubs, MessagePack DTOs), also consumed by the Unity client as a local package.
+
+</details>
+
+---
+
+## 🚪 The version-aware gateway
+
+Every fleet instance runs **one gateway container** (`ClashUp.Gateway`, `--network host`). The gateway holds **no game logic** — it is a reverse proxy + process supervisor that pulls and runs the exact backend image a client asks for.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as 🎮 Client (v1.2)
+    participant G as 🚪 Gateway
+    participant R as 📦 Artifact Registry
+    participant B as ⚙️ clashup-services:1.2
+
+    C->>G: gRPC open · header x-client-version: 1.2
+    alt backend for 1.2 already running
+        G->>B: route call
+    else not running yet
+        G->>R: pull clashup-services:1.2
+        R-->>G: image
+        G->>B: spawn on 127.0.0.1:<port>, then route
+    end
+    B-->>C: response
+    Note over G: idle versions reaped after TTL · respawned on next request
+    C--xG: unknown / unavailable version
+    G--xC: FAILED_PRECONDITION · required-action: upgrade-client
 ```
-                 ┌──────────────────────────────────────────────┐
-   Unity client  │                    GCP                        │
-   ───────────►  │                                               │
-   gRPC (h2c)    │   Services tier (regional MIG, behind LB)     │
-   x-client-     │   ┌─────────────────────────────────────┐     │
-   version: 1.2  │   │ gateway  →  clashup-services:1.2 ─┐  │     │
-                 │   │          →  clashup-services:1.1 ─┼──┼──► MongoDB Atlas
-                 │   └─────────────────────────────────────┘     │   (via Cloud NAT,
-                 │              │ matchmaking assigns a GS         │    static IP only)
-                 │              ▼                                  │
-                 │   GameServer tier (regional MIG, public IPs)   │
-   client connects│  ┌─────────────────────────────────────┐     │
-   DIRECTLY to the│  │ gateway  →  clashup-gameserver:1.2   │     │
-   assigned GS ──►│  │ (one instance hosts N live matches)  │     │
-                 │   └─────────────────────────────────────┘     │
-                 └──────────────────────────────────────────────┘
+
+**Why this matters**
+
+- **🚢 Shipping a game version = pushing its image.** Tag `v1.3.0` → CI builds and pushes `clashup-{services,gameserver,gateway}:1.3.0`. No infra change — the running fleet serves it the moment a `1.3.0` client connects.
+- **🧱 Only a new *gateway* build needs Terraform** (`-var gateway_image_version=<v>`), because the gateway image is baked into the instance template. Game-version images are never named in Terraform.
+- **🌈 One fleet hosts all live versions at once** — a staged client rollout needs no parallel infrastructure.
+
+---
+
+## 🎯 Match → instance routing
+
+A GameServer instance holds all of a match's state **in memory**, so **every player in a match must land on the same instance.** The chain that guarantees it:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as 🎮 Client
+    participant S as 🟦 Services (Matchmaker)
+    participant GS as 🟩 GameServer instance
+    participant H as MatchHub (on GS)
+
+    C->>S: enqueue for match
+    S->>S: pick least-loaded healthy GS
+    S->>S: write GsInstanceId + GsEndpoint to match doc
+    S-->>C: MatchToken (JWT, claim gsInstanceId) + GsEndpoint
+    C->>H: JoinAsync(MatchToken)  — direct connect to IP:5101
+    H->>H: validate token.gsInstanceId == my identity
+    alt token minted for THIS instance
+        H-->>C: ✅ joined — snapshots begin
+    else token for a different instance
+        H--xC: ❌ rejected
+    end
+    Note over C,H: sticky reconnect reuses the same gsInstanceId → same match
 ```
 
-Two server tiers, each a **regional Managed Instance Group** of identical
-**gateway** instances running on Container-Optimized OS:
-
-1. **Services** (`src/Server/ClashUp.Services`) — everything outside an active
-   match: auth, profile, lobby, matchmaking, game-server registry, config.
-   Stateless; reached through a load balancer. **The only tier that talks to
-   MongoDB.**
-2. **GameServer** (`src/Server/ClashUp.GameServer`) — runs N concurrent
-   authoritative matches per process. No load balancer: each instance has a
-   public IP and clients connect to it **directly** after matchmaking. Talks to
-   Services over gRPC; never touches the database.
-
-Supporting projects:
-
-- **`ClashUp.Server.Common`** — shared server library: JWT auth, Mongo context,
-  GCE metadata helpers, interceptors, and the reusable **CCU reporting**
-  infrastructure (`Ccu/` — `ICcuSource`, `GraceCcuCounter`, `CcuMetricReporter`).
-- **`ClashUp.Gateway`** — the version-aware reverse proxy that fronts both tiers
-  (see below).
-- **`ClashUp.Shared`** — cross-tier wire contracts (hubs, MessagePack DTOs), also
-  consumed by the Unity client as a local package.
+The instance learns its own public address at boot: the startup script reads the external IP from the **GCE metadata server** and passes it to the backend as `GameServer__PublicEndpoint`, so the address it registers is the one clients can actually reach.
 
 ---
 
-## The version-aware gateway
+## 🔌 Internal server-to-server
 
-Every fleet instance runs **one gateway container** (`ClashUp.Gateway`,
-`--network host`). The gateway does **not** contain game logic — it is a reverse
-proxy + process supervisor:
+The GameServer tier never touches the database — it relies on the Services tier for identity and match records, over **plain gRPC between gateways**.
 
-1. A client opens a gRPC connection and sends its build version in the
-   **`x-client-version`** header (the Unity `Application.version` / Bundle
-   Version).
-2. The gateway's **`ProcessSupervisor`** ensures a backend container for that
-   exact version is running — pulling `clashup-<tier>:<version>` from Artifact
-   Registry on demand, port-mapped to `127.0.0.1:<random>` on the Docker bridge.
-3. The gateway routes the call to that backend. Idle versions are reaped after a
-   TTL; the next request respawns them.
-4. **Unknown / unavailable version** → gRPC `FAILED_PRECONDITION` with
-   `required-action: upgrade-client`. Old clients are told to update rather than
-   silently breaking.
+- **Registration & heartbeat.** Each GameServer *backend* registers its instance with Services at startup and heartbeats periodically (`GameServerRegistrar` + heartbeat service). This is what lets the matchmaker place a match on it.
+- **Header-less routing.** Server-to-server calls carry no `x-client-version`, so the gateway routes them to its **`DefaultVersion=latest`** backend.
+- **Prewarm (GameServer only).** Because registration lives *inside* a backend, but backends are spawned on demand, a fresh GS instance would never register — a bootstrap deadlock. So the GameServer gateway **prewarms the single newest published version** at boot, which registers the instance and makes it immediately matchable. Services has no such need (its backends spawn from the client's own connection).
 
-**Consequences:**
-
-- **Shipping a game version = pushing its image.** Tag `v1.3.0`, CI builds and
-  pushes `clashup-{services,gameserver,gateway}:1.3.0`. No infra change — the
-  running fleet serves the new version the moment a client of that version
-  connects.
-- **Only a new *gateway* build needs a Terraform apply**
-  (`-var gateway_image_version=<v>`), because the gateway image is baked into the
-  instance template. Game-version images are never named in Terraform.
-- One fleet hosts **all live versions at once**, so a staged client rollout needs
-  no parallel infrastructure.
+> 🔁 **Version transitions:** pushing a new image doesn't kill running backends. A new-version client gets its **own** on-demand backend alongside the old one; the old one idle-evicts (`IdleVersionTtlMinutes`) once its version goes unused. Details in [`deployment-architecture.md`](.claude/memory/deployment-architecture.md).
 
 ---
 
-## Match → instance routing
+## 🕹️ Netcode & physics
 
-Because a GameServer instance holds all of a match's state in memory, **every
-player in a match must land on the same instance.** The chain that guarantees
-this:
+Authoritative simulation on the server, predicted on the client — the classic [Gambetta](https://www.gabrielgambetta.com/client-server-game-architecture.html) model.
 
-1. **Matchmaker** (`ClashUp.Services/Matchmaking/Matchmaker.cs`) picks the
-   least-loaded healthy GS, and writes `GsInstanceId` + `GsEndpoint`
-   (`http://<instance-public-ip>:5101`) into the match document.
-2. On join/reconnect, **Services issues a `MatchToken`** (JWT) carrying a
-   `gsInstanceId` claim, and hands the client that instance's `GsEndpoint`.
-3. The client connects **directly** to that endpoint.
-4. **`MatchHub.JoinAsync`** (GameServer) validates the token's `gsInstanceId`
-   against its own identity and **rejects** a token minted for a different
-   instance — a stray client can never join the wrong process.
-5. The instance learns its own public address at boot: the startup script reads
-   the external IP from the GCE metadata server and passes it to the backend as
-   `GameServer__PublicEndpoint`, so the address it registers with Services is the
-   one clients can actually reach.
+| Concern | Approach |
+|---------|----------|
+| **Physics** | **AetherNet** (deterministic 2D over a Box2D port). The same `MatchPhysicsWorld` runs on server (authority) and client (prediction). |
+| **Local player** | Client-side prediction + server reconciliation keyed by `LastProcessedInputSeq`; sub-tick interpolation between 30 Hz fixed steps. |
+| **Remote players** | Pure entity interpolation from buffered snapshots, rendered ~66 ms in the past — *not* run through the local physics world. |
+| **Wire protocol** | `InputCommand` up; `SnapshotPacket → WorldStatePacket → PlayerStateDto` down. |
 
-Sticky reconnect uses the same `gsInstanceId`, so a dropped player returns to the
-same match on the same instance.
+```mermaid
+flowchart LR
+    subgraph Client
+      IN[Input @ 30Hz] --> PRED[Predict locally]
+      PRED --> SEND[Send InputCommand<br/>+ seq]
+      RECON[Reconcile vs<br/>LastProcessedInputSeq]
+    end
+    subgraph Server [GameServer · authority]
+      SIM[MatchPhysicsWorld<br/>30Hz fixed step]
+    end
+    SEND -->|InputCommand| SIM
+    SIM -->|WorldStatePacket| RECON
+    RECON --> PRED
+```
 
----
-
-## Netcode & physics
-
-- **Physics:** AetherNet (deterministic 2D over a Box2D port). The same
-  `MatchPhysicsWorld` runs on server (authority) and client (prediction).
-- **Local player:** client-side prediction + server reconciliation, keyed by
-  `LastProcessedInputSeq`. Rendered with sub-tick interpolation between 30 Hz
-  fixed steps.
-- **Remote players:** pure entity interpolation from buffered snapshots, rendered
-  ~66 ms in the past — not run through the local physics world.
-- **Wire protocol:** `InputCommand` up; `SnapshotPacket → WorldStatePacket →
-  PlayerStateDto` down.
-
-Deeper notes live in [`docs/`](docs/) and the project memory files.
+> Deeper notes live in [`docs/`](docs/) and the project memory files (`netcode-architecture.md`).
 
 ---
 
-## Autoscaling & CCU
+## 📈 Autoscaling & CCU
 
 Each MIG autoscales on three signals, and **each tier reports its own CCU**:
 
 | Signal | Source | Services target | GameServer target |
-|--------|--------|-----------------|-------------------|
-| CPU | native | 80% | 80% |
-| RAM | gateway's `HostMetricsReporter` → `custom.googleapis.com/instance/memory_utilization` | 80% | 80% |
-| **CCU** | per-tier `CcuMetricReporter` | `custom.googleapis.com/services/ccu` (live hub connections) · target 500/inst | `custom.googleapis.com/gameserver/ccu` (match players) · target 100/inst |
+|--------|--------|:---:|:---:|
+| **CPU** | native | 80% | 80% |
+| **RAM** | gateway's `HostMetricsReporter` → `custom.googleapis.com/instance/memory_utilization` | 80% | 80% |
+| **CCU** | per-tier `CcuMetricReporter` | `…/services/ccu` · 500/inst | `…/gameserver/ccu` · 100/inst |
 
-CCU is implemented once in `ClashUp.Server.Common/Ccu/`:
+### Mutually-exclusive CCU model
 
-- **`GraceCcuCounter`** — thread-safe counter with a disconnect grace window
-  (reconnect within the window stays counted).
-- **`CcuMetricReporter`** — `BackgroundService` that pushes an `ICcuSource`'s
-  count to Cloud Monitoring under a tier-supplied metric type, labelled by server
-  version. No-ops off-GCE.
-- Each tier provides its own `ICcuSource`: GameServer counts **match players**
-  (`CcuTracker`, 5-min grace); Services counts **live client hub connections**
-  (`ServicesCcuTracker`, keyed by hub connection id).
+A player is counted in **exactly one tier at a time** — Services while in the lobby/matchmaking, GameServer while in a match:
 
-No Ops Agent is required — the gateway self-reports host memory, so instances run
-on the minimal Container-Optimized OS image.
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Lobby
+    Lobby --> Match: enter match<br/>(presence Stop → Services CCU −1)
+    Match --> Lobby: return to lobby<br/>(presence Start → Services CCU +1)
+    note right of Lobby: counted in<br/>services/ccu
+    note right of Match: counted in<br/>gameserver/ccu
+```
+
+CCU is implemented once in [`ClashUp.Server.Common/Ccu/`](src/Server/ClashUp.Server.Common):
+
+- **`GraceCcuCounter`** — thread-safe counter with a disconnect grace window (a quick reconnect stays counted).
+- **`CcuMetricReporter`** — `BackgroundService` pushing an `ICcuSource`'s count to Cloud Monitoring under a tier-supplied metric type, labelled by server version. No-ops off-GCE.
+- On the client, **`ServicesPresence`** holds a keepalive Services connection while in the lobby and drops it on match entry — that's what flips a player between the two CCU series.
+
+> No Ops Agent required — the gateway self-reports host memory, so instances run on the minimal Container-Optimized OS image.
 
 ---
 
-## Repo layout
+## 📊 Fleet dashboard
+
+A local, **read-only** ASP.NET dashboard ([`src/Tools/ClashUp.Dashboard`](src/Tools/ClashUp.Dashboard)) — per tier and instance: which versions are running, **CCU broken down by server version**, CPU & RAM, and the image tags available in Artifact Registry (with one-click registry cleanup).
+
+<div align="center">
+
+![ClashUp Fleet dashboard](docs/assets/dashboard.svg)
+
+<sub><i>Live view: two tiers, per-instance CPU/RAM, per-version CCU, and the Artifact Registry tags. The <code>latest</code> tag is intentionally hidden (it only backs header-less routing). Auto-refreshes every 5 s.</i></sub>
+
+</div>
+
+```sh
+dotnet run --project src/Tools/ClashUp.Dashboard   # needs read-only dashboard-sa.json → http://localhost:8080
+```
+
+> Data sources: Compute Engine (instances/state), Cloud Monitoring (per-tier CCU, CPU, RAM), Artifact Registry (image tags). If a query fails (e.g. an API not yet enabled) the page shows a banner and still renders what it could fetch.
+
+---
+
+## 🗂️ Repo layout
 
 ```
 src/
@@ -210,16 +248,15 @@ ops/
   terraform/                      # GCP infrastructure (see ops/terraform/README.md)
 .github/workflows/                # server-ci / server-cd / server-dev
 docs/
-  GDD.md, rules/                  # design doc + contributor rules (read these first)
+  GDD.md, rules/, assets/         # design doc + contributor rules + README diagrams
 ClashUp.sln                       # full solution (server + Shared)
 ```
 
 ---
 
-## Local development
+## 💻 Local development
 
-**Prerequisites:** .NET 8 SDK (`global.json` pins the version), Docker, Unity 6
-LTS (`6000.0.x`).
+**Prerequisites:** .NET 8 SDK (`global.json` pins the version), Docker, Unity 6 LTS (`6000.0.x`).
 
 ```sh
 # Local Mongo
@@ -232,99 +269,75 @@ dotnet build ClashUp.sln
 dotnet run --project src/Server/ClashUp.Services      # :5001 gRPC, :9001 admin
 dotnet run --project src/Server/ClashUp.GameServer    # :5101 gRPC, :9101 admin
 
-# Or the whole stack (mongo + both tiers, behind gateways) in containers:
+# …or the whole stack (mongo + both tiers behind gateways) in containers:
 docker compose -f ops/docker/docker-compose.yml up --build
 
 # Unity client: open client/ClashUp.Unity in Unity 6 LTS.
 ```
 
-Off-GCE, all cloud integrations degrade gracefully: the GCE metadata helpers
-return null, CCU reporting disables itself, and public-endpoint resolution falls
-back to the configured value. You can run and play locally with nothing but Mongo.
+Off-GCE, all cloud integrations **degrade gracefully**: GCE metadata helpers return null, CCU reporting disables itself, and public-endpoint resolution falls back to the configured value. You can run and play locally with nothing but Mongo.
 
-**Phone / device testing** uses Tailscale or `adb reverse` — see the project
-memory (`dev-environment.md`) and `EnvironmentConfig` in the Unity client.
+> 📱 **Phone / device testing** uses Tailscale or `adb reverse` — see `dev-environment.md` and `EnvironmentConfig` in the Unity client.
 
 ---
 
-## Deployment (GCP)
+## 🚀 Deployment (GCP)
 
-Full runbook: **[`ops/terraform/README.md`](ops/terraform/README.md)**. In short:
+Full runbook: **[`ops/terraform/README.md`](ops/terraform/README.md)**.
 
-1. One-time bootstrap — enable APIs, state bucket, Workload Identity Federation
-   for keyless CI, a read-only dashboard SA, and GitHub repo vars/secrets.
-2. **Two-phase apply** (instances pull the gateway image at boot):
-   - Phase 1: registry + network + NAT + instance SA → push first images →
-     allowlist the NAT IP in Atlas.
-   - Phase 2: MIGs, load balancer, autoscalers, monitoring descriptors.
-3. Point the Unity client's Services URL at `terraform output services_endpoint`
-   and set its Bundle Version to a pushed image tag so `x-client-version` matches.
-
-**CI/CD** (`.github/workflows/`):
-
-- `server-ci.yml` — build + test on PRs.
-- `server-cd.yml` — on a `v*.*.*` tag, build and push
-  `clashup-{services,gameserver,gateway}:<version>` (+ `:latest`) to Artifact
-  Registry via WIF (no long-lived keys).
-- `server-dev.yml` — dev/preview builds.
-
-**Transport:** by default the Services LB is an external **passthrough Network LB
-(L4/TCP)** carrying cleartext h2c gRPC — fine for bring-up. Set `services_domain`
-to switch to an **HTTPS Application LB** with a Google-managed certificate.
-
----
-
-## Monitoring
-
-`src/Tools/ClashUp.Dashboard` is a local ASP.NET dashboard (run with the
-read-only `dashboard-sa.json`) showing, per tier and instance:
-
-- versions running / available (Artifact Registry tags),
-- **CCU per instance, broken down by server version** (both tiers' CCU series),
-- CPU and RAM per instance.
-
-```sh
-dotnet run --project src/Tools/ClashUp.Dashboard   # needs dashboard-sa.json
+```mermaid
+flowchart TD
+    PR[Pull request] -->|server-ci.yml| CI[Build + test]
+    MAIN[push to main] -->|server-dev.yml| DEV["push :latest<br/>(VERSION=0.0.0-dev)"]
+    TAG["git tag v1.3.0"] -->|server-cd.yml| REL["build + push<br/>clashup-*:1.3.0 + :latest"]
+    REL --> AR[(Artifact Registry)]
+    DEV --> AR
+    AR -->|pulled on demand by| FLEET[🚪 Gateways on the fleet]
+    style TAG fill:#16271a,stroke:#3fb950
+    style REL fill:#16271a,stroke:#3fb950
 ```
 
----
+**Bring-up, in short:**
 
-## Configuration & secrets
+1. **One-time bootstrap** — enable APIs, state bucket, **Workload Identity Federation** for keyless CI, a read-only dashboard SA, and GitHub repo vars/secrets.
+2. **Two-phase apply** (instances pull the gateway image at boot):
+   - **Phase 1:** registry + network + NAT + instance SA → push first images → allowlist the NAT IP in Atlas.
+   - **Phase 2:** MIGs, load balancer, autoscalers, monitoring descriptors.
+3. Point the Unity client's Services URL at `terraform output services_endpoint` and set its Bundle Version to a pushed image tag so `x-client-version` matches.
 
-- **Server config** is environment-driven (`Mongo__ConnectionString`,
-  `Jwt__EndUserSigningKey`, `Jwt__InterTierSigningKey`,
-  `GameServer__ServicesEndpoint`, …). In the fleet these are injected into version
-  containers by the gateway via `Gateway__BackendEnvironment__N`, themselves set
-  by the instance startup script from Terraform variables.
-- **Terraform secrets** live only in gitignored `terraform.tfvars` (Mongo string,
-  JWT keys) — never committed. Prefer `TF_VAR_*` env or Secret Manager for real
-  deployments.
-- **Package versions** live in two universes that must move in lockstep: server
-  NuGet via Central Package Management (`Directory.Packages.props`), Unity via
-  NuGetForUnity + UPM (`Packages/manifest.json`). See
-  [`docs/rules/il2cpp-aot.md`](docs/rules/il2cpp-aot.md).
+**CI/CD** (`.github/workflows/`): `server-ci.yml` (PR build/test) · `server-cd.yml` (tag `v*.*.*` → versioned release, the real release path) · `server-dev.yml` (push to main → `:latest` dev build).
+
+**Transport:** the Services LB defaults to an external **passthrough Network LB (L4/TCP)** carrying cleartext h2c gRPC — fine for bring-up. Set `services_domain` to switch to an **HTTPS Application LB** with a Google-managed certificate.
 
 ---
 
-## Security
+## 🔐 Configuration & security
 
-- **Database access is locked to one IP.** Only the Services tier connects to
-  MongoDB, and it has **no external IP** — its egress to Atlas is NATed through a
-  single reserved static IP. The GameServer tier never connects to Mongo. So the
-  **Atlas IP-access list contains only the NAT IP as a `/32`**
-  (`terraform output nat_ip`) — **never `0.0.0.0/0`**.
-- **JWT keys are real secrets** supplied via tfvars, not the dev placeholders.
-- **Plaintext bring-up vs TLS.** The default L4 NLB exposes gRPC (including JWTs)
-  in cleartext — acceptable for bring-up only. Flip to TLS via `services_domain`
-  before real players. GameServer match traffic is plaintext h2c by design
-  (direct, low-latency, ephemeral IPs); hardening it is a separate follow-up.
-- **No public SSH** — instances are reached via Identity-Aware Proxy only.
+<details open>
+<summary><b>Configuration</b></summary>
+
+- **Server config** is environment-driven (`Mongo__ConnectionString`, `Jwt__EndUserSigningKey`, `Jwt__InterTierSigningKey`, `GameServer__ServicesEndpoint`, …). In the fleet these are injected into version containers by the gateway via `Gateway__BackendEnvironment__N`, set by the instance startup script from Terraform variables.
+- **Package versions** live in two universes that move in lockstep: server NuGet via Central Package Management (`Directory.Packages.props`); Unity via NuGetForUnity + UPM (`Packages/manifest.json`).
+
+</details>
+
+<details open>
+<summary><b>Security</b></summary>
+
+- **🔒 Database access is locked to one IP.** Only the Services tier connects to MongoDB, and it has **no external IP** — its egress to Atlas is NATed through a single reserved static IP. So the **Atlas IP-access list contains only the NAT IP as a `/32`** (`terraform output nat_ip`) — **never `0.0.0.0/0`**.
+- **🔑 JWT keys are real secrets** supplied via gitignored `terraform.tfvars` (prefer `TF_VAR_*` env or Secret Manager for real deployments) — never committed.
+- **🌐 Plaintext bring-up vs TLS.** The default L4 NLB exposes gRPC (including JWTs) in cleartext — acceptable for bring-up only. Flip to TLS via `services_domain` before real players. GameServer match traffic is plaintext h2c by design (direct, low-latency, ephemeral IPs); hardening it is a separate follow-up.
+- **🚫 No public SSH** — instances are reached via Identity-Aware Proxy only.
+
+</details>
 
 ---
 
-## Further reading
+## 📚 Further reading
 
 - [`docs/rules/`](docs/rules/) — contributor rules (read first).
 - [`docs/GDD.md`](docs/GDD.md) — game design doc.
 - [`ops/terraform/README.md`](ops/terraform/README.md) — full infra runbook.
 - [`src/Tools/ClashUp.Dashboard/README.md`](src/Tools/ClashUp.Dashboard/README.md) — dashboard setup.
+
+<div align="center"><sub>Built with Unity 6, .NET 8, MagicOnion, and Terraform · server-authoritative · one fleet, every version.</sub></div>
