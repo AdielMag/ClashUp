@@ -36,8 +36,8 @@ variable "services_machine_type" {
 
 variable "gameserver_machine_type" {
   type        = string
-  description = "GameServer-tier instance size. Kept on DEDICATED vCPUs (e2-highcpu-*) rather than shared-core so the 30Hz physics sim has a steady CPU budget. e2-highcpu-2 keeps 2 dedicated cores but trims RAM to 2GB (the sim uses ~0.5GB) — ~26% cheaper than e2-standard-2 with identical CPU."
-  default     = "e2-highcpu-2"
+  description = "GameServer-tier instance size. e2-small (2 shared vCPUs, 0.5 sustained baseline, 2GB) is the cheapest practical size for pre-launch. NOTE: shared cores can be throttled under sustained load, which jitters the 30Hz sim — each match runs on ONE instance, so bump this to a DEDICATED-core type (e.g. e2-highcpu-2) before real player load."
+  default     = "e2-small"
 }
 
 # --- Autoscaling bounds -----------------------------------------------------
