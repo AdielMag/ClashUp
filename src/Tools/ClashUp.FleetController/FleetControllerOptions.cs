@@ -20,7 +20,4 @@ public sealed class FleetControllerOptions
     /// the whole window must read zero.
     /// </summary>
     public int IdleLookbackMinutes { get; set; } = 35;
-
-    /// <summary>Target size each MIG is resized to on wake (the autoscaler takes over from there).</summary>
-    public int WakeSize { get; set; } = 1;
 }

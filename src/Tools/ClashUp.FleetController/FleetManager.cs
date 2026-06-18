@@ -81,22 +81,25 @@ public sealed class FleetManager
     /// <summary>Wake both tiers and re-arm the idle check. Idempotent.</summary>
     public async Task<ActionResult> WakeAsync(CancellationToken ct)
     {
+        // Turning the autoscaler back ON makes it restore min_replicas (>=1) on its own.
+        // We must NOT manually resize an autoscaled (mode=ON) MIG — the Compute API rejects
+        // that ("Resizing of autoscaled regional managed instance groups is not allowed").
+        // So wake = flip mode ON; the autoscaler scales the tier back up itself.
         foreach (var tier in Tiers)
         {
             await SetAutoscalerModeAsync(tier.Autoscaler, "ON", ct);
-            await ResizeAsync(tier.Mig, _o.WakeSize, ct);
         }
 
         await ResumeScheduleAsync(ct);
-        return new ActionResult(true, "Fleet waking — scaling both tiers up and re-armed the idle check.");
+        return new ActionResult(true, "Fleet waking — autoscalers ON (restoring min instances) and idle check re-armed.");
     }
 
     private async Task SleepAsync(CancellationToken ct)
     {
         foreach (var tier in Tiers)
         {
-            // Disable the autoscaler FIRST — otherwise it re-creates the minimum the
-            // instant we resize to 0.
+            // Disable the autoscaler FIRST (and wait for it to apply) — you can't resize an
+            // autoscaled MIG, and an ON autoscaler would re-create the minimum instantly.
             await SetAutoscalerModeAsync(tier.Autoscaler, "OFF", ct);
             await ResizeAsync(tier.Mig, 0, ct);
         }
@@ -141,12 +144,20 @@ public sealed class FleetManager
 
     // mode is the Compute API string value: "ON" or "OFF". We GET the full autoscaler,
     // flip just the mode, then UPDATE (full replace) so the rest of the policy is preserved.
+    // The update is awaited to completion so a following resize sees the new mode.
     private async Task SetAutoscalerModeAsync(string autoscaler, string mode, CancellationToken ct)
     {
         var client = await _autoscalerClient.Value;
         var current = await client.GetAsync(_o.ProjectId, _o.Region, autoscaler, ct);
+        if (string.Equals(current.AutoscalingPolicy.Mode, mode, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation("Autoscaler {Autoscaler} already {Mode}", autoscaler, mode);
+            return;
+        }
+
         current.AutoscalingPolicy.Mode = mode;
-        await client.UpdateAsync(_o.ProjectId, _o.Region, current, ct);
+        var op = await client.UpdateAsync(_o.ProjectId, _o.Region, current, ct);
+        await op.PollUntilCompletedAsync();
         _logger.LogInformation("Autoscaler {Autoscaler} mode -> {Mode}", autoscaler, mode);
     }
 
