@@ -36,6 +36,8 @@
     .versions { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
     .vrow { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; }
     .vrow .tag { font-family: ui-monospace, monospace; color: var(--accent); }
+    .vnote { font-size: 10px; color: var(--muted); border: 1px solid var(--border); border-radius: 4px;
+             padding: 0 5px; margin-left: 6px; cursor: help; }
     .pill { font-family: ui-monospace, monospace; font-size: 11px; background: var(--panel2);
             border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; margin: 0 4px 4px 0;
             display: inline-flex; align-items: center; gap: 6px; }
@@ -69,10 +71,20 @@
         <span>${fmtPct(value)}</span></div>`;
     }
 
+    // A running backend's version. A clean semver (1.0.1) is a real client
+    // release; anything else (e.g. 0.0.0-dev) is the dev build the gateway serves
+    // to header-less server-to-server traffic via its default 'latest' tag.
+    function versionRow(v) {
+      const isRelease = /^\d+\.\d+\.\d+$/.test(v.version);
+      const note = isRelease ? "" :
+        `<span class="vnote" title="Not a client release. This backend serves header-less server-to-server traffic (e.g. GameServer→Services registration), which the gateway routes to its default 'latest' tag. It idle-evicts when unused.">internal · default route</span>`;
+      return `<div class="vrow"><span><span class="tag">${v.version}</span>${note}</span><span>${v.ccu} CCU</span></div>`;
+    }
+
     function instanceCard(inst) {
       const stateClass = inst.state === "RUNNING" ? "RUNNING" : "OTHER";
       const versions = (inst.versions || []).length
-        ? inst.versions.map(v => `<div class="vrow"><span class="tag">${v.version}</span><span>${v.ccu} CCU</span></div>`).join("")
+        ? inst.versions.map(versionRow).join("")
         : `<div class="empty">no active backends</div>`;
       return `<div class="card">
         <span class="state ${stateClass}">${inst.state}</span>
@@ -103,7 +115,7 @@
     function imagesBlock(images) {
       const cards = images.length
         ? images.map(img => `<div class="card"><div class="name">${img.image}</div>
-            <div style="margin-top:8px">${img.tags.map(t => tagPill(img.image, t)).join("")}</div></div>`).join("")
+            <div style="margin-top:8px">${img.tags.filter(t => t.toLowerCase() !== "latest").map(t => tagPill(img.image, t)).join("")}</div></div>`).join("")
         : `<div class="empty">no images found</div>`;
       return `<section class="tier"><h2>Available versions (registry)</h2><div class="images">${cards}</div></section>`;
     }

@@ -36,8 +36,8 @@ variable "services_machine_type" {
 
 variable "gameserver_machine_type" {
   type        = string
-  description = "GameServer-tier instance size. Kept on DEDICATED vCPUs (e2-standard-*) rather than shared-core so the 30Hz physics sim has a steady CPU budget. e2-standard-2 halves the idle cost of e2-standard-4 while keeping 2 dedicated cores."
-  default     = "e2-standard-2"
+  description = "GameServer-tier instance size. Kept on DEDICATED vCPUs (e2-highcpu-*) rather than shared-core so the 30Hz physics sim has a steady CPU budget. e2-highcpu-2 keeps 2 dedicated cores but trims RAM to 2GB (the sim uses ~0.5GB) — ~26% cheaper than e2-standard-2 with identical CPU."
+  default     = "e2-highcpu-2"
 }
 
 # --- Autoscaling bounds -----------------------------------------------------
