@@ -297,10 +297,11 @@
     // ---- Uptime calendar -------------------------------------------------
     // Awake-hours per day from /api/uptime. The fleet auto-sleeps to 0 instances
     // when idle, so "uptime" = hours any instance was running (the billed hours).
-    // Data changes slowly, so we fetch once on load and every 5 minutes; the
-    // day/week/month toggle just re-renders the cached daily array.
+    // Data is bucketed by the hour, so we fetch once on load and only every 15
+    // minutes — keeping Monitoring read volume tiny (1 reduced time series/call).
+    // The day/week/month toggle just re-renders the cached daily array.
     const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const CAL_REFRESH_MS = 5 * 60 * 1000;
+    const CAL_REFRESH_MS = 15 * 60 * 1000;
     let calData = null;   // array of { date: "yyyy-MM-dd", awakeHours: int }
     let calView = "daily";
 
