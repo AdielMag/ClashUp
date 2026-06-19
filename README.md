@@ -204,11 +204,36 @@ CCU is implemented once in [`ClashUp.Server.Common/Ccu/`](src/Server/ClashUp.Ser
 
 > No Ops Agent required — the gateway self-reports host memory, so instances run on the minimal Container-Optimized OS image.
 
+### Idle auto-sleep (scale to zero)
+
+A GCP MIG autoscaler can't go below 1, so two `e2-small` boxes would idle 24/7 (~$25/mo). A tiny **Cloud Run controller** ([`src/Tools/ClashUp.FleetController`](src/Tools/ClashUp.FleetController)) drives both tiers to **0** when nobody's online and back up on demand — and it scales to zero itself, so it costs ~nothing.
+
+```mermaid
+sequenceDiagram
+    participant S as Cloud Scheduler<br/>(every 30 min)
+    participant C as Fleet controller<br/>(Cloud Run)
+    participant M as Cloud Monitoring
+    participant F as Both MIGs
+    S->>C: POST /tick
+    C->>M: CCU over last 35 min?
+    alt zero across the whole window
+        C->>F: autoscaler mode OFF → resize 0
+        C->>S: pause self (no point polling an asleep fleet)
+    else someone online
+        C-->>S: stay awake
+    end
+    Note over C,F: Wake (dashboard button) → mode ON<br/>(autoscaler restores min) → resume scheduler
+```
+
+- **Sleep** = autoscaler `mode=OFF` **then** resize to 0. **Wake** = `mode=ON` only — the autoscaler restores `min_replicas` itself (you can't manually resize an autoscaled MIG).
+- The **35-min lookback** (longer than the 30-min cadence) is hysteresis: a between-matches dip can't trigger sleep.
+- **Tradeoff:** both tiers sleep, so a fully-asleep fleet can't auto-wake a player — waking is manual (the dashboard button below). Ideal for pre-launch; keep Services at `min 1` as a doorman if you ever need self-serve wake.
+
 ---
 
 ## 📊 Fleet dashboard
 
-A local, **read-only** ASP.NET dashboard ([`src/Tools/ClashUp.Dashboard`](src/Tools/ClashUp.Dashboard)) — per tier and instance: which versions are running, **CCU broken down by server version**, CPU & RAM, and the image tags available in Artifact Registry (with one-click registry cleanup).
+A local, **read-only** ASP.NET dashboard ([`src/Tools/ClashUp.Dashboard`](src/Tools/ClashUp.Dashboard)) — per tier and instance: which versions are running, **CCU broken down by server version**, CPU & RAM, and the image tags available in Artifact Registry (with one-click registry cleanup). It also shows a live **next idle-check countdown** while the fleet is awake, and a 💤 **FLEET ASLEEP** banner with a **Wake** button once it has slept (the only write action — it just calls the controller via `run.invoker`; no compute rights live on your machine).
 
 <div align="center">
 
@@ -238,7 +263,8 @@ src/
     ClashUp.GameServer/           # per-match authoritative tier
     ClashUp.Server.sln            # server-only solution
   Tools/
-    ClashUp.Dashboard/            # local read-only fleet dashboard
+    ClashUp.Dashboard/            # local read-only fleet dashboard (+ Wake button)
+    ClashUp.FleetController/      # Cloud Run idle-sleep/wake controller
 client/
   ClashUp.Unity/                  # Unity 6 project
 external/
@@ -246,7 +272,7 @@ external/
 ops/
   docker/                         # Dockerfiles + compose (mongo, services, gameserver, gateway)
   terraform/                      # GCP infrastructure (see ops/terraform/README.md)
-.github/workflows/                # server-ci / server-cd / server-dev
+.github/workflows/                # server-ci / server-cd / server-dev / fleet-controller
 docs/
   GDD.md, rules/, assets/         # design doc + contributor rules + README diagrams
 ClashUp.sln                       # full solution (server + Shared)
