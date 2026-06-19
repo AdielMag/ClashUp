@@ -21,6 +21,7 @@ public sealed class GcpStatusService
     private const string ServicesCcuMetric = "custom.googleapis.com/services/ccu";
     private const string CpuMetric = "compute.googleapis.com/instance/cpu/utilization";
     private const string RamMetric = "custom.googleapis.com/instance/memory_utilization";
+    private const string UptimeMetric = "compute.googleapis.com/instance/uptime";
 
     private readonly DashboardOptions _options;
     private readonly ILogger<GcpStatusService> _logger;
@@ -78,6 +79,75 @@ public sealed class GcpStatusService
         var idleCheck = await SafeAsync(() => QueryIdleCheckAsync(cancellationToken), errors, "Idle check");
 
         return new FleetStatus(DateTimeOffset.UtcNow, asleep, idleCheck, tiers, images, errors);
+    }
+
+    /// <summary>
+    /// Builds the uptime calendar over <paramref name="from"/>..<paramref name="to"/> (inclusive, UTC days).
+    /// "Uptime" here is awake-time: the fleet auto-sleeps to 0 instances when idle, so we count, per day,
+    /// the whole hours in which any instance reported <c>instance/uptime</c> — i.e. the hours the fleet was
+    /// running and billable. We align the metric into 1-hour buckets and collapse all instances into one
+    /// series; a bucket with a positive sample is one awake hour, attributed to its UTC day.
+    /// Note: Cloud Monitoring retains this metric for ~6 weeks, so older days come back as 0 (no data).
+    /// </summary>
+    public async Task<UptimeCalendar> GetUptimeCalendarAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
+    {
+        if (to < from)
+        {
+            (from, to) = (to, from);
+        }
+
+        var startUtc = from.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var endUtc = to.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc); // exclusive end → include 'to'
+
+        var client = await _metricClient.Value;
+        var request = new ListTimeSeriesRequest
+        {
+            ProjectName = new Google.Api.Gax.ResourceNames.ProjectName(_options.ProjectId),
+            Filter = $"metric.type = \"{UptimeMetric}\" AND resource.type = \"gce_instance\"",
+            Interval = new TimeInterval
+            {
+                StartTime = Timestamp.FromDateTime(startUtc),
+                EndTime = Timestamp.FromDateTime(endUtc),
+            },
+            // Per-instance: count samples in each hour (>0 ⇒ that instance was up that hour).
+            // Cross-series SUM collapses all instances into one fleet-wide series; we only read presence.
+            Aggregation = new Aggregation
+            {
+                AlignmentPeriod = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(TimeSpan.FromHours(1)),
+                PerSeriesAligner = Aggregation.Types.Aligner.AlignCount,
+                CrossSeriesReducer = Aggregation.Types.Reducer.ReduceSum,
+            },
+            View = ListTimeSeriesRequest.Types.TimeSeriesView.Full,
+        };
+
+        // Distinct awake hour-buckets (UTC, floored to the hour). Using a set keeps the count
+        // correct even if the API returns more than one series for the window.
+        var awakeHours = new HashSet<DateTime>();
+        await foreach (var series in client.ListTimeSeriesAsync(request).WithCancellation(cancellationToken))
+        {
+            foreach (var point in series.Points)
+            {
+                if (point.Value.Int64Value <= 0 && point.Value.DoubleValue <= 0)
+                {
+                    continue;
+                }
+
+                var bucket = point.Interval.StartTime.ToDateTime();
+                awakeHours.Add(new DateTime(bucket.Year, bucket.Month, bucket.Day, bucket.Hour, 0, 0, DateTimeKind.Utc));
+            }
+        }
+
+        var hoursByDay = awakeHours
+            .GroupBy(h => DateOnly.FromDateTime(h))
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var days = new List<UptimeDay>();
+        for (var day = from; day <= to; day = day.AddDays(1))
+        {
+            days.Add(new UptimeDay(day, hoursByDay.GetValueOrDefault(day)));
+        }
+
+        return new UptimeCalendar(from, to, days);
     }
 
     /// <summary>

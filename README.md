@@ -235,6 +235,8 @@ sequenceDiagram
 
 A local, **read-only** ASP.NET dashboard ([`src/Tools/ClashUp.Dashboard`](src/Tools/ClashUp.Dashboard)) — per tier and instance: which versions are running, **CCU broken down by server version**, CPU & RAM, and the image tags available in Artifact Registry (with one-click registry cleanup). It also shows a live **next idle-check countdown** while the fleet is awake, and a 💤 **FLEET ASLEEP** banner with a **Wake** button once it has slept (the only write action — it just calls the controller via `run.invoker`; no compute rights live on your machine).
 
+A **server-uptime calendar** sits below the live view: a GitHub-style daily heatmap of **awake-hours per day** (the hours any instance was running — i.e. the hours you were billed) with **Daily / Weekly / Monthly** toggles. It reads straight from the `compute.googleapis.com/instance/uptime` metric (hourly-aligned, presence ⇒ awake), so it needs no new permissions beyond the dashboard's existing `monitoring.viewer`. The window is the **~6 weeks** Cloud Monitoring retains that metric; longer history would need a BigQuery export.
+
 <div align="center">
 
 ![ClashUp Fleet dashboard](docs/assets/dashboard.svg)
@@ -247,7 +249,7 @@ A local, **read-only** ASP.NET dashboard ([`src/Tools/ClashUp.Dashboard`](src/To
 dotnet run --project src/Tools/ClashUp.Dashboard   # needs read-only dashboard-sa.json → http://localhost:8080
 ```
 
-> Data sources: Compute Engine (instances/state), Cloud Monitoring (per-tier CCU, CPU, RAM), Artifact Registry (image tags). If a query fails (e.g. an API not yet enabled) the page shows a banner and still renders what it could fetch.
+> Data sources: Compute Engine (instances/state), Cloud Monitoring (per-tier CCU, CPU, RAM, and `instance/uptime` for the uptime calendar), Artifact Registry (image tags). If a query fails (e.g. an API not yet enabled) the page shows a banner and still renders what it could fetch.
 
 ---
 

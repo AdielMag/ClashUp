@@ -60,6 +60,37 @@
                 padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
     .wake-btn:hover:not(:disabled) { filter: brightness(1.1); }
     .wake-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Uptime calendar */
+    .cal { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+    .cal-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+    .cal-head h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em;
+                   color: var(--accent); margin: 0; }
+    .cal-toggle { display: flex; gap: 4px; background: var(--panel2); border: 1px solid var(--border);
+                  border-radius: 8px; padding: 3px; }
+    .cal-toggle button { background: none; border: none; color: var(--muted); font-size: 12px;
+                         padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+    .cal-toggle button.active { background: var(--accent); color: #06210d; font-weight: 600; }
+    .cal-legend { margin-left: auto; display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; }
+    .cal-legend .sw { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+    .cal-sub { color: var(--muted); font-size: 12px; margin-top: 12px; }
+    /* heatmap (daily) */
+    .heat { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 4px; }
+    .heat-col { display: flex; flex-direction: column; gap: 3px; }
+    .heat-dow { display: flex; flex-direction: column; gap: 3px; margin-right: 6px; }
+    .heat-dow span { height: 13px; font-size: 9px; color: var(--muted); line-height: 13px; }
+    .heat-cell { width: 13px; height: 13px; border-radius: 2px; background: var(--panel2); }
+    .heat-cell.empty { background: transparent; }
+    .heat-cell.lvl1 { background: #0e4429; }
+    .heat-cell.lvl2 { background: #006d32; }
+    .heat-cell.lvl3 { background: #26a641; }
+    .heat-cell.lvl4 { background: #39d353; }
+    /* bars (weekly/monthly) */
+    .cal-bars { display: grid; gap: 8px; }
+    .cal-bar-row { display: grid; grid-template-columns: 130px 1fr 64px; align-items: center; gap: 10px; font-size: 12px; }
+    .cal-bar { height: 10px; background: var(--panel2); border-radius: 5px; overflow: hidden; }
+    .cal-bar > span { display: block; height: 100%; background: var(--good); }
+    .cal-bar-row .val { text-align: right; color: var(--muted); }
   </style>
 </head>
 <body>
@@ -70,6 +101,22 @@
     <span class="meta" id="countdown"></span>
   </header>
   <div class="wrap" id="root"></div>
+
+  <div class="wrap" style="padding-top:0">
+    <section class="cal">
+      <div class="cal-head">
+        <h2>Server uptime</h2>
+        <div class="cal-toggle" id="calToggle">
+          <button data-view="daily" class="active" onclick="setCalView('daily')">Daily</button>
+          <button data-view="weekly" onclick="setCalView('weekly')">Weekly</button>
+          <button data-view="monthly" onclick="setCalView('monthly')">Monthly</button>
+        </div>
+        <div class="cal-legend" id="calLegend"></div>
+      </div>
+      <div id="calBody"><div class="empty">loading uptime…</div></div>
+      <div class="cal-sub" id="calSub"></div>
+    </section>
+  </div>
 
   <script>
     const fmtPct = v => (v == null ? "—" : v.toFixed(0) + "%");
@@ -246,6 +293,121 @@
 
     refresh();
     setInterval(refresh, REFRESH_MS);
+
+    // ---- Uptime calendar -------------------------------------------------
+    // Awake-hours per day from /api/uptime. The fleet auto-sleeps to 0 instances
+    // when idle, so "uptime" = hours any instance was running (the billed hours).
+    // Data changes slowly, so we fetch once on load and every 5 minutes; the
+    // day/week/month toggle just re-renders the cached daily array.
+    const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const CAL_REFRESH_MS = 5 * 60 * 1000;
+    let calData = null;   // array of { date: "yyyy-MM-dd", awakeHours: int }
+    let calView = "daily";
+
+    const fmtShort = iso => { const d = new Date(iso + "T00:00:00Z"); return MONTHS[d.getUTCMonth()] + " " + d.getUTCDate(); };
+    const fmtMonth = ym => { const [y, m] = ym.split("-"); return MONTHS[+m - 1] + " " + y; };
+    const heatLevel = h => h <= 0 ? 0 : h <= 6 ? 1 : h <= 12 ? 2 : h <= 18 ? 3 : 4;
+
+    function setCalView(view) {
+      calView = view;
+      for (const b of document.querySelectorAll("#calToggle button")) {
+        b.classList.toggle("active", b.dataset.view === view);
+      }
+      renderCalendar();
+    }
+
+    function renderDaily(days) {
+      const map = new Map(days.map(d => [d.date, d.awakeHours]));
+      const first = new Date(days[0].date + "T00:00:00Z");
+      const last = new Date(days[days.length - 1].date + "T00:00:00Z");
+      const cur = new Date(first);
+      cur.setUTCDate(cur.getUTCDate() - cur.getUTCDay()); // back to the Sunday on/before first
+      const cols = [];
+      while (cur <= last) {
+        const cells = [];
+        for (let r = 0; r < 7; r++) {
+          const iso = cur.toISOString().slice(0, 10);
+          if (cur < first || cur > last) {
+            cells.push(`<div class="heat-cell empty"></div>`);
+          } else {
+            const h = map.get(iso) ?? 0;
+            cells.push(`<div class="heat-cell lvl${heatLevel(h)}" title="${iso}: ${h}h awake"></div>`);
+          }
+          cur.setUTCDate(cur.getUTCDate() + 1);
+        }
+        cols.push(`<div class="heat-col">${cells.join("")}</div>`);
+      }
+      const dow = `<div class="heat-dow"><span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span></div>`;
+      document.getElementById("calLegend").innerHTML =
+        `Less <span class="sw" style="background:var(--panel2)"></span>` +
+        `<span class="sw" style="background:#0e4429"></span><span class="sw" style="background:#006d32"></span>` +
+        `<span class="sw" style="background:#26a641"></span><span class="sw" style="background:#39d353"></span> More`;
+      return `<div class="heat">${dow}${cols.join("")}</div>`;
+    }
+
+    function renderBars(groups) {
+      document.getElementById("calLegend").innerHTML = "";
+      if (!groups.length) return `<div class="empty">no data</div>`;
+      const rows = groups.map(g => {
+        const pct = g.max > 0 ? Math.min(100, (g.hours / g.max) * 100) : 0;
+        return `<div class="cal-bar-row"><span>${g.label}</span>
+          <div class="cal-bar"><span style="width:${pct}%"></span></div>
+          <span class="val">${g.hours}h</span></div>`;
+      });
+      return `<div class="cal-bars">${rows.join("")}</div>`;
+    }
+
+    function groupBars(days, keyFn, labelFn) {
+      const m = new Map();
+      for (const d of days) {
+        const key = keyFn(d.date);
+        const e = m.get(key) || { hours: 0, days: 0 };
+        e.hours += d.awakeHours; e.days += 1;
+        m.set(key, e);
+      }
+      return [...m.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1)
+        .map(([k, e]) => ({ label: labelFn(k), hours: e.hours, max: e.days * 24 }));
+    }
+
+    function weekKey(iso) {
+      const d = new Date(iso + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+      return d.toISOString().slice(0, 10);
+    }
+
+    function renderCalendar() {
+      const body = document.getElementById("calBody");
+      const sub = document.getElementById("calSub");
+      if (!calData) { body.innerHTML = `<div class="empty">loading uptime…</div>`; return; }
+      if (!calData.length) { body.innerHTML = `<div class="empty">no uptime data</div>`; sub.textContent = ""; return; }
+
+      if (calView === "daily") {
+        body.innerHTML = renderDaily(calData);
+      } else if (calView === "weekly") {
+        body.innerHTML = renderBars(groupBars(calData, weekKey, k => "Week of " + fmtShort(k)));
+      } else {
+        body.innerHTML = renderBars(groupBars(calData, iso => iso.slice(0, 7), fmtMonth));
+      }
+
+      const total = calData.reduce((s, d) => s + d.awakeHours, 0);
+      const active = calData.filter(d => d.awakeHours > 0).length;
+      sub.textContent = `${total}h awake across ${calData.length} days · ${active} day(s) with activity · UTC`;
+    }
+
+    async function loadCalendar() {
+      try {
+        const res = await fetch("/api/uptime");
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+        const data = await res.json();
+        calData = data.days || [];
+        renderCalendar();
+      } catch (e) {
+        document.getElementById("calBody").innerHTML = `<div class="empty">uptime unavailable: ${e.message}</div>`;
+      }
+    }
+
+    loadCalendar();
+    setInterval(loadCalendar, CAL_REFRESH_MS);
   </script>
 </body>
 </html>

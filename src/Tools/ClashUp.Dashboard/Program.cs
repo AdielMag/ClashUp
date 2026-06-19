@@ -28,6 +28,23 @@ app.UseStaticFiles();
 app.MapGet("/api/status", async (GcpStatusService svc, CancellationToken ct) =>
     Results.Json(await svc.GetFleetStatusAsync(ct)));
 
+// Uptime calendar: per-day awake-hours over a date range (defaults to the ~6-week
+// window Cloud Monitoring retains the source metric for). `from`/`to` are UTC dates
+// (yyyy-MM-dd); omit either to use the default rolling window.
+app.MapGet("/api/uptime", async (GcpStatusService svc, DateOnly? from, DateOnly? to, CancellationToken ct) =>
+{
+    var toDate = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+    var fromDate = from ?? toDate.AddDays(-41);
+    try
+    {
+        return Results.Json(await svc.GetUptimeCalendarAsync(fromDate, toDate, ct));
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
 app.MapPost("/api/registry/delete", async (GcpStatusService svc, DeleteVersionRequest req, CancellationToken ct) =>
 {
     try

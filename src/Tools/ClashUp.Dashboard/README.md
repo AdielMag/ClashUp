@@ -5,7 +5,9 @@ A local, read-only web dashboard for the ClashUp GCP fleet. Shows, per tier:
 - which instances are running and their state,
 - CPU and RAM utilization per instance,
 - CCU per instance, broken down by the server version each backend is running,
-- and the image versions available in Artifact Registry.
+- the image versions available in Artifact Registry,
+- and a **server-uptime calendar**: awake-hours per day (the hours any instance was
+  running) as a daily heatmap, with Daily / Weekly / Monthly toggles.
 
 It authenticates with a **read-only service account**. The one exception is the
 **Wake fleet** button: when the fleet has auto-slept (both MIGs scaled to 0 to save
@@ -45,11 +47,24 @@ have `roles/run.invoker` on the controller (granted by Terraform).
 dotnet run --project src/Tools/ClashUp.Dashboard
 ```
 
-Open <http://localhost:8080>. The page auto-refreshes every 5 seconds.
+Open <http://localhost:8080>. The live view auto-refreshes every 5 seconds; the
+uptime calendar refreshes every 5 minutes.
 
 > Data sources: Compute Engine (instances/state), Cloud Monitoring (per-tier CCU
 > — `custom.googleapis.com/gameserver/ccu` and `custom.googleapis.com/services/ccu`,
-> native CPU, and the gateway's `custom.googleapis.com/instance/memory_utilization`
-> for RAM), and Artifact Registry (image tags). If a query fails (e.g. an API is
-> not yet enabled), the dashboard shows a banner and still renders what it could
-> fetch.
+> native CPU, the gateway's `custom.googleapis.com/instance/memory_utilization`
+> for RAM, and `compute.googleapis.com/instance/uptime` for the uptime calendar),
+> and Artifact Registry (image tags). If a query fails (e.g. an API is not yet
+> enabled), the dashboard shows a banner and still renders what it could fetch.
+
+## Uptime calendar
+
+`GET /api/uptime?from=yyyy-MM-dd&to=yyyy-MM-dd` returns per-day **awake-hours** —
+the whole hours each UTC day in which any instance reported `instance/uptime`.
+Because the fleet auto-sleeps to 0 instances when idle, "awake hours" is exactly
+the time the fleet (and the billing meter) was running. The metric is aligned into
+1-hour buckets and reduced across instances; a bucket with any sample is one awake
+hour. Both `from`/`to` are optional and default to the last **~6 weeks** — the
+window Cloud Monitoring retains this metric for, so older days read as `0`. For
+durable multi-month/yearly history, export the metric to BigQuery and query that
+instead. All days are **UTC**.
