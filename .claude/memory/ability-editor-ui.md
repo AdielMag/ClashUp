@@ -48,6 +48,12 @@ styling (verified with the Spawn node).
   itself (that hides the field background).
 - Toolbar ghost buttons must be composite `VisualElement`s (icon + Label), NOT
   `Button`s — a Button is a TextElement and its child icon overlaps the text.
+- **Field hover tooltips**: set `field.tooltip` at creation (covers the input
+  area). But a `BaseField` label has a built-in *truncation* tooltip (shows the
+  full label text) that shadows yours on the label. Fix once in the base node via
+  `RegisterCallback<AttachToPanelEvent>` → query all `.unity-base-field`, copy
+  each field's `tooltip` onto its `.unity-base-field__label` child. Auto-applies to
+  every node type; new types just set `tooltip` on their fields.
 
 **Spawn caveat:** `SpawnNode` is currently a VISUAL placeholder — the shared data
 model (`AbilityNodeType` in ClashUp.Shared) has no Spawn entry, so the serializer
