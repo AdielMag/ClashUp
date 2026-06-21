@@ -130,6 +130,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - **TelegraphController**: `IStartable/ITickable/IDisposable` VContainer service — owns two `TelegraphRenderer` GameObjects (auto + primary). Resolves configs from `MatchAbilitiesHolder` + `MatchCharactersHolder` by local player's `AutoAttackId`/`ActiveAbilityId`. Switches auto↔primary based on `IAbilityInput.OnTouching`. Primary yaw tracks `IAbilityInput.LiveAimYaw`. Registered in `MatchLifetimeScope`.
 - **Telegraph materials**: `Assets/Core/Gameplay/Content/Telegraphs/` — `M_AutoTelegraph.mat` (Sprites/Default, yellow 0.35α), `M_PrimaryTelegraph.mat` (Sprites/Default, orange 0.55α). Use `Sprites/Default` NOT `Unlit/Transparent` — the latter has no `_Color` support.
 - See [ability-authoring.md](ability-authoring.md) for full schema and examples
+- **Editor UI restyled** (USS-driven, category-extensible nodes). To add a node type, edit `NodeVisuals.cs` dicts + register in the menu — no new USS. See [ability-editor-ui.md](ability-editor-ui.md)
 
 ## Important Conventions
 - Central package management via `Directory.Packages.props`

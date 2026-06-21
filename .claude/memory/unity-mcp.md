@@ -162,6 +162,27 @@ When the MCP material/prefab-create tools aren't surfaced via ToolSearch (the en
 
 To smoke-test the real `System.Text.Json` deserialization path (e.g. new `ProjectileConfig`/`TelegraphConfig` fields), spin up a throwaway console under `tools/_verify_*/` with a `ProjectReference` to `ClashUp.Shared.csproj`, deserialize the JSON with the same options as `ServerAbilityStore` (`PropertyNameCaseInsensitive` + `JsonStringEnumConverter`), assert the fields, `dotnet run`, then delete the temp dir (`.artifacts` is gitignored; not in any .sln so it won't affect solution builds).
 
+## Verifying an EditorWindow visually (GraphView/UIToolkit editor tools)
+
+`screenshot-game-view` / `screenshot-scene-view` / `screenshot-isolated` only
+capture Game/Scene/object renders — NOT custom `EditorWindow`s. To eyeball a
+custom editor (e.g. the Ability Editor):
+1. `script-execute` → open it (`AbilityGraphEditorWindow.ShowWindow()`), and drive
+   private methods via reflection (`GetMethod(..., NonPublic|Instance).Invoke`) to
+   load state, e.g. `LoadAbilityFile(path)`. Grab private fields the same way
+   (`_graphView`) to inspect/manipulate.
+2. Use the **computer-use** MCP to screenshot the real desktop. Gotchas:
+   - Unity runs on a **non-primary monitor** here (`DELL U2518D`) → `request_access`
+     for "Unity", then `switch_display "DELL U2518D"` before `screenshot`.
+   - Call `open_application "Unity"` right before each click — the desktop shell
+     can steal frontmost focus between calls (clicks then error).
+   - The screenshot is downscaled (~1456px vs 2560 monitor). Click coords are in
+     screenshot space (tool rescales), but do NOT try to derive Unity panel coords
+     from screenshot pixels — verify placement by reading back values in-engine
+     (`node.GetPosition()`, `viewTransform`) via `script-execute` instead.
+3. To check node placement/coords precisely, log `node.GetPosition()` for all nodes
+   via `script-execute` rather than measuring the screenshot.
+
 ## When to Use MCP vs Editor Scripts
 - **MCP first**: For one-time setup tasks (creating scenes, modifying build settings, adding components)
 - **Editor scripts**: Only when the setup needs to be repeatable by other team members without MCP
