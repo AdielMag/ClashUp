@@ -26,12 +26,13 @@ The editor reads/writes seconds; tick conversion (×30) is handled automatically
 
 ## File Locations
 
-Abilities must exist in **both** places — server loads at runtime, client loads as TextAssets:
+Ability JSON lives in **ONE** place — the server:
 
 | Location | Purpose |
 |---|---|
-| `src/Server/ClashUp.GameServer/Abilities/Data/<id>.json` | Server runtime |
-| `client/ClashUp.Unity/Assets/Core/Gameplay/Content/Abilities/<id>.json` | Client (future registry) |
+| `src/Server/ClashUp.GameServer/Abilities/Data/ability_<id>.json` | Server runtime (`ServerAbilityStore` globs `ability_*.json`) |
+
+There is **NO** client ability-JSON folder. The client receives ability config over the wire as `AbilitiesConfig` (`JoinResult` Key 9 / `MatchProvision` Key 8), built by `ServerAbilityStore.BuildClientConfig()`. The csproj already copies `Abilities/Data/ability_*.json` to output — new files are picked up with no csproj change.
 
 ---
 
@@ -72,11 +73,12 @@ All enum values are **strings** (not integers). Null/missing fields are omitted.
 | Value | UI label | Relevant fields |
 |---|---|---|
 | `CircleAroundCaster` | Circle / Caster | `Radius` |
-| `TargetCircle` | Circle / Target | `Radius` |
-| `ForwardLine` | Line / Caster | `Length` |
+| `TargetCircle` | Circle / Target | `Radius`, `ForwardOffset` |
+| `ForwardLine` | Line / Caster | `Length`, `Width` |
 | `ForwardCone` | Line / Target | `Length`, `Angle` (spread degrees) |
+| `Capsule` | (derived from Capsule hitbox cast shape) | `Length`, `Width` |
 
-For Line/Cone shapes the direction always follows the player's aim input (AimYaw) — it is not configurable.
+For Line/Cone shapes the direction always follows the player's aim input (AimYaw) — it is not configurable. `Width` is Key 5; **`ForwardOffset` is Key 6** — slides a `TargetCircle` downrange along aim (e.g. Mage Blast previews where its projectile-AoE lands). The Ability Editor shows the Forward Offset field only for Target-origin shapes.
 
 ### Nodes
 
@@ -127,18 +129,27 @@ Sequential chaining uses the `Next` field. Parallel branching uses `Children`.
   "Type": "Projectile",
   "DelayTicks": 0,
   "Projectile": {
-    "Speed": 10.0,
-    "Radius": 0.2,
-    "MaxRange": 15.0,
+    "Speed": 11.0,
+    "Radius": 0.4,
+    "MaxRange": 10.0,
     "MaxPierceCount": 0,
     "OnHitEffect": "Damage",
-    "OnHitAmount": 10.0
+    "OnHitAmount": 12.0,
+    "AoeRadius": 2.5,
+    "AoeAmount": 18.0,
+    "AoeEffect": "Damage",
+    "LifetimeTicks": 0
   },
   "Next": null
 }
 ```
 
-- `MaxPierceCount`: 0 = destroy on first hit; N = pierce up to N targets
+Projectiles are **fully simulated server-side** (see [[projectile-system]]).
+- `Speed`: units/second. `MaxRange`: detonates/expires at this distance.
+- `MaxPierceCount`: currently unused — projectiles detonate on the first enemy hit.
+- `OnHitEffect`/`OnHitAmount`: direct-hit damage on the struck target.
+- `AoeRadius`: 0 = single-target bolt; >0 = explode at impact applying `AoeAmount` (`AoeEffect`) to everyone in the circle except the caster and the direct-hit target.
+- `LifetimeTicks`: 0 ⇒ auto-derived from `MaxRange`/`Speed`.
 
 #### Parallel node
 
@@ -190,7 +201,7 @@ Each ability can have an `AbilityVisualConfig` ScriptableObject that defines VFX
 
 ### Registering in AbilityVisualRegistry
 
-The `AbilityVisualRegistry` SO (in `Assets/Core/Gameplay/Art/Config/`) connects GUIDs to Unity references for runtime lookup.
+The `AbilityVisualRegistry` SO (`Assets/Core/Match/Content/ScriptableObjects/AbilityVisualRegistry.asset`) connects GUIDs to Unity references for runtime lookup. Lookup is by `GetByAbilityId(id)` at runtime (the GUID is for editor wiring). Per-ability visuals are OPTIONAL — `ProjectileViewSystem`/`AbilityVisualHandler` use coded fallbacks (blue projectile sphere, area-flash explosion, fallback cast-flash color) when no `AbilityVisualConfig` is registered.
 
 1. Open the registry asset in the Inspector
 2. Add an entry: set **Config** to the `AbilityVisualConfig` asset, set **Ability Id** to match the ability's ID (e.g. `brawler_punch`)
@@ -203,13 +214,21 @@ At runtime, `AbilityVisualHandler` calls `registry.GetByAbilityId(abilityId)` on
 
 ## Wiring an Ability to a Character
 
-Add the ability ID to `CharacterRegistry` in `src/Shared/ClashUp.Shared/Characters/CharacterRegistry.cs`:
+`CharacterRegistry` is DELETED. A character references abilities via `CharacterDefinition.AutoAttackId` (auto) + `ActiveAbilityId` (manual). Set these in TWO places (keep in sync):
+
+1. `CharactersConfig.Default` in `src/Shared/ClashUp.Shared/MessagePackObjects/CharactersConfig.cs` (the compiled-in fallback / client roster).
+2. The `characters:registry` seed JSON in `src/Server/ClashUp.Services/Persistence/ConfigSeeder.cs` (the DB source of truth; only seeds when the key is MISSING — drop the doc to reseed an existing dev DB).
 
 ```csharp
-Abilities = new[] { new AbilityId("brawler_punch"), new AbilityId("your_new_ability") },
+new CharacterDefinition {
+  Id = new CharacterId("mage"), DisplayName = "Mage",
+  BaseStats = new StatBlock { MaxHealth = 70f, Damage = 8f, MoveSpeed = 4.5f },
+  AutoAttackId = new AbilityId("mage_bolt"),
+  ActiveAbilityId = new AbilityId("mage_blast"),
+}
 ```
 
-The server's `AbilityExecutor.InitPlayer` receives this loadout when a player spawns. Slots 0–3 map to `ButtonIndex` 0–3.
+`AetherServerSimulation.EnsurePlayer` → `AbilityExecutor.InitPlayer(autoAttackId, activeAbilityId)` on first spawn. `StatBlock.Damage` is NOT used by damage math — damage comes from ability `Amount`/`OnHitAmount`/`AoeAmount`. For a new client body, add an `id→prefab` entry to `CharacterPrefabMap`. See [[character-selection]].
 
 ---
 

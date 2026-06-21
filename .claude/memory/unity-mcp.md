@@ -149,6 +149,19 @@ When you add a `[SerializeField]`/public field WITH a C# initializer (e.g. `publ
 - **Set the value explicitly** on assets that need a non-default via `assets-modify` `pathPatches` (`{"Path":"FieldName","Value":{"typeName":"UnityEngine.Color","value":{"r":..,"g":..,"b":..,"a":..}}}`) rather than relying on the initializer surviving.
 - **Guard in code** (e.g. treat `alpha <= 0` as "unset, use fallback") so old assets that serialized a zero value still behave.
 
+## Hand-authoring Unity YAML assets (.mat / .prefab / ScriptableObject)
+
+When the MCP material/prefab-create tools aren't surfaced via ToolSearch (the env doesn't always expose them), writing the asset YAML + `.meta` directly with the `Write` tool then `assets-refresh` is reliable and deterministic:
+- Generate the asset GUID with `python tools/generate-guid.py` and put it in the `.meta` (`guid:`). `.mat` → `NativeFormatImporter` with `mainObjectFileID: 2100000`; `.prefab` → `PrefabImporter`.
+- A capsule prefab = copy `Brawler.prefab` (mesh `10208`, builtin guid `...e000...`), change `m_Name` + the `MeshRenderer.m_Materials` ref. Built-in **Standard** shader = `{fileID: 46, guid: 0000000000000000f000000000000000}`; built-in default material = `{fileID: 10303, guid: ...f000...}`.
+- A material ref from a prefab uses `{fileID: 2100000, guid: <matGuid>, type: 2}`.
+- **Prefab refs inside a ScriptableObject** (e.g. `CharacterPrefabMap._entries`) use `{fileID: <rootGameObjectFileID>, guid: <prefabGuid>, type: 3}`. Two prefabs can share the same internal `fileID` (scoped per-asset) — the `guid` disambiguates.
+- **Editing a ScriptableObject's serialized array** (adding an `_entries` item) is more reliable by editing the `.asset` YAML directly with `Edit` than via `assets-modify` serialized-array patches. After editing, `assets-refresh` and read back with `assets-get-data` (use the `paths` param for a scoped, token-cheap read).
+
+## Verifying server-side JSON / Shared model without the game
+
+To smoke-test the real `System.Text.Json` deserialization path (e.g. new `ProjectileConfig`/`TelegraphConfig` fields), spin up a throwaway console under `tools/_verify_*/` with a `ProjectReference` to `ClashUp.Shared.csproj`, deserialize the JSON with the same options as `ServerAbilityStore` (`PropertyNameCaseInsensitive` + `JsonStringEnumConverter`), assert the fields, `dotnet run`, then delete the temp dir (`.artifacts` is gitignored; not in any .sln so it won't affect solution builds).
+
 ## When to Use MCP vs Editor Scripts
 - **MCP first**: For one-time setup tasks (creating scenes, modifying build settings, adding components)
 - **Editor scripts**: Only when the setup needs to be repeatable by other team members without MCP
