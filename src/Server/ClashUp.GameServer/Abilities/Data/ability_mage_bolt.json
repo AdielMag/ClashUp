@@ -1,0 +1,32 @@
+{
+  "Id": { "Value": "mage_bolt" },
+  "DisplayName": "Magic Bolt",
+  "CooldownTicks": 24,
+  "ButtonIndex": 0,
+  "TriggerMode": "Auto",
+  "CastMode": "Instant",
+  "AutoRange": 9.0,
+  "Telegraph": {
+    "Shape": "CircleAroundCaster",
+    "Radius": 9.0,
+    "Length": 0.0,
+    "Angle": 0.0,
+    "ShowDurationTicks": 0
+  },
+  "RootNode": {
+    "Type": "Projectile",
+    "DelayTicks": 0,
+    "Projectile": {
+      "Speed": 14.0,
+      "Radius": 0.35,
+      "MaxRange": 9.0,
+      "MaxPierceCount": 0,
+      "OnHitEffect": "Damage",
+      "OnHitAmount": 8.0,
+      "AoeRadius": 0.0,
+      "AoeAmount": 0.0,
+      "AoeEffect": "Damage",
+      "LifetimeTicks": 0
+    }
+  }
+}

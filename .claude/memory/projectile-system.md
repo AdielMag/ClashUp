@@ -36,6 +36,15 @@ Plain JSON inside `AbilityDefinition` (NOT `[MessagePackObject]` — no `[Key]`)
 - `projectile_destroy` → destroy GO; spawn `HitVfxPrefab` + (if `aoeRadius>0`) `AbilityAreaFlash.Spawn(TargetCircle r=aoeRadius)` explosion at authoritative impact, even if the visual already self-despawned.
 - The old empty `projectile_*` stubs in `AbilityVisualHandler` are harmless no-ops (both subscribe; ProjectileViewSystem does the work).
 
+## detonate-at-origin (TargetPoint casts)
+`Spawn(..., detonateAtOrigin: true)` makes a projectile **appear at the spawn point and explode
+there on tick 1** (no travel): sets `StepPerTick=0, MaxRange=0, lifetime=1`, and the spawn event
+sends `speed=0, maxRange=0`. Used by `CastMode.TargetPoint` projectiles (see [[target-point-cast]]).
+**Client guard:** `ProjectileViewSystem.Tick` must only self-despawn travelling projectiles
+(`MaxRange > 0 && Traveled >= MaxRange`) — a `MaxRange==0` projectile would otherwise be culled on
+frame 1 before the explosion. A separate `Age >= MaxVisualSeconds` timeout covers missed destroy
+events for both kinds.
+
 ## Telegraph preview (ranged AoE)
 `TelegraphController.Tick` offsets the primary `TargetCircle` renderer origin by `forward(LiveAimYaw) * ForwardOffset` so it previews where a projectile-AoE lands. `AbilityShapeMesh` renders `TargetCircle` centered, so only the transform moves.
 

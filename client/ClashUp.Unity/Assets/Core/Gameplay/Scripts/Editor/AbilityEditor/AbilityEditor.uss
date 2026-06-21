@@ -1,0 +1,519 @@
+/* =============================================================================
+   Ability Editor — visual restyle (UI Toolkit / GraphView)
+   Pure styling. No behaviour, data-model or JSON changes live here.
+
+   Notes on UI Toolkit limitations (Unity 6) and how we work around them:
+   - USS has no linear-gradient backgrounds  -> gradients are approximated with
+     the mid solid colour (the C# side may layer two elements if needed).
+   - USS has no box-shadow                   -> node drop-shadow is omitted.
+   - USS has no numeric font-weight (600)    -> we use -unity-font-style: bold.
+   - letter-spacing is a px length, not em   -> converted to small px values.
+
+   Category accent colours are NOT defined here per node. They are driven from
+   NodeVisuals.AccentColors (a Dictionary<NodeCategory, Color>) and applied
+   inline in C#. This file only holds the shared/structural styling so that a
+   new node type needs zero new USS.
+============================================================================= */
+
+/* ---- Design tokens -------------------------------------------------------- */
+.clashup-ability-editor {
+    /* surfaces */
+    --canvas-bg:        rgb(27, 28, 31);     /* #1b1c1f */
+    --titlebar-bg:      rgb(31, 32, 36);     /* #1f2024 */
+    --toolbar-bg:       rgb(38, 40, 44);     /* #26282c */
+    --toolbar-bg-top:   rgb(41, 44, 49);     /* #292c31 */
+    --hairline:         rgb(19, 20, 22);     /* #131416 */
+    --node-bg:          rgb(42, 44, 49);     /* #2a2c31 */
+    --node-header-bg:   rgb(51, 54, 60);     /* #33363c */
+    --node-header-line: rgb(16, 17, 19);     /* #101113 */
+    --node-border:      rgb(14, 15, 17);     /* #0e0f11 */
+    --ports-bg:         rgb(45, 48, 54);     /* #2d3036 */
+    --ports-line:       rgb(26, 27, 30);     /* #1a1b1e */
+    --field-bg:         rgb(28, 29, 33);     /* #1c1d21 */
+    --field-border:     rgb(52, 55, 61);     /* #34373d */
+    --section-bg:       rgb(33, 35, 39);     /* #212327 */
+    --section-line:     rgb(22, 23, 26);     /* #16171a */
+
+    /* text */
+    --text-strong:      rgb(241, 242, 244);  /* #f1f2f4 */
+    --text:             rgb(224, 226, 230);  /* #e0e2e6 */
+    --label:            rgb(154, 160, 169);  /* #9aa0a9 */
+    --muted:            rgb(120, 126, 135);  /* #787e87 */
+    --port-label:       rgb(198, 202, 209);  /* #c6cad1 */
+    --port-off:         rgb(86, 91, 99);     /* #565b63 */
+
+    /* primary button (gradient #4f86d8 -> #4377c9; using mid solid) */
+    --accent-primary:   rgb(74, 126, 209);
+
+    /* segmented group */
+    --segment-bg:       rgb(29, 30, 34);     /* #1d1e22 */
+    --segment-border:   rgb(47, 50, 56);     /* #2f3238 */
+    --ghost-hover:      rgb(51, 55, 61);     /* #33373d */
+}
+
+/* ---- Window root ---------------------------------------------------------- */
+.clashup-ability-editor {
+    flex-direction: column;
+    background-color: var(--canvas-bg);
+}
+
+/* Slim window-title row */
+.ae-titlebar {
+    height: 34px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 14px;
+    background-color: var(--titlebar-bg);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--hairline);
+}
+.ae-titlebar__label {
+    color: var(--muted);
+    font-size: 11px;
+    -unity-font-style: bold;
+    letter-spacing: 0.5px;
+}
+
+/* =============================================================================
+   Toolbar
+============================================================================= */
+.ae-toolbar {
+    height: 54px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 12px;
+    padding-right: 12px;
+    background-color: var(--toolbar-bg);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--hairline);
+}
+.ae-toolbar__zone {
+    flex-direction: row;
+    align-items: center;
+}
+.ae-toolbar__zone--center {
+    flex-grow: 1;
+    justify-content: center;
+}
+
+/* segmented group (New / Browse) */
+.ae-segment {
+    flex-direction: row;
+    align-items: center;
+    background-color: var(--segment-bg);
+    border-width: 1px;
+    border-color: var(--segment-border);
+    border-radius: 9px;
+    padding: 2px;
+}
+.ae-ghost-btn {
+    flex-direction: row;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-radius: 7px;
+    height: 30px;
+    padding-left: 11px;
+    padding-right: 11px;
+    margin: 0;
+    color: var(--text);
+    font-size: 12px;
+}
+.ae-ghost-btn:hover {
+    background-color: var(--ghost-hover);
+}
+.ae-ghost-btn__icon {
+    width: 13px;
+    height: 13px;
+    margin-right: 6px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+.ae-ghost-btn__label {
+    color: var(--text);
+    font-size: 12px;
+}
+
+/* vertical divider */
+.ae-divider-v {
+    width: 1px;
+    height: 26px;
+    margin-left: 10px;
+    margin-right: 10px;
+    background-color: var(--segment-border);
+}
+
+/* outlined button (Load JSON) */
+.ae-btn-outline {
+    height: 32px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: var(--field-border);
+    background-color: rgba(255, 255, 255, 0.02);
+    color: var(--text);
+    font-size: 12px;
+    padding-left: 14px;
+    padding-right: 14px;
+    margin: 0;
+}
+.ae-btn-outline:hover {
+    background-color: var(--ghost-hover);
+}
+
+/* primary button (Save JSON / + Add Node) */
+.ae-btn-primary {
+    height: 32px;
+    border-radius: 8px;
+    border-width: 0;
+    background-color: var(--accent-primary);
+    color: rgb(255, 255, 255);
+    font-size: 12px;
+    -unity-font-style: bold;
+    padding-left: 16px;
+    padding-right: 16px;
+    margin-left: 8px;
+}
+.ae-btn-primary:hover {
+    background-color: rgb(85, 138, 224);
+}
+
+/* ability identity chip */
+.ae-identity {
+    flex-direction: row;
+    align-items: center;
+    background-color: var(--segment-bg);
+    border-width: 1px;
+    border-color: var(--segment-border);
+    border-radius: 9px;
+    height: 38px;
+    padding-left: 10px;
+    padding-right: 12px;
+    max-width: 360px;
+}
+.ae-identity__text {
+    flex-direction: column;
+    margin-left: 9px;
+    margin-right: 8px;
+}
+.ae-identity__id {
+    color: var(--text-strong);
+    font-size: 13px;
+    -unity-font-style: bold;
+}
+.ae-identity__sub {
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 1px;
+}
+.ae-identity__chevron {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+/* search field */
+.ae-search {
+    width: 190px;
+    height: 32px;
+    margin: 0;
+}
+.ae-search .unity-base-text-field__input {
+    background-color: var(--field-bg);
+    border-width: 1px;
+    border-color: var(--field-border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 12px;
+    padding-left: 10px;
+    --unity-cursor-color: var(--text);
+}
+
+/* =============================================================================
+   GraphView canvas
+============================================================================= */
+.ae-graphview {
+    flex-grow: 1;
+    background-color: var(--canvas-bg);
+}
+
+/* MiniMap */
+.ae-minimap {
+    background-color: rgb(31, 32, 35);   /* #1f2023 */
+    border-width: 1px;
+    border-color: var(--field-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+/* MiniMap header strip (covers the built-in MiniMap title) */
+.ae-minimap-header {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    height: 18px;
+    padding-left: 10px;
+    background-color: rgb(31, 32, 35);   /* #1f2023 */
+    color: var(--muted);
+    font-size: 9px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    -unity-text-align: middle-left;
+}
+
+/* Zoom control pill */
+.ae-zoom-pill {
+    position: absolute;
+    flex-direction: row;
+    align-items: center;
+    background-color: var(--toolbar-bg);
+    border-width: 1px;
+    border-color: var(--field-border);
+    border-radius: 10px;
+    height: 32px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+.ae-zoom-pill__btn {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-radius: 6px;
+    min-width: 26px;
+    height: 24px;
+    margin: 0 1px;
+    color: var(--text);
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    padding: 0;
+}
+.ae-zoom-pill__btn:hover {
+    background-color: var(--ghost-hover);
+}
+.ae-zoom-pill__label {
+    color: var(--label);
+    font-size: 11px;
+    min-width: 42px;
+    -unity-text-align: middle-center;
+}
+.ae-zoom-pill__sep {
+    width: 1px;
+    height: 18px;
+    margin: 0 4px;
+    background-color: var(--field-border);
+}
+
+/* =============================================================================
+   Node anatomy  (class .clashup-node added to every AbilityGraphNode)
+   Category colour (stripe / icon / port / tag) is applied inline in C#.
+============================================================================= */
+.clashup-node {
+    min-width: 248px;
+}
+
+/* the outer rounded body */
+.clashup-node > #node-border {
+    background-color: var(--node-bg);
+    border-width: 1px;
+    border-color: var(--node-border);
+    border-radius: 9px;
+    overflow: hidden;
+}
+.clashup-node:selected > #node-border {
+    border-color: var(--accent-primary);
+}
+
+/* 3px accent stripe (inserted as first child of #node-border in C#) */
+.ae-accent-stripe {
+    height: 3px;
+}
+
+/* header */
+.clashup-node #title {
+    flex-direction: row;
+    align-items: center;
+    height: 40px;
+    padding-left: 10px;
+    padding-right: 12px;
+    background-color: var(--node-header-bg);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--node-header-line);
+}
+.clashup-node #title-label {
+    color: var(--text-strong);
+    font-size: 13px;
+    -unity-font-style: bold;
+    margin: 0;
+    margin-left: 9px;
+    flex-grow: 1;
+}
+/* hide default collapse button for a cleaner header */
+.clashup-node #title-button-container {
+    display: none;
+}
+
+/* icon chip (background tint set inline; the shape is drawn by NodeIcon) */
+.ae-icon-chip {
+    width: 23px;
+    height: 23px;
+    border-radius: 6px;
+    align-items: center;
+    justify-content: center;
+}
+
+/* category tag */
+.ae-cat-tag {
+    color: var(--muted);
+    font-size: 9px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    margin-left: 6px;
+}
+
+/* contents */
+.clashup-node #contents {
+    background-color: var(--node-bg);
+}
+
+/* ports row */
+.clashup-node #top {
+    background-color: var(--ports-bg);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--ports-line);
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+.clashup-node #top > #divider {
+    display: none;
+}
+.clashup-node #input {
+    background-color: rgba(0, 0, 0, 0);
+}
+.clashup-node #output {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+/* ports */
+.clashup-node .port {
+    height: 22px;
+    padding-left: 6px;
+    padding-right: 6px;
+}
+.clashup-node .port > #type {
+    color: var(--port-label);
+    font-size: 12px;
+}
+/* dot: 12px ring; unconnected = transparent fill + grey ring */
+.clashup-node .port #connector {
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    border-width: 2px;
+    border-color: var(--port-off);
+    background-color: rgba(0, 0, 0, 0);
+}
+/* connected = inner cap fills with the port's category colour */
+.clashup-node .port #connector > #cap {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    margin: 0;
+}
+
+/* extension = field list */
+.clashup-node #contents > #extension {
+    background-color: var(--node-bg);
+    padding: 6px 0;
+}
+
+/* field rows (FloatField / IntegerField / TextField / EnumField / ObjectField) */
+.clashup-node .unity-base-field {
+    margin: 0;
+    padding: 4px 12px;
+    min-height: 27px;
+    flex-direction: row;
+    align-items: center;
+}
+.clashup-node .unity-base-field__label {
+    width: 44%;
+    min-width: 44%;
+    color: var(--label);
+    font-size: 12px;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-left;
+}
+.clashup-node .unity-base-field__input {
+    flex-grow: 1;
+    background-color: var(--field-bg);
+    border-width: 1px;
+    border-color: var(--field-border);
+    border-radius: 5px;
+    min-height: 25px;
+    color: var(--text);
+    font-size: 12px;
+    padding-left: 7px;
+    padding-right: 6px;
+    --unity-cursor-color: var(--text);
+}
+.clashup-node .unity-base-field__input:focus {
+    border-color: var(--accent-primary);
+}
+/* The editable text element inside text/number fields must be transparent so the
+   field-bg box (on .unity-base-field__input) shows through — but NOT zero-bg on
+   the input box itself (that would hide the box). */
+.clashup-node .unity-base-text-field__input > .unity-text-element {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+/* enum chevron + text */
+.clashup-node .unity-enum-field__input {
+    flex-direction: row;
+    align-items: center;
+}
+.clashup-node .unity-enum-field__text {
+    color: var(--text);
+    font-size: 12px;
+    flex-grow: 1;
+}
+.clashup-node .unity-enum-field__arrow {
+    -unity-background-image-tint-color: var(--label);
+}
+
+/* object field ellipsis */
+.clashup-node .unity-object-field__input {
+    overflow: hidden;
+}
+.clashup-node .unity-object-field-display__label {
+    color: var(--text);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+/* toggle as a 17px rounded checkbox */
+.clashup-node .unity-toggle__input {
+    flex-grow: 1;
+    justify-content: flex-start;
+}
+.clashup-node .unity-toggle__checkmark {
+    width: 17px;
+    height: 17px;
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: var(--field-border);
+    background-color: var(--field-bg);
+}
+
+/* section divider rows (Telegraph, Visuals) — full-bleed */
+.ae-section {
+    margin: 6px 0 2px 0;
+    padding: 5px 12px;
+    background-color: var(--section-bg);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-top-color: var(--section-line);
+    border-bottom-color: var(--section-line);
+}
+.ae-section__label {
+    color: var(--muted);
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+}

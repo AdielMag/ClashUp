@@ -11,20 +11,21 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
         public Port NextPort;
         public FloatField DelayField;
 
-        public ParallelNode() : base("Parallel")
+        public ParallelNode() : base("Parallel", NodeCategory.Flow)
         {
-            titleContainer.style.backgroundColor = new Color(0.32f, 0.13f, 0.5f);
             DelayField = new FloatField("Delay (s)") { value = 0f };
             extensionContainer.Add(DelayField);
 
             InputPort = Port.Create<Edge>(Orientation.Horizontal, Direction.Input, Port.Capacity.Single, typeof(AbilityNode));
             InputPort.portName = "In";
+            StylePort(InputPort);
             inputContainer.Add(InputPort);
 
             AddChildPort();
 
             NextPort = Port.Create<Edge>(Orientation.Horizontal, Direction.Output, Port.Capacity.Single, typeof(AbilityNode));
             NextPort.portName = "Next";
+            StylePort(NextPort);
             outputContainer.Add(NextPort);
 
             this.AddManipulator(new ContextualMenuManipulator(evt =>
@@ -38,6 +39,7 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
         {
             var port = Port.Create<Edge>(Orientation.Horizontal, Direction.Output, Port.Capacity.Single, typeof(AbilityNode));
             port.portName = $"Child {outputContainer.childCount}";
+            StylePort(port);
             // Insert before NextPort so Next always stays last
             int insertIndex = outputContainer.childCount;
             if (NextPort != null) insertIndex = outputContainer.IndexOf(NextPort);

@@ -36,6 +36,17 @@ public sealed class ServerAbilityStore
     // directly from the ability's root hitbox (single source of truth with the damage logic).
     private static TelegraphConfig? DeriveCastShape(AbilityNode? root)
     {
+        // Projectile-rooted abilities (e.g. the Mage) flash a circle at the impact point: the AoE
+        // radius when they explode, otherwise a small marker the size of the projectile.
+        if (root is { Type: AbilityNodeType.Projectile, Projectile: { } projectile })
+        {
+            return new TelegraphConfig
+            {
+                Shape = TelegraphShape.TargetCircle,
+                Radius = projectile.AoeRadius > 0f ? projectile.AoeRadius : MathF.Max(projectile.Radius, 0.3f),
+            };
+        }
+
         if (root is not { Type: AbilityNodeType.Hitbox, Hitbox: { } hitbox })
             return null;
 

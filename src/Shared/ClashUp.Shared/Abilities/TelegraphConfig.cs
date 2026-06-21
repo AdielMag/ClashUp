@@ -22,5 +22,9 @@ namespace ClashUp.Shared.Abilities
 
         // Full width (used by Capsule; ForwardLine falls back to a default when 0).
         [Key(5)] public float Width { get; init; }
+
+        // Distance forward along the aim direction to offset the telegraph origin (used by ranged
+        // TargetCircle previews, e.g. a projectile-AoE that lands away from the caster). 0 = centered.
+        [Key(6)] public float ForwardOffset { get; init; }
     }
 }

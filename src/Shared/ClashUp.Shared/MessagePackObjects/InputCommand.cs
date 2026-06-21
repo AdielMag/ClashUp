@@ -23,7 +23,13 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(3)] public short MoveX { get; init; }
         [Key(4)] public short MoveY { get; init; }
         [Key(5)] public short AimYawQ { get; init; }
-        [Key(6)] public short AimPitchQ { get; init; }
+
+        /// <summary>
+        /// Quantized 0..1 joystick distance-from-center for this cast (via
+        /// <see cref="Simulation.MovementModel.EncodeAxis"/>). Used by <c>CastMode.TargetPoint</c>
+        /// abilities to place the cast point nearer/farther from the player. 0 when not aiming.
+        /// </summary>
+        [Key(6)] public short AimDistanceQ { get; init; }
         [Key(7)] public int SequenceId { get; init; }
     }
 }

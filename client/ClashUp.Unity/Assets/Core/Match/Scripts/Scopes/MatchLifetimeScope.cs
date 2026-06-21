@@ -54,6 +54,7 @@ namespace ClashUp.Client.Match
             {
                 builder.RegisterEntryPoint<AbilityVisualHandler>();
                 builder.RegisterEntryPoint<TelegraphController>();
+                builder.RegisterEntryPoint<ProjectileViewSystem>();
             }
         }
     }

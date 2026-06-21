@@ -19,10 +19,8 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
         public Toggle HitSelfToggle;
         public Toggle HitAlliesToggle;
 
-        public HitboxNode() : base("Hitbox")
+        public HitboxNode() : base("Hitbox", NodeCategory.Hitbox)
         {
-            titleContainer.style.backgroundColor = new Color(0.5f, 0.13f, 0.13f);
-
             DelayField = new FloatField("Delay (s)") { value = 0f };
             EffectField = new EnumField("Effect", HitboxEffect.Damage);
             AmountField = new FloatField("Amount") { value = 10f };
@@ -45,10 +43,12 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
 
             InputPort = Port.Create<Edge>(Orientation.Horizontal, Direction.Input, Port.Capacity.Single, typeof(AbilityNode));
             InputPort.portName = "In";
+            StylePort(InputPort);
             inputContainer.Add(InputPort);
 
             NextPort = Port.Create<Edge>(Orientation.Horizontal, Direction.Output, Port.Capacity.Single, typeof(AbilityNode));
             NextPort.portName = "Next";
+            StylePort(NextPort);
             outputContainer.Add(NextPort);
 
             RefreshExpandedState();

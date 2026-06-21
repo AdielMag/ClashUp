@@ -65,9 +65,23 @@ namespace ClashUp.Client.Gameplay
             // CastShape; fall back to AbilitiesConfig.Default so it still shows against older/stale
             // servers that don't send CastShape over the wire.
             TelegraphConfig castShape = null;
+            bool isTargetPoint = false;
             if (_abilities != null && _abilities.TryGet(new AbilityId(abilityId), out var info))
+            {
                 castShape = info.CastShape;
+                isTargetPoint = info.CastMode == CastMode.TargetPoint;
+            }
             castShape ??= DefaultCastShape(abilityId);
+
+            // TargetPoint abilities cast AT the target, not the player. The projectile spawn +
+            // explosion at the target point carries the visual, so skip all caster-side flash/VFX
+            // here — only play the cast sound.
+            if (isTargetPoint)
+            {
+                if (visual?.CastSound != null)
+                    AudioSource.PlayClipAtPoint(visual.CastSound, pos);
+                return;
+            }
 
             bool spawnedFlash = false;
             if (castShape != null)

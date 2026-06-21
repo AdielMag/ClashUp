@@ -1,0 +1,33 @@
+{
+  "Id": { "Value": "mage_blast" },
+  "DisplayName": "Blast",
+  "CooldownTicks": 90,
+  "ButtonIndex": 1,
+  "TriggerMode": "Manual",
+  "CastMode": "TargetPoint",
+  "AutoRange": 8.0,
+  "Telegraph": {
+    "Shape": "TargetCircle",
+    "Radius": 2.5,
+    "Length": 0.0,
+    "Angle": 0.0,
+    "ShowDurationTicks": 0,
+    "ForwardOffset": 10.0
+  },
+  "RootNode": {
+    "Type": "Projectile",
+    "DelayTicks": 0,
+    "Projectile": {
+      "Speed": 11.0,
+      "Radius": 0.4,
+      "MaxRange": 10.0,
+      "MaxPierceCount": 0,
+      "OnHitEffect": "Damage",
+      "OnHitAmount": 12.0,
+      "AoeRadius": 2.5,
+      "AoeAmount": 18.0,
+      "AoeEffect": "Damage",
+      "LifetimeTicks": 0
+    }
+  }
+}

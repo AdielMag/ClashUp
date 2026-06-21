@@ -34,6 +34,17 @@ public sealed class ConfigSeeder : IHostedService
                   },
                   "AutoAttackId": { "Value": "brawler_punch" },
                   "ActiveAbilityId": { "Value": "brawler_charge" }
+                },
+                {
+                  "Id": { "Value": "mage" },
+                  "DisplayName": "Mage",
+                  "BaseStats": {
+                    "MaxHealth": 70,
+                    "Damage": 8,
+                    "MoveSpeed": 4.5
+                  },
+                  "AutoAttackId": { "Value": "mage_bolt" },
+                  "ActiveAbilityId": { "Value": "mage_blast" }
                 }
               ]
             }

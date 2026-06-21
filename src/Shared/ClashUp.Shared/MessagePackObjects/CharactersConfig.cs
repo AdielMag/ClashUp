@@ -29,6 +29,19 @@ namespace ClashUp.Shared.MessagePackObjects
                     AutoAttackId = new AbilityId("brawler_punch"),
                     ActiveAbilityId = new AbilityId("brawler_charge"),
                 },
+                new CharacterDefinition
+                {
+                    Id = new CharacterId("mage"),
+                    DisplayName = "Mage",
+                    BaseStats = new StatBlock
+                    {
+                        MaxHealth = 70f,
+                        Damage = 8f,
+                        MoveSpeed = 4.5f,
+                    },
+                    AutoAttackId = new AbilityId("mage_bolt"),
+                    ActiveAbilityId = new AbilityId("mage_blast"),
+                },
             },
         };
     }

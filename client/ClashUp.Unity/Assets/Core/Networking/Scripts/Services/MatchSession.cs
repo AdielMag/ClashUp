@@ -18,6 +18,7 @@ namespace ClashUp.Client.Networking
         private readonly GameServerChannelFactory _channelFactory;
         private readonly MatchHubReceiver _receiver;
         private readonly ResolveMatchClient _resolve;
+        private readonly SelectedCharacterStore _selectedCharacter;
         private readonly IDebugLogger _log;
 
         private GrpcChannel? _channel;
@@ -25,11 +26,12 @@ namespace ClashUp.Client.Networking
         private MatchHandoff _handoff;
         private CancellationTokenSource? _reconnectCts;
 
-        public MatchSession(GameServerChannelFactory channelFactory, MatchHubReceiver receiver, ResolveMatchClient resolve, IDebugLogger log)
+        public MatchSession(GameServerChannelFactory channelFactory, MatchHubReceiver receiver, ResolveMatchClient resolve, SelectedCharacterStore selectedCharacter, IDebugLogger log)
         {
             _channelFactory = channelFactory;
             _receiver = receiver;
             _resolve = resolve;
+            _selectedCharacter = selectedCharacter;
             _log = log;
         }
 
@@ -60,6 +62,7 @@ namespace ClashUp.Client.Networking
             {
                 MatchId = _handoff.MatchId,
                 MatchToken = _handoff.MatchToken,
+                CharacterId = _selectedCharacter.Selected,
             });
         }
 

@@ -22,6 +22,7 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
                 Radius = root.TelegraphRadiusField.value,
                 Length = root.TelegraphLengthField.value,
                 Angle = root.TelegraphAngleField.value,
+                ForwardOffset = root.TelegraphForwardOffsetField.value,
                 ShowDurationTicks = SecondsToTicks(root.TelegraphShowDurationField.value),
             };
 
@@ -39,6 +40,9 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
                 DisplayName = root.DisplayNameField.value,
                 CooldownTicks = SecondsToTicks(root.CooldownField.value),
                 ButtonIndex = root.ButtonIndexField.value,
+                TriggerMode = (TriggerMode)root.TriggerModeField.value,
+                CastMode = (CastMode)root.CastModeField.value,
+                AutoRange = root.AutoRangeField.value,
                 Telegraph = telegraph,
                 RootNode = BuildChain(root.OutputPort),
                 VisualConfigGuid = visualGuid,
@@ -96,6 +100,10 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
                     MaxPierceCount = proj.MaxPierceField.value,
                     OnHitEffect = (HitboxEffect)proj.OnHitEffectField.value,
                     OnHitAmount = proj.OnHitAmountField.value,
+                    AoeRadius = proj.AoeRadiusField.value,
+                    AoeAmount = proj.AoeAmountField.value,
+                    AoeEffect = (HitboxEffect)proj.AoeEffectField.value,
+                    LifetimeTicks = SecondsToTicks(proj.LifetimeField.value),
                 },
             };
         }
@@ -127,6 +135,9 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
             root.DisplayNameField.value = definition.DisplayName ?? string.Empty;
             root.CooldownField.value = TicksToSeconds(definition.CooldownTicks);
             root.ButtonIndexField.value = definition.ButtonIndex;
+            root.TriggerModeField.value = definition.TriggerMode;
+            root.CastModeField.value = definition.CastMode;
+            root.AutoRangeField.value = definition.AutoRange;
 
             if (definition.Telegraph != null)
             {
@@ -134,6 +145,7 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
                 root.TelegraphRadiusField.value = definition.Telegraph.Radius;
                 root.TelegraphLengthField.value = definition.Telegraph.Length;
                 root.TelegraphAngleField.value = definition.Telegraph.Angle;
+                root.TelegraphForwardOffsetField.value = definition.Telegraph.ForwardOffset;
                 root.TelegraphShowDurationField.value = TicksToSeconds(definition.Telegraph.ShowDurationTicks);
             }
 
@@ -189,6 +201,10 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
                         proj.MaxPierceField.value = data.Projectile.MaxPierceCount;
                         proj.OnHitEffectField.value = data.Projectile.OnHitEffect;
                         proj.OnHitAmountField.value = data.Projectile.OnHitAmount;
+                        proj.AoeRadiusField.value = data.Projectile.AoeRadius;
+                        proj.AoeAmountField.value = data.Projectile.AoeAmount;
+                        proj.AoeEffectField.value = data.Projectile.AoeEffect;
+                        proj.LifetimeField.value = TicksToSeconds(data.Projectile.LifetimeTicks);
                     }
                     graphView.Connect(parentOutput, proj.InputPort);
                     nextOutput = proj.NextPort;

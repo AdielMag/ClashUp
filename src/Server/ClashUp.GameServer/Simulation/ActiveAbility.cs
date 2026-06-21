@@ -8,6 +8,11 @@ public sealed class ActiveAbility
     public required float AimYaw { get; init; }
     public required AbilityDefinition Definition { get; init; }
 
+    // For CastMode.TargetPoint: the resolved world point the cast originates at (instead of the caster).
+    public bool HasTargetPoint { get; init; }
+    public float TargetX { get; init; }
+    public float TargetZ { get; init; }
+
     public int ElapsedTicks { get; set; }
     public bool IsFinished { get; set; }
 
@@ -17,7 +22,8 @@ public sealed class ActiveAbility
     public required bool[] NodeFinished { get; init; }
     public required HashSet<int>?[] HitboxHitEntities { get; init; }
 
-    public static ActiveAbility Create(string casterId, float aimYaw, AbilityDefinition definition)
+    public static ActiveAbility Create(string casterId, float aimYaw, AbilityDefinition definition,
+                                       bool hasTargetPoint = false, float targetX = 0f, float targetZ = 0f)
     {
         var flat = new List<AbilityNode>();
         if (definition.RootNode != null)
@@ -29,6 +35,9 @@ public sealed class ActiveAbility
             CasterId = casterId,
             AimYaw = aimYaw,
             Definition = definition,
+            HasTargetPoint = hasTargetPoint,
+            TargetX = targetX,
+            TargetZ = targetZ,
             FlatNodes = flat.ToArray(),
             NodeTicksElapsed = new int[count],
             NodeStarted = new bool[count],

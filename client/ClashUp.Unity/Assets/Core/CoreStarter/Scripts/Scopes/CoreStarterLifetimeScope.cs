@@ -20,6 +20,7 @@ namespace ClashUp.Client.CoreStarter
             builder.RegisterInstance(new ClashUpEndpoints());
             builder.Register<MagicOnionChannelProvider>(Lifetime.Singleton);
             builder.Register<SessionTokenStore>(Lifetime.Singleton);
+            builder.Register<SelectedCharacterStore>(Lifetime.Singleton);
             builder.Register<MatchmakingClient>(Lifetime.Singleton);
             builder.Register<ResolveMatchClient>(Lifetime.Singleton);
             builder.Register<GameServerChannelFactory>(Lifetime.Singleton);

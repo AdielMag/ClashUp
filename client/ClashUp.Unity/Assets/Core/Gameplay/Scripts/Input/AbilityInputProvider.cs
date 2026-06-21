@@ -25,6 +25,7 @@ namespace ClashUp.Client.Gameplay
         private GameObject _canvasRoot;
         private bool _pendingFire;
         private float _pendingAimYaw;
+        private float _pendingAimMagnitude;
         private bool _pendingAutoAim;
         private bool _isTouching;
 
@@ -44,6 +45,8 @@ namespace ClashUp.Client.Gameplay
             : 0u;
         public float AimYaw     => _pendingAimYaw;
         public float LiveAimYaw => ComputeLiveAimYaw();
+        public float AimMagnitude     => _pendingAimMagnitude;
+        public float LiveAimMagnitude => ComputeLiveAimMagnitude();
 
         public void Poll()
         {
@@ -54,7 +57,7 @@ namespace ClashUp.Client.Gameplay
                 _pendingFire = true;
                 // AimDirection is zero when the drag stayed inside the dead zone → auto-aim.
                 var dir = _button.AimDirection;
-                SetAim(dir.sqrMagnitude > 0.01f, Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg);
+                SetAim(dir.sqrMagnitude > 0.01f, Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg, _button.AimMagnitude);
                 _button.Consume();
                 _button.StartCooldown(CooldownSeconds);
                 return;
@@ -70,29 +73,35 @@ namespace ClashUp.Client.Gameplay
                 {
                     var screenCenter = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
                     var dir = mouse.position.ReadValue() - screenCenter;
-                    SetAim(dir.sqrMagnitude > 400f, Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg);
+                    SetAim(dir.sqrMagnitude > 400f, Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg, DesktopMagnitude(dir));
                 }
                 else
                 {
-                    SetAim(false, 0f);
+                    SetAim(false, 0f, 0f);
                 }
                 _button.StartCooldown(CooldownSeconds);
             }
         }
 
-        // aimed == true: use the supplied yaw. aimed == false: request server auto-aim.
-        private void SetAim(bool aimed, float yaw)
+        // aimed == true: use the supplied yaw + magnitude. aimed == false: request server auto-aim.
+        private void SetAim(bool aimed, float yaw, float magnitude)
         {
-            _pendingAimYaw  = aimed ? yaw : 0f;
-            _pendingAutoAim = !aimed;
+            _pendingAimYaw       = aimed ? yaw : 0f;
+            _pendingAimMagnitude = aimed ? Mathf.Clamp01(magnitude) : 0f;
+            _pendingAutoAim      = !aimed;
         }
 
         public void ConsumeInput()
         {
-            _pendingFire    = false;
-            _pendingAimYaw  = 0f;
-            _pendingAutoAim = false;
+            _pendingFire         = false;
+            _pendingAimYaw       = 0f;
+            _pendingAimMagnitude = 0f;
+            _pendingAutoAim      = false;
         }
+
+        // Desktop: map mouse offset from screen center to a 0..1 distance (full at ~40% screen height).
+        private static float DesktopMagnitude(Vector2 offset) =>
+            Mathf.Clamp01(offset.magnitude / (Screen.height * 0.4f));
 
         private float ComputeLiveAimYaw()
         {
@@ -111,6 +120,23 @@ namespace ClashUp.Client.Gameplay
                 var dir = mouse.position.ReadValue() - screenCenter;
                 if (dir.sqrMagnitude > 400f)
                     return Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg;
+            }
+
+            return 0f;
+        }
+
+        private float ComputeLiveAimMagnitude()
+        {
+            if (_button != null && _isTouching)
+                return _button.CurrentAimMagnitude;
+
+            var mouse = Mouse.current;
+            if (mouse != null && mouse.leftButton.isPressed)
+            {
+                var screenCenter = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+                var dir = mouse.position.ReadValue() - screenCenter;
+                if (dir.sqrMagnitude > 400f)
+                    return DesktopMagnitude(dir);
             }
 
             return 0f;

@@ -15,4 +15,6 @@ MonoBehaviour:
   _entries:
   - CharacterId: brawler
     Prefab: {fileID: 5205222061269336509, guid: 50713768e8f149c429061a9d50668d7f, type: 3}
+  - CharacterId: mage
+    Prefab: {fileID: 5205222061269336509, guid: 217329d0bccd4797be854bc123595396, type: 3}
   _fallbackPrefab: {fileID: 5205222061269336509, guid: 50713768e8f149c429061a9d50668d7f, type: 3}

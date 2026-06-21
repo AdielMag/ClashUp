@@ -25,6 +25,7 @@ namespace ClashUp.Client.Gameplay
 
         private TelegraphConfig _autoConfig;
         private TelegraphConfig _primaryConfig;
+        private CastMode _primaryCastMode;
         private TelegraphVisualData _autoVisual;
         private TelegraphVisualData _primaryVisual;
 
@@ -112,7 +113,23 @@ namespace ClashUp.Client.Gameplay
                     // Fallback to player facing when no aim direction yet
                     if (Mathf.Approximately(aimYaw, 0f))
                         aimYaw = playerYaw;
-                    _primaryRenderer.Show(_primaryConfig, _primaryVisual ?? FallbackPrimaryVisual, origin, aimYaw);
+
+                    // Ranged AoE preview: slide a TargetCircle forward along the aim so it previews
+                    // where the effect will land. TargetPoint scales the distance by the joystick
+                    // magnitude (nearer/farther); directional abilities use a fixed offset.
+                    var primaryOrigin = origin;
+                    if (_primaryConfig.Shape == TelegraphShape.TargetCircle && _primaryConfig.ForwardOffset > 0f)
+                    {
+                        float scale = _primaryCastMode == CastMode.TargetPoint
+                            ? Mathf.Clamp01(_input.LiveAimMagnitude)
+                            : 1f;
+                        float offset = scale * _primaryConfig.ForwardOffset;
+                        float yawRad = aimYaw * Mathf.Deg2Rad;
+                        primaryOrigin.x += Mathf.Sin(yawRad) * offset;
+                        primaryOrigin.z += Mathf.Cos(yawRad) * offset;
+                    }
+
+                    _primaryRenderer.Show(_primaryConfig, _primaryVisual ?? FallbackPrimaryVisual, primaryOrigin, aimYaw);
                 }
                 else
                 {
@@ -162,6 +179,7 @@ namespace ClashUp.Client.Gameplay
             if (charDef.ActiveAbilityId.Value != null && _abilities.TryGet(charDef.ActiveAbilityId, out var primaryInfo))
             {
                 _primaryConfig = primaryInfo.Telegraph;
+                _primaryCastMode = primaryInfo.CastMode;
                 var primaryVis = _registry?.GetByAbilityId(charDef.ActiveAbilityId.Value);
                 _primaryVisual = primaryVis?.Telegraph;
             }

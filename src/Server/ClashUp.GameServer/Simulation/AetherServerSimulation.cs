@@ -16,6 +16,7 @@ public sealed class AetherServerSimulation : IServerSimulation
     private readonly MatchPhysicsWorld _world = new();
     private readonly HealthTable _health = new();
     private readonly AbilityExecutor _abilities = new();
+    private readonly ProjectileSimulation _projectiles = new();
     private readonly Dictionary<string, int> _lastSeq = new();
     private readonly Dictionary<int, int> _teamSlotCounters = new();
     private readonly HashSet<string> _knownPlayers = new();
@@ -76,7 +77,8 @@ public sealed class AetherServerSimulation : IServerSimulation
         if (command.ButtonMask != 0)
         {
             float aimYaw = MovementModel.DecodeAxis(command.AimYawQ) * 180f;
-            _abilities.ProcessInput(player.Value, command.ButtonMask, aimYaw, _world, _health, CurrentTick);
+            float aimMagnitude = MovementModel.DecodeAxis(command.AimDistanceQ);
+            _abilities.ProcessInput(player.Value, command.ButtonMask, aimYaw, aimMagnitude, _world, _health, CurrentTick);
         }
     }
 
@@ -84,7 +86,8 @@ public sealed class AetherServerSimulation : IServerSimulation
     {
         _world.Step(deltaSeconds);
         _health.Tick();
-        _abilities.Tick(_world, _health, CurrentTick);
+        _abilities.Tick(_world, _health, _projectiles, deltaSeconds, CurrentTick);
+        _projectiles.Tick(_world, _health, CurrentTick);
         CurrentTick++;
 
         // Manage respawn timers for dead players.
@@ -120,7 +123,18 @@ public sealed class AetherServerSimulation : IServerSimulation
         }
     }
 
-    public IReadOnlyList<MatchEvent> DrainAbilityEvents() => _abilities.DrainEvents();
+    public IReadOnlyList<MatchEvent> DrainAbilityEvents()
+    {
+        var abilityEvents = _abilities.DrainEvents();
+        var projectileEvents = _projectiles.DrainEvents();
+        if (projectileEvents.Count == 0) return abilityEvents;
+        if (abilityEvents.Count == 0) return projectileEvents;
+
+        var merged = new List<MatchEvent>(abilityEvents.Count + projectileEvents.Count);
+        merged.AddRange(abilityEvents);
+        merged.AddRange(projectileEvents);
+        return merged;
+    }
 
     public ReadOnlyMemory<byte> EncodeDelta(int baselineTick)
     {

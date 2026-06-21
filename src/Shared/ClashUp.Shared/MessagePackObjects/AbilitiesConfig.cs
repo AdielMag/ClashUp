@@ -60,6 +60,39 @@ namespace ClashUp.Shared.MessagePackObjects
                     AutoRange = 4.0f,
                     CastMode = CastMode.Aimed,
                 },
+                new AbilityClientInfo
+                {
+                    Id = new AbilityId("mage_bolt"),
+                    Telegraph = new TelegraphConfig
+                    {
+                        Shape = TelegraphShape.CircleAroundCaster,
+                        Radius = 9.0f,
+                    },
+                    CastShape = new TelegraphConfig
+                    {
+                        Shape = TelegraphShape.TargetCircle,
+                        Radius = 0.35f,
+                    },
+                    AutoRange = 9.0f,
+                    CastMode = CastMode.Instant,
+                },
+                new AbilityClientInfo
+                {
+                    Id = new AbilityId("mage_blast"),
+                    Telegraph = new TelegraphConfig
+                    {
+                        Shape = TelegraphShape.TargetCircle,
+                        Radius = 2.5f,
+                        ForwardOffset = 10.0f,
+                    },
+                    CastShape = new TelegraphConfig
+                    {
+                        Shape = TelegraphShape.TargetCircle,
+                        Radius = 2.5f,
+                    },
+                    AutoRange = 8.0f,
+                    CastMode = CastMode.TargetPoint,
+                },
             },
         };
     }

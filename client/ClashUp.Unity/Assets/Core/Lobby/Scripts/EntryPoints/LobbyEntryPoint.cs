@@ -3,6 +3,8 @@ using System.Threading;
 using ClashUp.Client.Core;
 using ClashUp.Client.CoreStarter;
 using ClashUp.Client.Networking;
+using ClashUp.Shared.Characters;
+using ClashUp.Shared.MessagePackObjects;
 
 using Cysharp.Threading.Tasks;
 
@@ -18,12 +20,14 @@ namespace ClashUp.Client.Lobby
 
         private readonly GameFlowController _flow;
         private readonly MatchmakingClient _matchmaking;
+        private readonly SelectedCharacterStore _selectedCharacter;
         private readonly IDebugLogger _log;
 
-        public LobbyEntryPoint(GameFlowController flow, MatchmakingClient matchmaking, IDebugLogger log)
+        public LobbyEntryPoint(GameFlowController flow, MatchmakingClient matchmaking, SelectedCharacterStore selectedCharacter, IDebugLogger log)
         {
             _flow = flow;
             _matchmaking = matchmaking;
+            _selectedCharacter = selectedCharacter;
             _log = log;
         }
 
@@ -65,6 +69,17 @@ namespace ClashUp.Client.Lobby
             await playClicked.Task.AttachExternalCancellation(cancellation);
 
             ui.Destroy();
+
+            // Generic character selection before matchmaking (used across all game modes for now).
+            var selectUI = CharacterSelectUI.Create(CharactersConfig.Default, _selectedCharacter.Selected);
+            var confirmed = new UniTaskCompletionSource<CharacterId>();
+            selectUI.OnConfirmed += id => confirmed.TrySetResult(id);
+            var chosen = await confirmed.Task.AttachExternalCancellation(cancellation);
+            selectUI.Destroy();
+
+            _selectedCharacter.Selected = chosen;
+            _log.Log($"[Lobby] Character selected: {chosen.Value}");
+
             _flow.EnterMatchmaking();
         }
     }

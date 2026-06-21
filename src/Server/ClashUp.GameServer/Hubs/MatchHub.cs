@@ -80,13 +80,18 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
         {
             var assignment = context.Provision.PlayerAssignments
                 .FirstOrDefault(a => a.PlayerId.Value == _claims.PlayerId);
+
+            // Honor the player's chosen character; the catalog normalizes unknown/empty ids to the
+            // default, so the server stays authoritative even against a stale or malicious client.
+            var catalog = CharacterCatalog.FromConfig(context.Provision.Characters);
+            var chosenCharacter = catalog.Get(request.CharacterId).Id;
             summary = new PlayerSummary
             {
                 Id = new PlayerId(_claims.PlayerId),
                 DisplayName = $"Player-{_claims.PlayerId[..6]}",
                 TeamId = assignment?.TeamId ?? 0,
                 ColorSlot = context.GetPlayers().Count,
-                CharacterId = CharacterCatalog.FromConfig(context.Provision.Characters).DefaultId,
+                CharacterId = chosenCharacter,
             };
             context.AddPlayer(summary);
         }

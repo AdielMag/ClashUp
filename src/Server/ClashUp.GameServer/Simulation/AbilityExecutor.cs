@@ -13,6 +13,11 @@ public sealed class AbilityExecutor
     private readonly List<MatchEvent> _pendingEvents = new();
     private readonly int[] _overlapScratch = new int[64];
 
+    // Set at the top of each Tick so EvaluateProjectile can hand spawns off to the projectile
+    // system without threading them through the whole node-evaluation call chain.
+    private ProjectileSimulation? _projectiles;
+    private double _dt;
+
     public void RegisterAbilities(IEnumerable<AbilityDefinition> definitions)
     {
         foreach (var def in definitions)
@@ -29,7 +34,7 @@ public sealed class AbilityExecutor
         _playerSlots[playerId] = slots.ToArray();
     }
 
-    public void ProcessInput(string playerId, uint buttonMask, float aimYaw,
+    public void ProcessInput(string playerId, uint buttonMask, float aimYaw, float aimMagnitude,
                              MatchPhysicsWorld world, HealthTable health, int currentTick)
     {
         if (!_playerSlots.TryGetValue(playerId, out var slots)) return;
@@ -46,7 +51,14 @@ public sealed class AbilityExecutor
             if (slot.CooldownRemaining > 0) continue;
             if (slot.IsActive) continue;
 
-            // No manual aim → lock onto the nearest enemy inside the ability's range.
+            // Point-target: joystick direction + distance resolve a world point; cast originates there.
+            if (def.CastMode == CastMode.TargetPoint)
+            {
+                ActivateTargetPoint(playerId, i, aimYaw, aimMagnitude, autoAim, def, world, health, currentTick);
+                continue;
+            }
+
+            // Directional: no manual aim → lock onto the nearest enemy inside the ability's range.
             float castYaw = aimYaw;
             if (autoAim && def.AutoRange > 0f)
             {
@@ -58,8 +70,51 @@ public sealed class AbilityExecutor
         }
     }
 
-    public void Tick(MatchPhysicsWorld world, HealthTable health, int currentTick)
+    // Resolve the target world point for a CastMode.TargetPoint ability and activate it there.
+    private void ActivateTargetPoint(string playerId, int slotIndex, float aimYaw, float aimMagnitude,
+                                     bool autoAim, AbilityDefinition def, MatchPhysicsWorld world,
+                                     HealthTable health, int currentTick)
     {
+        var (cx, cz, casterYaw) = world.GetPlayerState(playerId);
+
+        // Max reach = the telegraph's forward offset (single source of truth with the client preview).
+        float maxDist = def.Telegraph?.ForwardOffset ?? 0f;
+        if (maxDist <= 0f) maxDist = def.AutoRange;
+        if (maxDist <= 0f) maxDist = 1f;
+
+        float targetX, targetZ;
+        if (autoAim)
+        {
+            // Tap without aiming → nearest enemy's position; else a forward offset ahead of the player.
+            if (FindNearestEnemyPoint(playerId, world, health, maxDist, out float ex, out float ez))
+            {
+                targetX = ex;
+                targetZ = ez;
+            }
+            else
+            {
+                float fwd = casterYaw * (MathF.PI / 180f);
+                targetX = cx + MathF.Sin(fwd) * maxDist;
+                targetZ = cz + MathF.Cos(fwd) * maxDist;
+            }
+        }
+        else
+        {
+            float dist = Math.Clamp(aimMagnitude, 0f, 1f) * maxDist;
+            float yawRad = aimYaw * (MathF.PI / 180f);
+            targetX = cx + MathF.Sin(yawRad) * dist;
+            targetZ = cz + MathF.Cos(yawRad) * dist;
+        }
+
+        ActivateSlot(playerId, slotIndex, aimYaw, def, currentTick, hasTarget: true, targetX, targetZ);
+    }
+
+    public void Tick(MatchPhysicsWorld world, HealthTable health,
+                     ProjectileSimulation projectiles, double dt, int currentTick)
+    {
+        _projectiles = projectiles;
+        _dt = dt;
+
         foreach (var slots in _playerSlots.Values)
             foreach (var slot in slots)
                 if (slot.CooldownRemaining > 0) slot.CooldownRemaining--;
@@ -105,21 +160,25 @@ public sealed class AbilityExecutor
     }
 
     private void ActivateSlot(string playerId, int slotIndex, float aimYaw,
-                               AbilityDefinition def, int currentTick)
+                               AbilityDefinition def, int currentTick,
+                               bool hasTarget = false, float targetX = 0f, float targetZ = 0f)
     {
         var slots = _playerSlots[playerId];
         var slot = slots[slotIndex];
         slot.IsActive = true;
         slot.CooldownRemaining = def.CooldownTicks;
 
-        var ability = ActiveAbility.Create(playerId, aimYaw, def);
+        var ability = ActiveAbility.Create(playerId, aimYaw, def, hasTarget, targetX, targetZ);
         _activeAbilities.Add(ability);
 
+        // TargetPoint casts carry the resolved point so the client shows the cast at the target.
         _pendingEvents.Add(new MatchEvent
         {
             Tick = currentTick,
             Kind = "ability_cast",
-            Payload = JsonSerializer.Serialize(new { caster = playerId, abilityId = def.Id.Value, tick = currentTick, aimYaw }),
+            Payload = hasTarget
+                ? JsonSerializer.Serialize(new { caster = playerId, abilityId = def.Id.Value, tick = currentTick, aimYaw, targetX, targetZ })
+                : JsonSerializer.Serialize(new { caster = playerId, abilityId = def.Id.Value, tick = currentTick, aimYaw }),
         });
     }
 
@@ -150,6 +209,40 @@ public sealed class AbilityExecutor
         }
 
         return bestYaw;
+    }
+
+    // Like FindNearestEnemyYaw, but returns the enemy's world position (for TargetPoint auto-aim).
+    private bool FindNearestEnemyPoint(string casterId, MatchPhysicsWorld world, HealthTable health,
+                                       float range, out float x, out float z)
+    {
+        var (cx, cz, _) = world.GetPlayerState(casterId);
+        int hitCount = world.OverlapCircle(cx, cz, range, _overlapScratch);
+
+        float bestDistSq = float.MaxValue;
+        x = 0f;
+        z = 0f;
+        bool found = false;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            string? targetId = world.GetPlayerByEntityId(_overlapScratch[i]);
+            if (targetId == null || targetId == casterId) continue;
+            if (!health.IsAlive(targetId)) continue;
+
+            var (tx, tz, _) = world.GetPlayerState(targetId);
+            float dx = tx - cx;
+            float dz = tz - cz;
+            float distSq = dx * dx + dz * dz;
+            if (distSq < bestDistSq)
+            {
+                bestDistSq = distSq;
+                x = tx;
+                z = tz;
+                found = true;
+            }
+        }
+
+        return found;
     }
 
     private void TickAbility(ActiveAbility ability, MatchPhysicsWorld world, HealthTable health, int currentTick)
@@ -269,9 +362,19 @@ public sealed class AbilityExecutor
         float dirX = MathF.Sin(yawRad);
         float dirZ = MathF.Cos(yawRad);
 
-        // Shape starts OffsetForward in front of the caster.
-        float startX = cx + dirX * cfg.OffsetForward;
-        float startZ = cz + dirZ * cfg.OffsetForward;
+        // TargetPoint: the shape is centered on the resolved target (OffsetForward ignored).
+        // Otherwise it starts OffsetForward in front of the caster.
+        float startX, startZ;
+        if (ability.HasTargetPoint)
+        {
+            startX = ability.TargetX;
+            startZ = ability.TargetZ;
+        }
+        else
+        {
+            startX = cx + dirX * cfg.OffsetForward;
+            startZ = cz + dirZ * cfg.OffsetForward;
+        }
 
         // Broad-phase circle that bounds the shape; refined per-target below for Capsule/Cone.
         float queryX = startX, queryZ = startZ, queryRadius;
@@ -344,24 +447,21 @@ public sealed class AbilityExecutor
         if (ability.NodeTicksElapsed[nodeIndex] == 1)
         {
             var cfg = node.Projectile;
-            if (cfg != null)
+            if (cfg != null && _projectiles != null)
             {
-                var (cx, cz, _) = world.GetPlayerState(ability.CasterId);
-                int entityId = world.GetEntityIdForPlayer(ability.CasterId);
-                _pendingEvents.Add(new MatchEvent
+                if (ability.HasTargetPoint)
                 {
-                    Tick = currentTick,
-                    Kind = "projectile_spawn",
-                    Payload = JsonSerializer.Serialize(new
-                    {
-                        id = entityId,
-                        abilityId = ability.Definition.Id.Value,
-                        x = cx, z = cz,
-                        yaw = ability.AimYaw,
-                        speed = cfg.Speed,
-                        maxRange = cfg.MaxRange,
-                    }),
-                });
+                    // Projectile appears at the chosen point and detonates there (no travel from caster).
+                    _projectiles.Spawn(ability.CasterId, ability.Definition.Id.Value,
+                        ability.TargetX, ability.TargetZ, ability.AimYaw, cfg, _dt, currentTick,
+                        detonateAtOrigin: true);
+                }
+                else
+                {
+                    var (cx, cz, _) = world.GetPlayerState(ability.CasterId);
+                    _projectiles.Spawn(ability.CasterId, ability.Definition.Id.Value,
+                        cx, cz, ability.AimYaw, cfg, _dt, currentTick);
+                }
             }
         }
 

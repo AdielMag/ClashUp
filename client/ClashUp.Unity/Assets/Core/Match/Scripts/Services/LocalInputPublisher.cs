@@ -69,6 +69,7 @@ namespace ClashUp.Client.Match
             var dir = _input.Value;
             uint buttonMask = _abilityInput.ButtonMask;
             float aimYaw = _abilityInput.AimYaw;
+            float aimMagnitude = _abilityInput.AimMagnitude;
 
             var cmd = new InputCommand
             {
@@ -78,6 +79,7 @@ namespace ClashUp.Client.Match
                 MoveY = MovementModel.EncodeAxis(dir.y),
                 ButtonMask = buttonMask,
                 AimYawQ = MovementModel.EncodeAxis(aimYaw / 180f),
+                AimDistanceQ = MovementModel.EncodeAxis(aimMagnitude),
                 SequenceId = _sequenceId,
             };
 
