@@ -25,9 +25,12 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
 
         public SpawnNode() : base("Spawn", NodeCategory.Spawn)
         {
-            PrefabIdField = new TextField("Prefab Id") { value = "" };
-            CountField = new IntegerField("Count") { value = 1 };
-            SpreadField = new FloatField("Spread") { value = 0f };
+            PrefabIdField = new TextField("Prefab Id") { value = "",
+                tooltip = "Id of the prefab/entity to spawn." };
+            CountField = new IntegerField("Count") { value = 1,
+                tooltip = "How many instances to spawn." };
+            SpreadField = new FloatField("Spread") { value = 0f,
+                tooltip = "Scatter radius for the spawned instances (meters)." };
 
             extensionContainer.Add(PrefabIdField);
             extensionContainer.Add(CountField);

@@ -13,7 +13,8 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
 
         public ParallelNode() : base("Parallel", NodeCategory.Flow)
         {
-            DelayField = new FloatField("Delay (s)") { value = 0f };
+            DelayField = new FloatField("Delay (s)") { value = 0f,
+                tooltip = "Delay before the child branches start running, measured from when the previous node completes." };
             extensionContainer.Add(DelayField);
 
             InputPort = Port.Create<Edge>(Orientation.Horizontal, Direction.Input, Port.Capacity.Single, typeof(AbilityNode));

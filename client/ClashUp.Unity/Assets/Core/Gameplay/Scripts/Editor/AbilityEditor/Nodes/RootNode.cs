@@ -35,24 +35,37 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
         {
             capabilities &= ~Capabilities.Deletable;
 
-            IdField = new TextField("Ability ID") { value = "new_ability" };
-            DisplayNameField = new TextField("Display Name") { value = "New Ability" };
-            CooldownField = new FloatField("Cooldown (s)") { value = 1f };
-            ButtonIndexField = new IntegerField("Button (0-3)") { value = 0 };
-            TriggerModeField = new EnumField("Trigger Mode", TriggerMode.Manual);
-            CastModeField = new EnumField("Cast Mode", CastMode.Aimed);
-            AutoRangeField = new FloatField("Auto Range") { value = 0f };
+            IdField = new TextField("Ability ID") { value = "new_ability",
+                tooltip = "Unique id for this ability. Used as the JSON filename (ability_<id>.json) and to wire the ability to characters." };
+            DisplayNameField = new TextField("Display Name") { value = "New Ability",
+                tooltip = "Human-readable name shown in UI." };
+            CooldownField = new FloatField("Cooldown (s)") { value = 1f,
+                tooltip = "Seconds before the ability can be cast again." };
+            ButtonIndexField = new IntegerField("Button (0-3)") { value = 0,
+                tooltip = "Which input button triggers this ability (0-3)." };
+            TriggerModeField = new EnumField("Trigger Mode", TriggerMode.Manual) {
+                tooltip = "Manual = player taps the button to cast. Auto = fires automatically when a target is within Auto Range." };
+            CastModeField = new EnumField("Cast Mode", CastMode.Aimed) {
+                tooltip = "How aim/target is resolved: Aimed (direction from joystick), TargetPoint (a point on the ground), etc." };
+            AutoRangeField = new FloatField("Auto Range") { value = 0f,
+                tooltip = "For Auto trigger: distance within which the ability fires at a target (meters)." };
 
-            TelegraphTypeField = new EnumField("Shape", TelegraphShapeType.Circle);
-            TelegraphOriginField = new EnumField("Origin", TelegraphOriginType.Caster);
-            TelegraphRadiusField = new FloatField("Radius") { value = 1.5f };
-            TelegraphLengthField = new FloatField("Length") { value = 3f };
-            TelegraphAngleField = new FloatField("Cone Spread (deg)") { value = 45f };
+            TelegraphTypeField = new EnumField("Shape", TelegraphShapeType.Circle) {
+                tooltip = "Telegraph footprint shape: Circle or Line (Line+Target origin becomes a cone)." };
+            TelegraphOriginField = new EnumField("Origin", TelegraphOriginType.Caster) {
+                tooltip = "Telegraph anchor: Caster (drawn around the player) or Target (slides downrange toward the aim point)." };
+            TelegraphRadiusField = new FloatField("Radius") { value = 1.5f,
+                tooltip = "Radius of the circular telegraph (meters)." };
+            TelegraphLengthField = new FloatField("Length") { value = 3f,
+                tooltip = "Length/reach of the line or cone telegraph (meters)." };
+            TelegraphAngleField = new FloatField("Cone Spread (deg)") { value = 45f,
+                tooltip = "Full cone angle in degrees. Only used when Shape = Line and Origin = Target." };
             TelegraphForwardOffsetField = new FloatField("Forward Offset") { value = 0f };
             TelegraphForwardOffsetField.tooltip =
                 "TargetCircle: fixed forward offset in directional modes, or the MAX target distance " +
                 "when Cast Mode = TargetPoint (joystick distance scales 0..this).";
-            TelegraphShowDurationField = new FloatField("Show (s)") { value = 0f };
+            TelegraphShowDurationField = new FloatField("Show (s)") { value = 0f,
+                tooltip = "How long the telegraph stays visible after cast (0 = only while aiming)." };
 
             extensionContainer.Add(IdField);
             extensionContainer.Add(DisplayNameField);
@@ -71,7 +84,8 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
             extensionContainer.Add(TelegraphShowDurationField);
 
             extensionContainer.Add(MakeSectionHeader("Visuals"));
-            VisualConfigField = new ObjectField("Visual Config") { objectType = typeof(AbilityVisualConfig), allowSceneObjects = false };
+            VisualConfigField = new ObjectField("Visual Config") { objectType = typeof(AbilityVisualConfig), allowSceneObjects = false,
+                tooltip = "AbilityVisualConfig asset holding this ability's VFX prefabs, sounds and telegraph visuals." };
             extensionContainer.Add(VisualConfigField);
 
             TelegraphTypeField.RegisterValueChangedCallback(_ => UpdateTelegraphFieldVisibility());

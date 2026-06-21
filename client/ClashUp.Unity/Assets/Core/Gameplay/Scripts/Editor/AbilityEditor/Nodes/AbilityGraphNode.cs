@@ -22,6 +22,22 @@ namespace ClashUp.Client.Gameplay.Editor.AbilityEditor
 
             AddToClassList("clashup-node");
             ApplyCategoryChrome();
+
+            // Once attached, mirror each field's tooltip onto its label so the
+            // description shows when hovering the label too (otherwise the label's
+            // built-in truncation tooltip — the full label text — takes over).
+            // Runs for every node type automatically; no per-field wiring needed.
+            RegisterCallback<AttachToPanelEvent>(_ => PropagateFieldTooltips());
+        }
+
+        private void PropagateFieldTooltips()
+        {
+            this.Query<VisualElement>(className: "unity-base-field").ForEach(field =>
+            {
+                if (string.IsNullOrEmpty(field.tooltip)) return;
+                var label = field.Q<Label>(className: "unity-base-field__label");
+                if (label != null) label.tooltip = field.tooltip;
+            });
         }
 
         private void ApplyCategoryChrome()
