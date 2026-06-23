@@ -202,6 +202,7 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 - [projectile-system.md](projectile-system.md) — Server-authoritative projectile sim + client dead-reckon visuals, AoE explosions, projectile events (fire-and-forget)
 - [target-point-cast.md](target-point-cast.md) — CastMode.TargetPoint: joystick dir+distance picks a world point; magnitude input pipeline, telegraph, editor round-trip
 - [character-selection.md](character-selection.md) — Pre-matchmaking character picker, SelectedCharacterStore, MatchJoinRequest.CharacterId wiring
+- [forfeit-leave-match.md](forfeit-leave-match.md) — Mid-match "Leave Match"/forfeit: client confirm prompt, server last-team-standing end condition, permanent player ejection (GS `_forfeited` barrier + Mongo `$pull` via `ReportPlayerLeftAsync`)
 - [lobby-ui.md](lobby-ui.md) — Lobby pager UI: horizontal scroll, vertical per-page scroll, bottom bar, play button wiring, VContainer scope
 - [lobby-ui-reskin.md](lobby-ui-reskin.md) — Clash-style lobby reskin: 5 nav screens (Store/Heroes/Play/Guild/Missions) + tab nav + Champion Select, built by `LobbyUiBuilder` (menu ClashUp ▸ Build Lobby UI); BATTLE→MathmakingPage wiring; radial-glow bg, 9-slice/tint/glyph gotchas; no "critter" naming
 - [gcp-ops-gotchas.md](gcp-ops-gotchas.md) — Deploy/verify gotchas: GITHUB_TOKEN env breaks push (use `env -u`), MIG update policies (Services PROACTIVE / GameServer OPPORTUNISTIC), verifying GS via MIG health + Monitoring REST API, CI dev-vs-release paths

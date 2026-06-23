@@ -213,6 +213,11 @@ There are three distinct root causes, each fixed separately:
 - **Fix**: `CheckActiveMatchAsync` checks `(UtcNow - MatchDoc.CreatedAt).TotalSeconds` vs `MatchDoc.DurationSeconds`. If remaining < 10s, marks match Ended and returns Queued.
 - `MatchDoc.DurationSeconds` was added for this purpose; set by `Matchmaker` when creating the doc.
 
+### 5. Fire-and-forget RPC killed by immediate channel dispose ("still saying reconnect")
+- **Cause**: `MatchSessionRunner.Dispose` did `_session.LeaveAsync().Forget()` then immediately `_session.Dispose()` (disposes the gRPC channel). The fire-and-forget `LeaveAsync` RPC was cancelled by the channel teardown before it reached the server → server only saw `OnDisconnected` → treated it as a *reconnectable* disconnect → player stayed in match → lobby reconnected.
+- **Fix**: On an explicit leave/forfeit, **await** the teardown RPC before unloading the scene: `OnBackToLobby` → `await _session.LeaveAsync()` *then* `ReturnToLobbyAsync()`. The later Dispose-time `LeaveAsync().Forget()` becomes a server-side no-op via a `_left` guard.
+- **General rule**: any client RPC that must reach the server during teardown (leave/forfeit/report) MUST be awaited before disposing the channel — never rely on `.Forget()` then `Dispose()`. If the server also chains a DB write the client depends on (e.g. Mongo `$pull` so `CheckActiveMatchAsync` won't reconnect), **await** that GS→Services call inside the hub method too, so it's done by the time the client's awaited RPC returns. See [[forfeit-leave-match]].
+
 **Rule**: The client is dumb — it never synthesizes match-end on its own. The server must always deliver `OnMatchEnded`. `SessionResetHandler` handles the pause case separately (full boot reset on unpause).
 
 ## Prediction & Interpolation Debugging
