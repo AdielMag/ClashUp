@@ -36,4 +36,10 @@ public sealed class MatchRepository : IMatchRepository
         _collection
             .Find(x => x.State == "Active" && x.Players.Any(p => p.PlayerId == playerId))
             .FirstOrDefaultAsync(cancellationToken)!;
+
+    public Task RemovePlayerAsync(string matchId, string playerId, CancellationToken cancellationToken)
+    {
+        var update = Builders<MatchDoc>.Update.PullFilter(x => x.Players, p => p.PlayerId == playerId);
+        return _collection.UpdateOneAsync(x => x.MatchId == matchId, update, cancellationToken: cancellationToken);
+    }
 }

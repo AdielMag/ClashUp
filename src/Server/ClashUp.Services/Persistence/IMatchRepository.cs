@@ -6,4 +6,5 @@ public interface IMatchRepository
     Task SetStateAsync(string matchId, string state, CancellationToken cancellationToken);
     Task<MatchDoc?> GetByIdAsync(string matchId, CancellationToken cancellationToken);
     Task<MatchDoc?> FindActiveForPlayerAsync(string playerId, CancellationToken cancellationToken);
+    Task RemovePlayerAsync(string matchId, string playerId, CancellationToken cancellationToken);
 }

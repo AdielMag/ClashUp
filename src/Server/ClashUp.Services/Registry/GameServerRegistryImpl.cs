@@ -80,6 +80,14 @@ public sealed class GameServerRegistryImpl : ServiceBase<IGameServerRegistry>, I
         _logger.LogInformation("Match ended: {MatchId} on {InstanceId}", notice.MatchId, notice.InstanceId);
     }
 
+    public async UnaryResult ReportPlayerLeftAsync(GsPlayerLeft notice)
+    {
+        var ct = Context.CallContext.CancellationToken;
+        await _matchRepo.RemovePlayerAsync(notice.MatchId.Value, notice.PlayerId, ct);
+        _logger.LogInformation("Player {PlayerId} left match {MatchId} on {InstanceId}",
+            notice.PlayerId, notice.MatchId, notice.InstanceId);
+    }
+
     public async UnaryResult MarkDrainingAsync(string instanceId)
     {
         await _repository.MarkStatusAsync(instanceId, "Draining", Context.CallContext.CancellationToken);

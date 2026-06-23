@@ -16,11 +16,16 @@ namespace ClashUp.Client.Match
         private readonly TMP_Text _playerCountLabel;
         private readonly GameObject _backButtonObj;
         private readonly Button _backButton;
+        private readonly GameObject _leaveButtonObj;
+        private readonly Button _leaveButton;
+        private readonly GameObject _confirmOverlay;
 
         public event Action OnBackToLobbyClicked;
 
         private MatchUI(GameObject root, TMP_Text statusLabel, TMP_Text timerLabel,
-            TMP_Text playerCountLabel, GameObject backButtonObj, Button backButton)
+            TMP_Text playerCountLabel, GameObject backButtonObj, Button backButton,
+            GameObject leaveButtonObj, Button leaveButton, GameObject confirmOverlay,
+            Button confirmButton, Button cancelButton)
         {
             _root = root;
             _statusLabel = statusLabel;
@@ -28,8 +33,23 @@ namespace ClashUp.Client.Match
             _playerCountLabel = playerCountLabel;
             _backButtonObj = backButtonObj;
             _backButton = backButton;
+            _leaveButtonObj = leaveButtonObj;
+            _leaveButton = leaveButton;
+            _confirmOverlay = confirmOverlay;
+
             _backButton.onClick.AddListener(() => OnBackToLobbyClicked?.Invoke());
             _backButtonObj.SetActive(false);
+
+            // Leave button opens the confirmation; confirming reuses the back-to-lobby path
+            // (which forfeits via MatchSessionRunner.Dispose → MatchSession.LeaveAsync).
+            _leaveButton.onClick.AddListener(() => _confirmOverlay.SetActive(true));
+            cancelButton.onClick.AddListener(() => _confirmOverlay.SetActive(false));
+            confirmButton.onClick.AddListener(() =>
+            {
+                _confirmOverlay.SetActive(false);
+                OnBackToLobbyClicked?.Invoke();
+            });
+            _confirmOverlay.SetActive(false);
         }
 
         public static MatchUI Create()
@@ -115,7 +135,95 @@ namespace ClashUp.Client.Match
             btnText.alignment = TextAlignmentOptions.Center;
             btnText.color = Color.white;
 
-            return new MatchUI(root, statusLabel, timerLabel, playerCountLabel, btnObj, backButton);
+            // Leave Match button (top-right, visible during active play)
+            var (leaveObj, leaveButton) = CreateButton(root.transform, "LeaveMatchButton",
+                "Leave Match", new Color(0.6f, 0.2f, 0.2f, 1f), new Vector2(220f, 60f));
+            var leaveRect = (RectTransform)leaveObj.transform;
+            leaveRect.anchorMin = new Vector2(1f, 1f);
+            leaveRect.anchorMax = new Vector2(1f, 1f);
+            leaveRect.pivot = new Vector2(1f, 1f);
+            leaveRect.anchoredPosition = new Vector2(-30f, -30f);
+
+            // Confirmation overlay (hidden until the Leave button is pressed)
+            var overlay = new GameObject("LeaveConfirmOverlay");
+            overlay.transform.SetParent(root.transform, false);
+            var overlayRect = overlay.AddComponent<RectTransform>();
+            overlayRect.anchorMin = Vector2.zero;
+            overlayRect.anchorMax = Vector2.one;
+            overlayRect.sizeDelta = Vector2.zero;
+            overlayRect.anchoredPosition = Vector2.zero;
+            var dim = overlay.AddComponent<Image>();
+            dim.color = new Color(0f, 0f, 0f, 0.85f);
+
+            var panel = new GameObject("Panel");
+            panel.transform.SetParent(overlay.transform, false);
+            var panelRect = panel.AddComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(720f, 360f);
+            var panelImg = panel.AddComponent<Image>();
+            panelImg.color = new Color(0.12f, 0.12f, 0.14f, 1f);
+
+            var promptObj = new GameObject("Prompt");
+            promptObj.transform.SetParent(panel.transform, false);
+            var promptRect = promptObj.AddComponent<RectTransform>();
+            promptRect.anchorMin = new Vector2(0.5f, 1f);
+            promptRect.anchorMax = new Vector2(0.5f, 1f);
+            promptRect.pivot = new Vector2(0.5f, 1f);
+            promptRect.anchoredPosition = new Vector2(0f, -50f);
+            promptRect.sizeDelta = new Vector2(640f, 160f);
+            var promptText = promptObj.AddComponent<TextMeshProUGUI>();
+            promptText.text = "Leave the match?\nThis will forfeit and count as a loss.";
+            promptText.fontSize = 32;
+            promptText.alignment = TextAlignmentOptions.Center;
+            promptText.color = Color.white;
+
+            var (cancelObj, cancelButton) = CreateButton(panel.transform, "CancelButton",
+                "Cancel", new Color(0.25f, 0.25f, 0.3f, 1f), new Vector2(260f, 80f));
+            var cancelRect = (RectTransform)cancelObj.transform;
+            cancelRect.anchorMin = new Vector2(0.5f, 0f);
+            cancelRect.anchorMax = new Vector2(0.5f, 0f);
+            cancelRect.pivot = new Vector2(0.5f, 0f);
+            cancelRect.anchoredPosition = new Vector2(-150f, 40f);
+
+            var (confirmObj, confirmButton) = CreateButton(panel.transform, "ConfirmLeaveButton",
+                "Leave", new Color(0.7f, 0.18f, 0.18f, 1f), new Vector2(260f, 80f));
+            var confirmRect = (RectTransform)confirmObj.transform;
+            confirmRect.anchorMin = new Vector2(0.5f, 0f);
+            confirmRect.anchorMax = new Vector2(0.5f, 0f);
+            confirmRect.pivot = new Vector2(0.5f, 0f);
+            confirmRect.anchoredPosition = new Vector2(150f, 40f);
+
+            return new MatchUI(root, statusLabel, timerLabel, playerCountLabel, btnObj, backButton,
+                leaveObj, leaveButton, overlay, confirmButton, cancelButton);
+        }
+
+        private static (GameObject, Button) CreateButton(Transform parent, string name,
+            string label, Color color, Vector2 size)
+        {
+            var obj = new GameObject(name);
+            obj.transform.SetParent(parent, false);
+            var rect = obj.AddComponent<RectTransform>();
+            rect.sizeDelta = size;
+            var img = obj.AddComponent<Image>();
+            img.color = color;
+            var button = obj.AddComponent<Button>();
+            button.targetGraphic = img;
+
+            var textObj = new GameObject("Text");
+            textObj.transform.SetParent(obj.transform, false);
+            var textRect = textObj.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero;
+            var text = textObj.AddComponent<TextMeshProUGUI>();
+            text.text = label;
+            text.fontSize = 28;
+            text.alignment = TextAlignmentOptions.Center;
+            text.color = Color.white;
+
+            return (obj, button);
         }
 
         public void SetTimeRemaining(float seconds)
@@ -139,6 +247,9 @@ namespace ClashUp.Client.Match
         {
             _statusLabel.text = "Match Over";
             _timerLabel.text = "00:00";
+            // Match is already over — no forfeit needed; the centered back button takes over.
+            _confirmOverlay.SetActive(false);
+            _leaveButtonObj.SetActive(false);
             _backButtonObj.SetActive(true);
         }
 

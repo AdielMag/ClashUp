@@ -44,4 +44,12 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(1)] public MatchId MatchId { get; init; }
         [Key(2)] public MatchResult? Result { get; init; }
     }
+
+    [MessagePackObject]
+    public sealed class GsPlayerLeft
+    {
+        [Key(0)] public string InstanceId { get; init; } = string.Empty;
+        [Key(1)] public MatchId MatchId { get; init; }
+        [Key(2)] public string PlayerId { get; init; } = string.Empty;
+    }
 }

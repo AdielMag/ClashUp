@@ -61,26 +61,36 @@ namespace ClashUp.Client.Lobby
 
             _reconnectFailures = 0;
 
-            var ui = LobbyUI.Create();
+            while (!cancellation.IsCancellationRequested)
+            {
+                var ui = LobbyUI.Create();
 
-            var playClicked = new UniTaskCompletionSource();
-            ui.OnPlayClicked += () => playClicked.TrySetResult();
+                var playClicked = new UniTaskCompletionSource();
+                ui.OnPlayClicked += () => playClicked.TrySetResult();
 
-            await playClicked.Task.AttachExternalCancellation(cancellation);
+                await playClicked.Task.AttachExternalCancellation(cancellation);
 
-            ui.Destroy();
+                ui.Destroy();
 
-            // Generic character selection before matchmaking (used across all game modes for now).
-            var selectUI = CharacterSelectUI.Create(CharactersConfig.Default, _selectedCharacter.Selected);
-            var confirmed = new UniTaskCompletionSource<CharacterId>();
-            selectUI.OnConfirmed += id => confirmed.TrySetResult(id);
-            var chosen = await confirmed.Task.AttachExternalCancellation(cancellation);
-            selectUI.Destroy();
+                // Generic character selection before matchmaking (used across all game modes for now).
+                var selectUI = CharacterSelectUI.Create(CharactersConfig.Default, _selectedCharacter.Selected);
+                var confirmed = new UniTaskCompletionSource<CharacterId>();
+                bool goBack = false;
+                selectUI.OnConfirmed += id => confirmed.TrySetResult(id);
+                selectUI.OnBackClicked += () => { goBack = true; confirmed.TrySetResult(default); };
 
-            _selectedCharacter.Selected = chosen;
-            _log.Log($"[Lobby] Character selected: {chosen.Value}");
+                var chosen = await confirmed.Task.AttachExternalCancellation(cancellation);
+                selectUI.Destroy();
 
-            _flow.EnterMatchmaking();
+                if (goBack)
+                    continue;
+
+                _selectedCharacter.Selected = chosen;
+                _log.Log($"[Lobby] Character selected: {chosen.Value}");
+
+                _flow.EnterMatchmaking();
+                return;
+            }
         }
     }
 }

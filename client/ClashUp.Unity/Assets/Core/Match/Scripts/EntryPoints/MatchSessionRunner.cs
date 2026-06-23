@@ -217,6 +217,15 @@ namespace ClashUp.Client.Match
 
         private void OnBackToLobby()
         {
+            LeaveAndReturnAsync().Forget();
+        }
+
+        private async UniTaskVoid LeaveAndReturnAsync()
+        {
+            // Send the forfeit and WAIT for it before tearing down. Dispose's fire-and-forget
+            // LeaveAsync races with the channel teardown and never reaches the server, so the
+            // server would only see a (reconnectable) disconnect and the lobby would reconnect.
+            await _session.LeaveAsync();
             _flow.ReturnToLobbyAsync().Forget();
         }
 

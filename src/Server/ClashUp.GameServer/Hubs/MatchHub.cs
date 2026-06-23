@@ -29,6 +29,7 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
 
     private MatchContext? _context;
     private MatchTokenClaims _claims;
+    private bool _left;
 
     public MatchHub(IMatchRegistry matches, IMatchTokenValidator tokens, GameServerIdentity identity, IServicesRegistryClient servicesClient, ServerAbilityStore abilityStore, ICcuTracker ccuTracker)
     {
@@ -66,6 +67,12 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
             throw new InvalidOperationException($"Match {request.MatchId} has already ended.");
         }
         _context = context;
+
+        // A player who forfeited this match is permanently barred — never route them back in.
+        if (context.IsForfeited(_claims.PlayerId))
+        {
+            throw new InvalidOperationException($"Player {_claims.PlayerId} forfeited match {request.MatchId}.");
+        }
 
         var group = await Group.AddAsync(context.MatchId.Value);
         context.Group ??= group;
@@ -123,7 +130,40 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
 
     public async Task LeaveAsync()
     {
-        if (_context?.Group is not null)
+        if (_context is null || _left)
+        {
+            return;
+        }
+        _left = true;
+
+        // Forfeit: permanently remove the player from the match (vs. a disconnect, which is
+        // reconnectable). Dropping them from the roster is the signal the tick loop reads to
+        // re-evaluate the alive-team count and end the match if only one team is left.
+        _context.Forfeit(_claims.PlayerId);
+        _ccuTracker.PlayerDisconnected(_claims.PlayerId);
+
+        // Remove from the Services match doc so reconnect lookups stop routing them back here.
+        // Awaited (not fire-and-forget) so that by the time the client's LeaveAsync returns,
+        // the DB no longer lists the player — otherwise the lobby's CheckActiveMatchAsync races
+        // the Mongo write and reconnects them right back into the match.
+        try
+        {
+            await _servicesClient.ReportPlayerLeftAsync(
+                new GsPlayerLeft
+                {
+                    InstanceId = _identity.InstanceId,
+                    MatchId = _context.MatchId,
+                    PlayerId = _claims.PlayerId,
+                },
+                CancellationToken.None);
+        }
+        catch
+        {
+            // Best-effort; the GS-local _forfeited barrier still bars rejoin while the match runs.
+        }
+
+        _context.Group?.All.OnPlayerLeft(new PlayerId(_claims.PlayerId), LeaveReason.ClientLeave);
+        if (_context.Group is not null)
         {
             await _context.Group.RemoveAsync(Context);
         }
@@ -147,7 +187,9 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
 
     protected override async ValueTask OnDisconnected()
     {
-        if (_context is not null)
+        // A voluntary LeaveAsync (forfeit) already handled teardown; the socket close that
+        // follows must not re-mark the (now removed) player as a reconnectable disconnect.
+        if (_context is not null && !_left)
         {
             _context.MarkDisconnected(_claims.PlayerId);
             // Start the CCU grace timer; reconnecting before it elapses keeps the player counted.

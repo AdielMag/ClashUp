@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4fda7581dfdc012459365128556bcd0e, type: 3}
+  m_Name: LobbyUiAssets
+  m_EditorClassIdentifier: 
+  panelBlue: {fileID: 21300000, guid: 5c93311f4fc7e0a4387dd8f46048ab4a, type: 3}
+  panelGold: {fileID: 21300000, guid: e8542b9ee6681aa45ba2778041e8ac01, type: 3}
+  panelPurple: {fileID: 21300000, guid: 0abc551d9b81b3c4eb6e4e30016bb391, type: 3}
+  pillDark: {fileID: 21300000, guid: 067ffebfd720fff45888490fcf369d8a, type: 3}
+  buttonGold: {fileID: 21300000, guid: c02652b62e1413f498e061821dbb1294, type: 3}
+  buttonGreen: {fileID: 21300000, guid: 9a149651c667b5b4ca5888d7e9347d98, type: 3}
+  buttonBlue: {fileID: 21300000, guid: 89c324939a9e53445823224db4be07cf, type: 3}
+  buttonDark: {fileID: 21300000, guid: c6fc481d1c95d3b4aab9e092b40f9bcb, type: 3}
+  back: {fileID: 21300000, guid: 38d4f025a9163d149a7391fe054a8e56, type: 3}
+  bolt: {fileID: 21300000, guid: 3e430ade81a512b4bb9a9f49fdfd29fa, type: 3}
+  trophy: {fileID: 21300000, guid: f926b3abeb314654fb83e9437462019f, type: 3}
+  swords: {fileID: 21300000, guid: e2b581983dc19c24f9b8bc5b984e87a0, type: 3}
+  star: {fileID: 21300000, guid: 8284af1f42db0ec4e996e5383b4cb8f8, type: 3}
+  background: {fileID: 21300000, guid: 905c2f5acf3fe3f4b9fc72a4cbf1fa7e, type: 3}
+  heroes:
+  - name: sproutling
+    sprite: {fileID: 21300000, guid: 1f4a4ae15eb2bcd4bb9b5ac181d3956c, type: 3}
+  - name: embertail
+    sprite: {fileID: 21300000, guid: db155739fd543994eb25286bc693f8b2, type: 3}
+  - name: bumblefuzz
+    sprite: {fileID: 21300000, guid: c250aa7b7f908ad45a8b639dc932be60, type: 3}
+  - name: tweetle
+    sprite: {fileID: 21300000, guid: f41403496f10df74e91e8d7a64eb205d, type: 3}
+  - name: plumpkin
+    sprite: {fileID: 21300000, guid: 509dc61ea3c7fd64489b70453d8235c0, type: 3}
+  - name: frostnip
+    sprite: {fileID: 21300000, guid: e89f70fe635737349b349874d985a795, type: 3}
+  - name: cindersnap
+    sprite: {fileID: 21300000, guid: b92b1fd323a3cb840a3ab474f0ea2931, type: 3}
+  - name: mossback
+    sprite: {fileID: 21300000, guid: 77dabe930cbc1d947b4f1c067ea513cf, type: 3}
+  - name: brawler
+    sprite: {fileID: 21300000, guid: b92b1fd323a3cb840a3ab474f0ea2931, type: 3}
+  - name: mage
+    sprite: {fileID: 21300000, guid: e89f70fe635737349b349874d985a795, type: 3}

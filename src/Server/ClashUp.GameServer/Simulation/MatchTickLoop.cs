@@ -1,3 +1,5 @@
+using System.Linq;
+
 using ClashUp.Server.GameServer.Match;
 using ClashUp.Shared.Hubs;
 using ClashUp.Shared.MessagePackObjects;
@@ -19,6 +21,12 @@ public sealed class MatchTickLoop : IDisposable
     private readonly ILogger<MatchTickLoop> _logger;
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _runTask;
+
+    // Once ≥2 teams have ever been present, dropping to ≤1 team (via forfeit) ends the match.
+    // Once ≥1 player has ever joined, dropping to 0 (last player left) closes the match.
+    // Both guards prevent an instant end at startup, before/while players are still joining.
+    private bool _sawMultipleTeams;
+    private bool _sawAnyPlayer;
 
     public MatchTickLoop(MatchContext context, ILogger<MatchTickLoop> logger)
     {
@@ -45,23 +53,29 @@ public sealed class MatchTickLoop : IDisposable
                 _context.Simulation.Step(tickIntervalSec);
                 await BroadcastAsync();
 
+                // Forfeit-driven end conditions.
+                var aliveTeams = _context.GetAliveTeamIds();
+                if (aliveTeams.Count >= 1)
+                    _sawAnyPlayer = true;
+                if (aliveTeams.Count >= 2)
+                    _sawMultipleTeams = true;
+
+                // Last player left (e.g. a solo match) — just close it.
+                if (_sawAnyPlayer && aliveTeams.Count == 0)
+                {
+                    await EndMatchAsync(0, "all players left");
+                    break;
+                }
+                // Everyone but one team has left — that team wins.
+                if (_sawMultipleTeams && aliveTeams.Count <= 1)
+                {
+                    await EndMatchAsync(aliveTeams.FirstOrDefault(), "last team standing");
+                    break;
+                }
+
                 if (durationSeconds > 0 && _context.Clock.ElapsedSeconds >= durationSeconds)
                 {
-                    var result = BuildMatchResult();
-                    _context.IsEnded = true;
-                    _context.EndResult = result;
-
-                    // Notify Services immediately so the DB is updated before any client
-                    // can loop back through CheckActiveMatchAsync (which takes ~2s via lobby reload).
-                    _context.OnMatchEndedEarly?.Invoke(_context.MatchId);
-
-                    _context.Group?.All.OnMatchEnded(result);
-                    _logger.LogInformation("Match {MatchId} ended (timer expired)", _context.MatchId);
-
-                    // Give the broadcast time to flush before tearing down connections.
-                    await Task.Delay(2000, CancellationToken.None);
-
-                    _context.OnMatchEnded?.Invoke(_context.MatchId);
+                    await EndMatchAsync(0, "timer expired");
                     break;
                 }
             }
@@ -76,12 +90,32 @@ public sealed class MatchTickLoop : IDisposable
         }
     }
 
-    private MatchResult BuildMatchResult()
+    private async Task EndMatchAsync(int winningTeamId, string reason)
+    {
+        var result = BuildMatchResult(winningTeamId);
+        _context.IsEnded = true;
+        _context.EndResult = result;
+
+        // Notify Services immediately so the DB is updated before any client
+        // can loop back through CheckActiveMatchAsync (which takes ~2s via lobby reload).
+        _context.OnMatchEndedEarly?.Invoke(_context.MatchId);
+
+        _context.Group?.All.OnMatchEnded(result);
+        _logger.LogInformation("Match {MatchId} ended ({Reason}), winner team {WinningTeamId}",
+            _context.MatchId, reason, winningTeamId);
+
+        // Give the broadcast time to flush before tearing down connections.
+        await Task.Delay(2000, CancellationToken.None);
+
+        _context.OnMatchEnded?.Invoke(_context.MatchId);
+    }
+
+    private MatchResult BuildMatchResult(int winningTeamId)
     {
         return new MatchResult
         {
             MatchId = _context.MatchId,
-            WinningTeamId = 0,
+            WinningTeamId = winningTeamId,
             EndedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
         };
     }

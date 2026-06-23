@@ -12,4 +12,5 @@ public interface IServicesRegistryClient
     Task HeartbeatAsync(GsHeartbeat heartbeat, CancellationToken cancellationToken);
     Task MarkDrainingAsync(string instanceId, CancellationToken cancellationToken);
     Task ReportMatchEndedAsync(GsMatchEnded notice, CancellationToken cancellationToken);
+    Task ReportPlayerLeftAsync(GsPlayerLeft notice, CancellationToken cancellationToken);
 }

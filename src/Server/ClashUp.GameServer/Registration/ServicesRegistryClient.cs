@@ -30,5 +30,8 @@ public sealed class ServicesRegistryClient : IServicesRegistryClient, IDisposabl
     public async Task ReportMatchEndedAsync(GsMatchEnded notice, CancellationToken cancellationToken) =>
         await _client.ReportMatchEndedAsync(notice);
 
+    public async Task ReportPlayerLeftAsync(GsPlayerLeft notice, CancellationToken cancellationToken) =>
+        await _client.ReportPlayerLeftAsync(notice);
+
     public void Dispose() => _channel.Dispose();
 }

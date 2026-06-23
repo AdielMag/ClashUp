@@ -21,6 +21,13 @@ namespace ClashUp.Shared.Services
         UnaryResult ReportMatchEndedAsync(GsMatchEnded notice);
 
         /// <summary>
+        /// A player permanently left (forfeited) a still-running match. Removes the
+        /// player from the match's roster so reconnect lookups no longer route them
+        /// back into it.
+        /// </summary>
+        UnaryResult ReportPlayerLeftAsync(GsPlayerLeft notice);
+
+        /// <summary>
         /// Marks the GS as Draining. The matchmaker will stop placing new
         /// matches on it; in-flight matches continue.
         /// </summary>

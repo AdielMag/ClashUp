@@ -47,6 +47,12 @@ public sealed class MatchContext : IDisposable
     private readonly ConcurrentDictionary<string, PlayerSummary> _players = new();
     private readonly ConcurrentDictionary<string, bool> _connected = new();
 
+    // Players who explicitly forfeited. They are barred from rejoining this match
+    // even if a reconnect token is somehow issued (vs. a disconnect, which is
+    // reconnectable). Distinct from _players: the player is removed from _players
+    // but remembered here for the lifetime of the (still-running) match.
+    private readonly ConcurrentDictionary<string, byte> _forfeited = new();
+
     public void AddPlayer(PlayerSummary player)
     {
         _players[player.Id.Value] = player;
@@ -63,6 +69,23 @@ public sealed class MatchContext : IDisposable
         _connected.TryRemove(playerId, out _);
     }
     public List<PlayerSummary> GetPlayers() => _players.Values.ToList();
+
+    /// <summary>
+    /// Distinct team ids that still have at least one player in the match. A forfeit
+    /// (RemovePlayer) drops a player from this set; a disconnect only flips _connected
+    /// and keeps the player, so a reconnectable drop does NOT reduce alive teams.
+    /// </summary>
+    public IReadOnlyCollection<int> GetAliveTeamIds() =>
+        _players.Values.Select(p => p.TeamId).Distinct().ToArray();
+
+    /// <summary>Permanently bar a player from rejoining (forfeit) and drop them from the roster.</summary>
+    public void Forfeit(string playerId)
+    {
+        _forfeited[playerId] = 0;
+        RemovePlayer(playerId);
+    }
+
+    public bool IsForfeited(string playerId) => _forfeited.ContainsKey(playerId);
 
     /// <summary>
     /// Invoked immediately when the match ends — before the 2-second client broadcast window.
