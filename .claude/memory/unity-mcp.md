@@ -140,7 +140,9 @@ To validate code-generated meshes (telegraph/area-flash shapes, etc.) without a 
 3. `script-execute` again to `DestroyImmediate` the root and clean up. **Don't `scene-save`** — leave the open scene untouched.
 
 Gotchas:
-- `screenshot-scene-view` / `screenshot-game-view` were NOT surfaced via ToolSearch in this environment — `screenshot-isolated` was. Reach for `screenshot-isolated` for object/mesh checks.
+- `screenshot-scene-view` / `screenshot-game-view` / `screenshot-camera` are often NOT surfaced via ToolSearch in this environment — only `screenshot-isolated` (and sometimes `screenshot-game-view`) are. Reach for `screenshot-isolated` for object/mesh checks.
+- `screenshot-isolated` needs **MeshRenderer-based geometry** — it computes bounds from `Renderer`s. It **cannot frame world-space UGUI** (a `Canvas` with `TextMeshProUGUI`/`Image` uses `CanvasRenderer`, not `Renderer`) and errors `"No Renderers found on target GameObject or its children."`. So you can screenshot a procedural arena (cubes/planes) but NOT a world-space nameplate/points label. With the camera/scene-view tools unavailable, world-space-UGUI features may not be screenshot-verifiable at all — fall back to reasoning + a clean compile.
+- A **runtime builder previewed in edit mode** (calling it from `script-execute`) spams the console: `UnityEngine.Object.Destroy` logs `"Destroy may not be called from edit mode! Use DestroyImmediate instead."` once per call (~25 errors for a 25-object build). These are editor-only artifacts (correct at runtime). Make runtime code dual-mode — `if (Application.isPlaying) Object.Destroy(x); else Object.DestroyImmediate(x);` — so it's clean when previewed (see `MapVisualBuilder.StripCollider`).
 - `MonoBehaviour.Update()` does NOT run in edit mode, so a self-destruct/fade component (e.g. `AbilityAreaFlash`) persists for the screenshot — pass a long duration anyway and clean up manually.
 
 ## Adding a New Serialized Field to an Existing ScriptableObject
