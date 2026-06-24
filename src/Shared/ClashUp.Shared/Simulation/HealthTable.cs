@@ -9,16 +9,38 @@ namespace ClashUp.Shared.Simulation
         public const int DefaultSpawnInvulnTicks = 90;
 
         private readonly Dictionary<string, float> _health = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, float> _maxHealth = new(StringComparer.Ordinal);
         private readonly Dictionary<string, int> _invulnTicks = new(StringComparer.Ordinal);
 
         public void Initialize(string playerId, float maxHealth)
         {
             _health[playerId] = maxHealth;
+            _maxHealth[playerId] = maxHealth;
         }
 
         public float GetHealth(string playerId)
         {
             return _health.TryGetValue(playerId, out var h) ? h : 0f;
+        }
+
+        public float GetMaxHealth(string playerId)
+        {
+            return _maxHealth.TryGetValue(playerId, out var m) ? m : 0f;
+        }
+
+        /// <summary>
+        /// Raise/lower a player's max health (e.g. as points scale it). When <paramref name="healDelta"/>
+        /// is true an increase also heals the player by the gained amount (feels good on pickup);
+        /// current health is always clamped to the new max.
+        /// </summary>
+        public void SetMaxHealth(string playerId, float newMax, bool healDelta)
+        {
+            float oldMax = GetMaxHealth(playerId);
+            _maxHealth[playerId] = newMax;
+            if (!_health.TryGetValue(playerId, out var h)) return;
+            if (healDelta && newMax > oldMax)
+                h += newMax - oldMax;
+            _health[playerId] = MathF.Min(newMax, h);
         }
 
         public bool IsAlive(string playerId)

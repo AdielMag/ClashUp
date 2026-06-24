@@ -27,9 +27,9 @@ namespace ClashUp.Client.Gameplay.Editor
             if (savePath.StartsWith(Application.dataPath))
                 AssetDatabase.ImportAsset("Assets" + savePath[Application.dataPath.Length..]);
 
-            Debug.Log($"[ClashUp] Baked {map.Entities.Length} entities, {map.SpawnAreas.Length} spawn areas to: {savePath}");
+            Debug.Log($"[ClashUp] Baked {map.Entities.Length} entities, {map.SpawnAreas.Length} spawn areas, {map.BoxSpawns.Length} box spawns to: {savePath}");
             EditorUtility.DisplayDialog("ClashUp Map Baker",
-                $"Baked {map.Entities.Length} entities, {map.SpawnAreas.Length} spawn areas.\n\nSaved to:\n{savePath}", "OK");
+                $"Baked {map.Entities.Length} entities, {map.SpawnAreas.Length} spawn areas, {map.BoxSpawns.Length} box spawns.\n\nSaved to:\n{savePath}", "OK");
         }
 
         private static MapData BuildMapData(string sceneName)
@@ -60,13 +60,34 @@ namespace ClashUp.Client.Gameplay.Editor
             }
 
             var spawnAreas = BuildSpawnAreas();
+            var boxSpawns = BuildBoxSpawns();
 
             return new MapData
             {
                 MapName = sceneName,
                 Entities = entities.ToArray(),
                 SpawnAreas = spawnAreas,
+                BoxSpawns = boxSpawns,
             };
+        }
+
+        private static BoxSpawnDef[] BuildBoxSpawns()
+        {
+            var markers = Object.FindObjectsByType<BoxSpawnMarker>(FindObjectsSortMode.None);
+            if (markers.Length == 0) return System.Array.Empty<BoxSpawnDef>();
+
+            float ppm = AetherNet.SimulationConstants.PixelsPerMeter;
+            var list = new List<BoxSpawnDef>(markers.Length);
+            foreach (var m in markers)
+            {
+                // Bake scene uses XY plane; X→game X, Y→game Z (Aether Y).
+                list.Add(new BoxSpawnDef
+                {
+                    X = m.transform.position.x / ppm,
+                    Z = m.transform.position.y / ppm,
+                });
+            }
+            return list.ToArray();
         }
 
         private static BakedFixtureDef[] BuildFixtures(AetherRigidbody rb, float ppm)

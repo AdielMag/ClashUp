@@ -11,19 +11,21 @@ namespace ClashUp.Client.Lobby
     public sealed class LobbyUI
     {
         private readonly GameObject _root;
-        public event Action OnPlayClicked;
+
+        /// <summary>Raised with the chosen matchmaking modeId when a mode entry is clicked.</summary>
+        public event Action<string> OnModeSelected;
 
         private LobbyUI(GameObject root) => _root = root;
 
         public static LobbyUI Create()
         {
-            // Find the matchmaking page's play button in the loaded lobby scene.
+            // Find the matchmaking page's mode buttons in the loaded lobby scene.
             var page = UnityEngine.Object.FindFirstObjectByType<MathmakingPage>();
             if (page != null)
             {
                 var ui = new LobbyUI(null);
-                page.OnPlayClicked += () => ui.OnPlayClicked?.Invoke();
-                Debug.Log("[LobbyUI] Wired to MathmakingPage.OnPlayClicked.");
+                page.OnModeSelected += mode => ui.OnModeSelected?.Invoke(mode);
+                Debug.Log("[LobbyUI] Wired to MathmakingPage.OnModeSelected.");
                 return ui;
             }
 
@@ -89,7 +91,7 @@ namespace ClashUp.Client.Lobby
             btnText.color     = Color.white;
 
             var ui = new LobbyUI(root);
-            button.onClick.AddListener(() => ui.OnPlayClicked?.Invoke());
+            button.onClick.AddListener(() => ui.OnModeSelected?.Invoke("default"));
             return ui;
         }
     }

@@ -243,9 +243,31 @@ namespace ClashUp.Client.Match
             _statusLabel.text = text;
         }
 
-        public void ShowMatchEnded(MatchResult result)
+        public void ShowMatchEnded(MatchResult result, int localTeamId)
         {
-            _statusLabel.text = "Match Over";
+            // No winner (0) → neutral; otherwise victory/defeat relative to the local team.
+            if (result.WinningTeamId == 0)
+            {
+                _statusLabel.text = "MATCH OVER";
+                _statusLabel.color = Color.white;
+            }
+            else if (result.WinningTeamId == localTeamId)
+            {
+                _statusLabel.text = "VICTORY";
+                _statusLabel.color = new Color(0.3f, 0.9f, 0.4f);
+            }
+            else
+            {
+                _statusLabel.text = "DEFEAT";
+                _statusLabel.color = new Color(0.9f, 0.3f, 0.3f);
+            }
+            _statusLabel.fontSize = 56;
+
+            // Surface the local team's final score when the mode tracks points.
+            if (result.TeamScores != null &&
+                result.TeamScores.TryGetValue(localTeamId.ToString(), out var score))
+                _playerCountLabel.text = $"Your team points: {score}";
+
             _timerLabel.text = "00:00";
             // Match is already over — no forfeit needed; the centered back button takes over.
             _confirmOverlay.SetActive(false);

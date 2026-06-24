@@ -101,7 +101,8 @@ public sealed class ProjectileSimulation
         return id;
     }
 
-    public void Tick(MatchPhysicsWorld world, HealthTable health, int currentTick)
+    public void Tick(MatchPhysicsWorld world, HealthTable health, BoxSimulation? boxes,
+                     PlayerProgression? progression, int currentTick)
     {
         for (int i = _projectiles.Count - 1; i >= 0; i--)
         {
@@ -113,43 +114,66 @@ public sealed class ProjectileSimulation
             p.Traveled += p.StepPerTick;
             p.RemainingLifetimeTicks--;
 
-            // Broad-phase: nearest valid enemy within the projectile's collision radius.
+            // Broad-phase: nearest valid enemy (and nearest breakable box) within the collision radius.
             string? directHit = null;
             float bestDistSq = float.MaxValue;
+            int boxHit = -1;
+            float bestBoxDistSq = float.MaxValue;
             int hitCount = world.OverlapCircle(p.X, p.Z, p.Radius, _overlapScratch);
             for (int h = 0; h < hitCount; h++)
             {
-                string? targetId = world.GetPlayerByEntityId(_overlapScratch[h]);
-                if (targetId == null || targetId == p.CasterId) continue;
-                if (!health.IsAlive(targetId)) continue;
-
-                var (tx, tz, _) = world.GetPlayerState(targetId);
-                float dx = tx - p.X;
-                float dz = tz - p.Z;
-                float distSq = dx * dx + dz * dz;
-                if (distSq < bestDistSq)
+                int eid = _overlapScratch[h];
+                string? targetId = world.GetPlayerByEntityId(eid);
+                if (targetId != null)
                 {
-                    bestDistSq = distSq;
-                    directHit = targetId;
+                    if (targetId == p.CasterId) continue;
+                    if (!health.IsAlive(targetId)) continue;
+
+                    var (tx, tz, _) = world.GetPlayerState(targetId);
+                    float dx = tx - p.X;
+                    float dz = tz - p.Z;
+                    float distSq = dx * dx + dz * dz;
+                    if (distSq < bestDistSq)
+                    {
+                        bestDistSq = distSq;
+                        directHit = targetId;
+                    }
+                }
+                else if (boxes != null && world.IsBoxEntity(eid))
+                {
+                    var (bx, bz) = world.GetEntityPosition(eid);
+                    float dx = bx - p.X;
+                    float dz = bz - p.Z;
+                    float distSq = dx * dx + dz * dz;
+                    if (distSq < bestBoxDistSq)
+                    {
+                        bestBoxDistSq = distSq;
+                        boxHit = eid;
+                    }
                 }
             }
 
             bool expired = p.Traveled >= p.MaxRange || p.RemainingLifetimeTicks <= 0;
 
-            if (directHit != null || expired)
+            if (directHit != null || boxHit != -1 || expired)
             {
-                Detonate(p, directHit, world, health, currentTick);
+                Detonate(p, directHit, boxHit, boxes, progression, world, health, currentTick);
                 _projectiles.RemoveAt(i);
             }
         }
     }
 
-    private void Detonate(ActiveProjectile p, string? directHit, MatchPhysicsWorld world,
+    private void Detonate(ActiveProjectile p, string? directHit, int boxHit, BoxSimulation? boxes,
+                          PlayerProgression? progression, MatchPhysicsWorld world,
                           HealthTable health, int currentTick)
     {
-        // Direct single-target hit.
+        float mult = progression?.GetDamageMultiplier(p.CasterId) ?? 1f;
+
+        // Direct single-target hit (player or box).
         if (directHit != null)
-            ApplyAndEmit(p, directHit, p.OnHitEffect, p.OnHitAmount, health, currentTick);
+            ApplyAndEmit(p, directHit, p.OnHitEffect, ScaleDamage(p.OnHitEffect, p.OnHitAmount, mult), health, currentTick);
+        else if (boxHit != -1 && boxes != null)
+            boxes.ApplyDamage(world, boxHit, p.OnHitAmount * mult, p.CasterId, currentTick);
 
         // AoE explosion at the impact point (exclude the caster and the already-hit direct target).
         if (p.AoeRadius > 0f)
@@ -157,11 +181,18 @@ public sealed class ProjectileSimulation
             int hitCount = world.OverlapCircle(p.X, p.Z, p.AoeRadius, _overlapScratch);
             for (int h = 0; h < hitCount; h++)
             {
-                string? targetId = world.GetPlayerByEntityId(_overlapScratch[h]);
-                if (targetId == null || targetId == p.CasterId) continue;
-                if (targetId == directHit) continue;
-                if (!health.IsAlive(targetId)) continue;
-                ApplyAndEmit(p, targetId, p.AoeEffect, p.AoeAmount, health, currentTick);
+                int eid = _overlapScratch[h];
+                string? targetId = world.GetPlayerByEntityId(eid);
+                if (targetId != null)
+                {
+                    if (targetId == p.CasterId || targetId == directHit) continue;
+                    if (!health.IsAlive(targetId)) continue;
+                    ApplyAndEmit(p, targetId, p.AoeEffect, ScaleDamage(p.AoeEffect, p.AoeAmount, mult), health, currentTick);
+                }
+                else if (boxes != null && eid != boxHit && world.IsBoxEntity(eid))
+                {
+                    boxes.ApplyDamage(world, eid, p.AoeAmount * mult, p.CasterId, currentTick);
+                }
             }
         }
 
@@ -177,10 +208,13 @@ public sealed class ProjectileSimulation
                 x = p.X,
                 z = p.Z,
                 aoeRadius = p.AoeRadius,
-                reason = directHit != null ? "hit" : "expire",
+                reason = directHit != null || boxHit != -1 ? "hit" : "expire",
             }),
         });
     }
+
+    private static float ScaleDamage(HitboxEffect effect, float amount, float multiplier) =>
+        effect == HitboxEffect.Damage ? amount * multiplier : amount;
 
     private void ApplyAndEmit(ActiveProjectile p, string targetId, HitboxEffect effect,
                               float amount, HealthTable health, int currentTick)

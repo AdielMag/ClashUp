@@ -26,6 +26,7 @@ public sealed class MatchContext : IDisposable
 
     public MatchProvision Provision { get; }
     public MatchId MatchId => Provision.MatchId;
+    public string ObjectiveType => Provision.ObjectiveType;
 
     public IServerSimulation Simulation =>
         _scope.ServiceProvider.GetRequiredService<IServerSimulation>();
@@ -35,6 +36,9 @@ public sealed class MatchContext : IDisposable
 
     public MatchClock Clock =>
         _scope.ServiceProvider.GetRequiredService<MatchClock>();
+
+    public BotDirector Bots =>
+        _scope.ServiceProvider.GetRequiredService<BotDirector>();
 
     public MatchTickLoop? TickLoop { get; set; }
 
@@ -69,6 +73,10 @@ public sealed class MatchContext : IDisposable
         _connected.TryRemove(playerId, out _);
     }
     public List<PlayerSummary> GetPlayers() => _players.Values.ToList();
+
+    /// <summary>Count of real (non-bot) players still in the roster. The tick loop closes the match
+    /// once this hits 0 after a real player has been present, so a bot-only match never lingers.</summary>
+    public int RealPlayerCount() => _players.Values.Count(p => !p.IsBot);
 
     /// <summary>
     /// Distinct team ids that still have at least one player in the match. A forfeit

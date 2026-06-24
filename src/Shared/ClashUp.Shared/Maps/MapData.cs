@@ -41,10 +41,21 @@ namespace ClashUp.Shared.Maps
         public float[] PositionsZ { get; set; } = System.Array.Empty<float>();
     }
 
+    /// <summary>
+    /// A breakable-box spawn point authored into the map. The server spawns a box here at match
+    /// start (and on respawn) in objective modes that use boxes (e.g. "elimination").
+    /// </summary>
+    public class BoxSpawnDef
+    {
+        public float X { get; set; }
+        public float Z { get; set; }
+    }
+
     public class MapData
     {
         public string MapName { get; set; } = string.Empty;
         public BakedEntityDef[] Entities { get; set; } = System.Array.Empty<BakedEntityDef>();
         public SpawnArea[] SpawnAreas { get; set; } = System.Array.Empty<SpawnArea>();
+        public BoxSpawnDef[] BoxSpawns { get; set; } = System.Array.Empty<BoxSpawnDef>();
     }
 }

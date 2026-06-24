@@ -1,4 +1,5 @@
 using System;
+using ClashUp.Shared.MessagePackObjects;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,19 +12,27 @@ namespace ClashUp.Client.Gameplay
         private const float TickRate = 30f;
 
         private readonly AetherClientSimulation _sim;
+        private readonly ClientPredictionWorld _world;
+        private readonly MatchModeHolder _mode;
         private readonly JoystickInputProvider _joystick;
         private readonly AbilityInputProvider _abilityInput;
 
         private GameObject _overlay;
+        private TMP_Text _titleLabel;
         private TMP_Text _countdownLabel;
         private bool _wasDead;
+        private bool _localEliminated;
 
         public RespawnScreenController(
             AetherClientSimulation sim,
+            ClientPredictionWorld world,
+            MatchModeHolder mode,
             JoystickInputProvider joystick,
             AbilityInputProvider abilityInput)
         {
             _sim = sim;
+            _world = world;
+            _mode = mode;
             _joystick = joystick;
             _abilityInput = abilityInput;
         }
@@ -32,42 +41,59 @@ namespace ClashUp.Client.Gameplay
         {
             _overlay = BuildOverlay();
             _overlay.SetActive(false);
+            _world.SnapshotDecoded += OnSnapshot;
+        }
+
+        private void OnSnapshot(int tick, WorldStatePacket packet)
+        {
+            var localId = _sim.LocalId;
+            foreach (var dto in packet.Players)
+                if (dto.Id.Equals(localId)) { _localEliminated = dto.IsEliminated; return; }
         }
 
         public void Tick()
         {
+            // No-respawn mode: a permanent ELIMINATED overlay once we're out.
+            if (_mode.IsElimination)
+            {
+                UpdateOverlay(_localEliminated, "ELIMINATED", "Spectating…");
+                return;
+            }
+
+            // Survival mode: respawn countdown driven by RespawnInTicks.
             var localId = _sim.LocalId.Value;
             if (localId == null || !_sim.Players.TryGetValue(localId, out var state))
             {
-                _overlay.SetActive(false);
-                if (_wasDead)
-                {
-                    _joystick.SetVisible(true);
-                    _abilityInput.SetVisible(true);
-                    _wasDead = false;
-                }
+                UpdateOverlay(false, null, null);
                 return;
             }
 
             bool isDead = state.RespawnInTicks > 0;
-            _overlay.SetActive(isDead);
+            string countdown = isDead ? $"Respawning in {state.RespawnInTicks / TickRate:F1}s" : null;
+            UpdateOverlay(isDead, "YOU DIED", countdown);
+        }
 
-            if (isDead != _wasDead)
+        private void UpdateOverlay(bool isDown, string title, string countdown)
+        {
+            _overlay.SetActive(isDown);
+
+            if (isDown != _wasDead)
             {
-                _joystick.SetVisible(!isDead);
-                _abilityInput.SetVisible(!isDead);
-                _wasDead = isDead;
+                _joystick.SetVisible(!isDown);
+                _abilityInput.SetVisible(!isDown);
+                _wasDead = isDown;
             }
 
-            if (isDead)
+            if (isDown)
             {
-                float seconds = state.RespawnInTicks / TickRate;
-                _countdownLabel.text = $"Respawning in {seconds:F1}s";
+                if (title != null) _titleLabel.text = title;
+                if (countdown != null) _countdownLabel.text = countdown;
             }
         }
 
         public void Dispose()
         {
+            _world.SnapshotDecoded -= OnSnapshot;
             if (_overlay != null)
                 UnityEngine.Object.Destroy(_overlay);
         }
@@ -110,6 +136,7 @@ namespace ClashUp.Client.Gameplay
             deadLabel.fontStyle = FontStyles.Bold;
             deadLabel.alignment = TextAlignmentOptions.Center;
             deadLabel.color = new Color(0.9f, 0.1f, 0.1f, 1f);
+            _titleLabel = deadLabel;
 
             var cntObj = new GameObject("CountdownLabel");
             cntObj.transform.SetParent(root.transform, false);

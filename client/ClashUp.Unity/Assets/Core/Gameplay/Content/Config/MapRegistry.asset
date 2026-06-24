@@ -18,4 +18,6 @@ MonoBehaviour:
       value: {fileID: 11400000, guid: 615a22dd22f2a8449bdb0c4e7ad1fec9, type: 2}
     - key: arena_tdm
       value: {fileID: 11400000, guid: 4537d22842d3a244db13c857b1b8b82f, type: 2}
+    - key: arena_pickup
+      value: {fileID: 11400000, guid: a4624a71759c42dc99b5b7dfaaf865ee, type: 2}
     error: 0

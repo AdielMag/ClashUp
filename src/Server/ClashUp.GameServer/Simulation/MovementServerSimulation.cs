@@ -33,6 +33,12 @@ public sealed class MovementServerSimulation : IServerSimulation
 
     public void LoadMap(MapData mapData) { }
 
+    public void Configure(string objectiveType) { }
+
+    public bool IsEliminated(string playerId) => false;
+
+    public IReadOnlyDictionary<string, int> GetTeamScores() => new Dictionary<string, int>();
+
     public void EnsurePlayer(PlayerId player, int colorSlot, int teamId, CharacterId characterId)
     {
         if (_players.ContainsKey(player.Value)) return;
@@ -84,6 +90,8 @@ public sealed class MovementServerSimulation : IServerSimulation
     }
 
     public IReadOnlyList<MatchEvent> DrainAbilityEvents() => Array.Empty<MatchEvent>();
+
+    public bool TryGetBotView(string botId, out BotView view) { view = default; return false; }
 
     public void Dispose() { }
 }

@@ -24,6 +24,16 @@ public sealed class AetherServerSimulation : IServerSimulation
     private readonly Dictionary<string, (float X, float Z)> _spawnPositions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _respawnTimers = new(StringComparer.Ordinal);
 
+    // Objective-mode state (boxes / points / elimination). Inert in survival mode.
+    private readonly Dictionary<string, int> _playerTeams = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _eliminated = new(StringComparer.Ordinal);
+    private readonly List<MatchEvent> _pendingEvents = new();
+    private readonly PlayerProgression _progression;
+    private readonly PointOrbSimulation _orbs;
+    private readonly BoxSimulation _boxes;
+    private string _objectiveType = "survival";
+    private bool _noRespawn;
+
     // 5 seconds at 30 Hz
     private const int RespawnDelayTicks = 150;
     private MapData? _mapData;
@@ -36,6 +46,9 @@ public sealed class AetherServerSimulation : IServerSimulation
         _characters = characters;
         RandomSeed = (uint)System.Random.Shared.Next(1, int.MaxValue);
         _abilities.RegisterAbilities(abilityStore.All);
+        _progression = new PlayerProgression(_health);
+        _orbs = new PointOrbSimulation(RandomSeed);
+        _boxes = new BoxSimulation(_orbs);
     }
 
     public void LoadMap(MapData mapData)
@@ -43,6 +56,18 @@ public sealed class AetherServerSimulation : IServerSimulation
         _mapData = mapData;
         _world.LoadMapGeometry(mapData);
     }
+
+    public void Configure(string objectiveType)
+    {
+        _objectiveType = string.IsNullOrEmpty(objectiveType) ? "survival" : objectiveType;
+        _noRespawn = _objectiveType == "elimination";
+
+        // Box-based modes seed the arena's breakable boxes from the map (requires LoadMap first).
+        if (_noRespawn && _mapData != null)
+            _boxes.Initialize(_world, _mapData.BoxSpawns);
+    }
+
+    public bool IsEliminated(string playerId) => _eliminated.Contains(playerId);
 
     public void EnsurePlayer(PlayerId player, int colorSlot, int teamId, CharacterId characterId)
     {
@@ -59,6 +84,8 @@ public sealed class AetherServerSimulation : IServerSimulation
         _health.Initialize(player.Value, stats.MaxHealth);
         _maxHealth[player.Value] = stats.MaxHealth;
         _spawnPositions[player.Value] = (spawnX, spawnZ);
+        _playerTeams[player.Value] = teamId;
+        _progression.RegisterPlayer(player.Value, stats.MaxHealth);
         _health.SetInvulnerable(player.Value, HealthTable.DefaultSpawnInvulnTicks);
         _abilities.InitPlayer(player.Value, character.AutoAttackId, character.ActiveAbilityId);
 
@@ -86,11 +113,53 @@ public sealed class AetherServerSimulation : IServerSimulation
     {
         _world.Step(deltaSeconds);
         _health.Tick();
-        _abilities.Tick(_world, _health, _projectiles, deltaSeconds, CurrentTick);
-        _projectiles.Tick(_world, _health, CurrentTick);
+        // Boxes/progression are only relevant (and non-null) in objective modes.
+        _abilities.Tick(_world, _health, _projectiles, _noRespawn ? _boxes : null,
+            _noRespawn ? _progression : null, deltaSeconds, CurrentTick);
+        _projectiles.Tick(_world, _health, _noRespawn ? _boxes : null,
+            _noRespawn ? _progression : null, CurrentTick);
+
+        if (_noRespawn)
+        {
+            _boxes.Tick(_world);
+            _orbs.Tick(_world, _health, _progression, CurrentTick);
+        }
+
         CurrentTick++;
 
-        // Manage respawn timers for dead players.
+        if (_noRespawn)
+            HandleEliminations();
+        else
+            HandleRespawns();
+    }
+
+    // No-respawn modes: a player who hits 0 HP is out for good and drops all their points as orbs.
+    private void HandleEliminations()
+    {
+        foreach (var id in _world.PlayerIds)
+        {
+            if (_health.IsAlive(id)) continue;
+            if (!_eliminated.Add(id)) continue; // already eliminated
+
+            var (x, z, _) = _world.GetPlayerState(id);
+            int dropped = _progression.Take(id);
+            if (dropped > 0)
+                _orbs.DropFromPlayer(_world, x, z, dropped);
+
+            int team = _playerTeams.TryGetValue(id, out var t) ? t : 0;
+            _pendingEvents.Add(new MatchEvent
+            {
+                Tick = CurrentTick,
+                Kind = "player_eliminated",
+                Payload = System.Text.Json.JsonSerializer.Serialize(new { playerId = id, team, droppedPoints = dropped }),
+            });
+            Console.WriteLine($"[ELIM] {id[..6]} eliminated (team {team}, dropped {dropped} pts)");
+        }
+    }
+
+    // Survival modes: 5-second respawn timer (unchanged legacy behavior).
+    private void HandleRespawns()
+    {
         foreach (var id in _world.PlayerIds)
         {
             if (_health.IsAlive(id)) continue;
@@ -125,14 +194,19 @@ public sealed class AetherServerSimulation : IServerSimulation
 
     public IReadOnlyList<MatchEvent> DrainAbilityEvents()
     {
-        var abilityEvents = _abilities.DrainEvents();
-        var projectileEvents = _projectiles.DrainEvents();
-        if (projectileEvents.Count == 0) return abilityEvents;
-        if (abilityEvents.Count == 0) return projectileEvents;
-
-        var merged = new List<MatchEvent>(abilityEvents.Count + projectileEvents.Count);
-        merged.AddRange(abilityEvents);
-        merged.AddRange(projectileEvents);
+        var merged = new List<MatchEvent>();
+        merged.AddRange(_abilities.DrainEvents());
+        merged.AddRange(_projectiles.DrainEvents());
+        if (_noRespawn)
+        {
+            merged.AddRange(_boxes.DrainEvents());
+            merged.AddRange(_orbs.DrainEvents());
+        }
+        if (_pendingEvents.Count > 0)
+        {
+            merged.AddRange(_pendingEvents);
+            _pendingEvents.Clear();
+        }
         return merged;
     }
 
@@ -152,9 +226,78 @@ public sealed class AetherServerSimulation : IServerSimulation
                 LastProcessedInputSeq = _lastSeq.TryGetValue(id, out var seq) ? seq : 0,
                 IsInvulnerable = _health.IsInvulnerable(id),
                 RespawnInTicks = _respawnTimers.TryGetValue(id, out var rt) ? rt : 0,
+                Points = _progression.GetPoints(id),
+                IsEliminated = _eliminated.Contains(id),
+                MaxHealth = _health.GetMaxHealth(id),
             });
         }
-        return MessagePackSerializer.Serialize(new WorldStatePacket { Players = dtos.ToArray() });
+
+        var packet = _noRespawn
+            ? new WorldStatePacket { Players = dtos.ToArray(), Boxes = _boxes.Snapshot(), Orbs = _orbs.Snapshot(_world) }
+            : new WorldStatePacket { Players = dtos.ToArray() };
+        return MessagePackSerializer.Serialize(packet);
+    }
+
+    public bool TryGetBotView(string botId, out BotView view)
+    {
+        view = default;
+        if (!_playerTeams.TryGetValue(botId, out int myTeam)) return false;
+
+        var (sx, sz, syaw) = _world.GetPlayerState(botId);
+
+        float bestDistSq = float.MaxValue;
+        bool hasEnemy = false;
+        float ex = 0f, ez = 0f;
+        foreach (var id in _world.PlayerIds)
+        {
+            if (id == botId) continue;
+            if (!_health.IsAlive(id)) continue;
+            if (_playerTeams.TryGetValue(id, out int t) && t == myTeam) continue;
+
+            var (tx, tz, _) = _world.GetPlayerState(id);
+            float dx = tx - sx;
+            float dz = tz - sz;
+            float distSq = dx * dx + dz * dz;
+            if (distSq < bestDistSq)
+            {
+                bestDistSq = distSq;
+                ex = tx;
+                ez = tz;
+                hasEnemy = true;
+            }
+        }
+
+        bool hasBox = _boxes.TryGetNearestBox(sx, sz, out float bx, out float bz, out float boxDistSq);
+
+        view = new BotView
+        {
+            SelfX = sx,
+            SelfZ = sz,
+            SelfYaw = syaw,
+            SelfAlive = _health.IsAlive(botId),
+            HasEnemy = hasEnemy,
+            EnemyX = ex,
+            EnemyZ = ez,
+            EnemyDistance = hasEnemy ? System.MathF.Sqrt(bestDistSq) : float.MaxValue,
+            HasBox = hasBox,
+            BoxX = bx,
+            BoxZ = bz,
+            BoxDistance = hasBox ? System.MathF.Sqrt(boxDistSq) : float.MaxValue,
+        };
+        return true;
+    }
+
+    /// <summary>Per-team total points (for the end-of-match result / standings).</summary>
+    public IReadOnlyDictionary<string, int> GetTeamScores()
+    {
+        var scores = new Dictionary<string, int>();
+        foreach (var kvp in _playerTeams)
+        {
+            string key = kvp.Value.ToString();
+            scores.TryGetValue(key, out var cur);
+            scores[key] = cur + _progression.GetPoints(kvp.Key);
+        }
+        return scores;
     }
 
     public void Dispose() => _world.Dispose();

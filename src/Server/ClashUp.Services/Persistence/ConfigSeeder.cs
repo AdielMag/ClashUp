@@ -18,6 +18,14 @@ public sealed class ConfigSeeder : IHostedService
             """{"NumberOfTeams":1,"TeamSize":1,"DurationSeconds":20,"ObjectiveType":"survival","MapId":"arena_tdm"}""",
             cancellationToken);
 
+        // No-respawn, point-economy, last-team-standing mode. Teams of 1 (FFA-style), 2+ teams required.
+        // Bot-fill enabled: after 10s of waiting, empty slots are filled with AI bots (enemies, since
+        // teams differ). Existing Mongo docs must be dropped/updated to pick up these fields.
+        await SeedIfMissingAsync(
+            "match:elimination",
+            """{"NumberOfTeams":2,"TeamSize":1,"DurationSeconds":180,"ObjectiveType":"elimination","MapId":"arena_pickup","FillWithBots":true,"BotFillWaitSeconds":10,"MinRealPlayers":1}""",
+            cancellationToken);
+
         await SeedIfMissingAsync(
             "characters:registry",
             """

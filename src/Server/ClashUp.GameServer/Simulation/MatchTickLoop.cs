@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 
 using ClashUp.Server.GameServer.Match;
@@ -27,6 +28,9 @@ public sealed class MatchTickLoop : IDisposable
     // Both guards prevent an instant end at startup, before/while players are still joining.
     private bool _sawMultipleTeams;
     private bool _sawAnyPlayer;
+    // Once a real (non-bot) player has been present, dropping to 0 real players closes the match
+    // even if bots remain — so a bot-only match never lingers and no bot is awarded the win.
+    private bool _sawRealPlayer;
 
     public MatchTickLoop(MatchContext context, ILogger<MatchTickLoop> logger)
     {
@@ -53,12 +57,25 @@ public sealed class MatchTickLoop : IDisposable
                 _context.Simulation.Step(tickIntervalSec);
                 await BroadcastAsync();
 
-                // Forfeit-driven end conditions.
-                var aliveTeams = _context.GetAliveTeamIds();
+                // End conditions. "Alive teams" excludes eliminated players (no-respawn modes);
+                // in survival nobody is ever eliminated, so this matches the old forfeit-driven set.
+                var aliveTeams = ComputeAliveTeams();
                 if (aliveTeams.Count >= 1)
                     _sawAnyPlayer = true;
                 if (aliveTeams.Count >= 2)
                     _sawMultipleTeams = true;
+
+                int realCount = _context.RealPlayerCount();
+                if (realCount >= 1)
+                    _sawRealPlayer = true;
+
+                // All human players have left — close the match even if bots remain. Checked before the
+                // "last team standing" rule so a bot team is never declared the winner of an empty match.
+                if (_sawRealPlayer && realCount == 0)
+                {
+                    await EndMatchAsync(0, "all human players left");
+                    break;
+                }
 
                 // Last player left (e.g. a solo match) — just close it.
                 if (_sawAnyPlayer && aliveTeams.Count == 0)
@@ -66,7 +83,7 @@ public sealed class MatchTickLoop : IDisposable
                     await EndMatchAsync(0, "all players left");
                     break;
                 }
-                // Everyone but one team has left — that team wins.
+                // Everyone but one team is gone/eliminated — that team wins.
                 if (_sawMultipleTeams && aliveTeams.Count <= 1)
                 {
                     await EndMatchAsync(aliveTeams.FirstOrDefault(), "last team standing");
@@ -75,7 +92,9 @@ public sealed class MatchTickLoop : IDisposable
 
                 if (durationSeconds > 0 && _context.Clock.ElapsedSeconds >= durationSeconds)
                 {
-                    await EndMatchAsync(0, "timer expired");
+                    // Time-limited objective modes award the win to the highest-scoring team.
+                    int winner = _context.ObjectiveType == "elimination" ? TeamWithMostPoints() : 0;
+                    await EndMatchAsync(winner, "timer expired");
                     break;
                 }
             }
@@ -116,8 +135,36 @@ public sealed class MatchTickLoop : IDisposable
         {
             MatchId = _context.MatchId,
             WinningTeamId = winningTeamId,
+            TeamScores = _context.Simulation.GetTeamScores(),
             EndedAtMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
         };
+    }
+
+    // Distinct teams that still have at least one non-eliminated player. In survival no one is ever
+    // eliminated, so this reduces to the roster-team set (legacy behavior).
+    private IReadOnlyCollection<int> ComputeAliveTeams()
+    {
+        var sim = _context.Simulation;
+        return _context.GetPlayers()
+            .Where(p => !sim.IsEliminated(p.Id.Value))
+            .Select(p => p.TeamId)
+            .Distinct()
+            .ToArray();
+    }
+
+    // Highest-scoring team by total points; ties resolve to 0 (draw).
+    private int TeamWithMostPoints()
+    {
+        var scores = _context.Simulation.GetTeamScores();
+        int bestTeam = 0, bestScore = -1;
+        bool tie = false;
+        foreach (var kvp in scores)
+        {
+            if (!int.TryParse(kvp.Key, out int team)) continue;
+            if (kvp.Value > bestScore) { bestScore = kvp.Value; bestTeam = team; tie = false; }
+            else if (kvp.Value == bestScore) { tie = true; }
+        }
+        return tie ? 0 : bestTeam;
     }
 
     private void Drain()
@@ -131,8 +178,16 @@ public sealed class MatchTickLoop : IDisposable
         {
             _context.Simulation.EnsurePlayer(p.Id, p.ColorSlot, p.TeamId, p.CharacterId);
 
-            if (_context.Inputs.TryDequeueOne(p.Id.Value, out var input))
+            if (p.IsBot)
+            {
+                // Bots are server-driven: synthesize the same InputCommand a real player would send.
+                var botInput = _context.Bots.Think(p.Id.Value, _context.Simulation, _context.Simulation.CurrentTick);
+                _context.Simulation.ApplyInput(p.Id, botInput);
+            }
+            else if (_context.Inputs.TryDequeueOne(p.Id.Value, out var input))
+            {
                 _context.Simulation.ApplyInput(p.Id, input);
+            }
         }
     }
 

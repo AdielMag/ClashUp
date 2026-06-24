@@ -125,6 +125,7 @@ public sealed class MatchHub : StreamingHubBase<IMatchHub, IMatchHubReceiver>, I
             MapId = context.Provision.MapId,
             Characters = context.Provision.Characters,
             Abilities = _abilityStore.BuildClientConfig(),
+            ObjectiveType = context.Provision.ObjectiveType,
         };
     }
 

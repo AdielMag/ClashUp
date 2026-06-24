@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <!-- The Gateway tests construct ASP.NET HttpContexts directly. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="coverlet.collector" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ClashUp.GameServer\ClashUp.GameServer.csproj" />
+    <ProjectReference Include="..\ClashUp.Services\ClashUp.Services.csproj" />
+    <ProjectReference Include="..\ClashUp.Server.Common\ClashUp.Server.Common.csproj" />
+    <ProjectReference Include="..\ClashUp.Gateway\ClashUp.Gateway.csproj" />
+    <ProjectReference Include="..\..\Shared\ClashUp.Shared\ClashUp.Shared.csproj" />
+  </ItemGroup>
+
+  <!-- The disk-backed stores (ServerMapStore / ServerAbilityStore) read from AppContext.BaseDirectory.
+       Mirror the GameServer's authored data into the test output so those systems can be exercised. -->
+  <ItemGroup>
+    <Content Include="..\ClashUp.GameServer\Maps\Data\*.json" Link="Maps\Data\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\ClashUp.GameServer\Abilities\Data\ability_*.json" Link="Abilities\Data\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

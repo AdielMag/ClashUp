@@ -11,5 +11,9 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(2)] public int TeamId { get; init; }
         [Key(3)] public int ColorSlot { get; init; }
         [Key(4)] public CharacterId CharacterId { get; init; }
+
+        /// <summary>True for AI-controlled players. Lets the server count real players (for
+        /// bot-only match cleanup) and lets the client optionally label bots.</summary>
+        [Key(5)] public bool IsBot { get; init; }
     }
 }

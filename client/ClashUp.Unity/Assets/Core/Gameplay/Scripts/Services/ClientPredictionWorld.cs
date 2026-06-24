@@ -44,6 +44,13 @@ namespace ClashUp.Client.Gameplay
         public int CurrentTick => _sim.CurrentTick;
 
         /// <summary>
+        /// Raised once per processed snapshot with the fully-decoded world packet (tick, packet).
+        /// Lets render-only systems (boxes, orbs) read their slice without re-deserializing the blob.
+        /// Fires during <see cref="ProcessPendingSnapshots"/> on the main thread.
+        /// </summary>
+        public event Action<int, WorldStatePacket> SnapshotDecoded;
+
+        /// <summary>
         /// Sub-tick interpolation fraction (0..1) of the current prediction step, written by
         /// the input loop each frame and read by the view to smooth the local player. Lives
         /// here (Gameplay) so the view need not reference the Match assembly.
@@ -102,6 +109,9 @@ namespace ClashUp.Client.Gameplay
                     if (dto.Id.Equals(localId)) continue;
                     _interpolator.AddSample(dto.Id.Value, snapshot.ServerStampMs, dto.X, dto.Z, dto.Yaw, dto.Health, dto.RespawnInTicks);
                 }
+
+                // Hand the decoded packet to render-only systems (boxes / orbs / HUD).
+                SnapshotDecoded?.Invoke(snapshot.Tick, packet);
             }
 
             // Capture the pre-reconcile PHYSICS position for correction smoothing.

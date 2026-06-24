@@ -13,9 +13,11 @@ public sealed class AbilityExecutor
     private readonly List<MatchEvent> _pendingEvents = new();
     private readonly int[] _overlapScratch = new int[64];
 
-    // Set at the top of each Tick so EvaluateProjectile can hand spawns off to the projectile
-    // system without threading them through the whole node-evaluation call chain.
+    // Set at the top of each Tick so the node-evaluation call chain can reach them without
+    // threading every system through every method. _boxes/_progression are null in survival mode.
     private ProjectileSimulation? _projectiles;
+    private BoxSimulation? _boxes;
+    private PlayerProgression? _progression;
     private double _dt;
 
     public void RegisterAbilities(IEnumerable<AbilityDefinition> definitions)
@@ -58,11 +60,11 @@ public sealed class AbilityExecutor
                 continue;
             }
 
-            // Directional: no manual aim → lock onto the nearest enemy inside the ability's range.
+            // Directional: no manual aim → lock onto the nearest target (enemy or box) inside the range.
             float castYaw = aimYaw;
             if (autoAim && def.AutoRange > 0f)
             {
-                float autoYaw = FindNearestEnemyYaw(playerId, world, health, def.AutoRange);
+                float autoYaw = FindNearestTargetYaw(playerId, world, health, def.AutoRange);
                 if (!float.IsNaN(autoYaw)) castYaw = autoYaw;
             }
 
@@ -85,8 +87,8 @@ public sealed class AbilityExecutor
         float targetX, targetZ;
         if (autoAim)
         {
-            // Tap without aiming → nearest enemy's position; else a forward offset ahead of the player.
-            if (FindNearestEnemyPoint(playerId, world, health, maxDist, out float ex, out float ez))
+            // Tap without aiming → nearest target's position (enemy or box); else a forward offset ahead.
+            if (FindNearestTargetPoint(playerId, world, health, maxDist, out float ex, out float ez))
             {
                 targetX = ex;
                 targetZ = ez;
@@ -110,9 +112,12 @@ public sealed class AbilityExecutor
     }
 
     public void Tick(MatchPhysicsWorld world, HealthTable health,
-                     ProjectileSimulation projectiles, double dt, int currentTick)
+                     ProjectileSimulation projectiles, BoxSimulation? boxes,
+                     PlayerProgression? progression, double dt, int currentTick)
     {
         _projectiles = projectiles;
+        _boxes = boxes;
+        _progression = progression;
         _dt = dt;
 
         foreach (var slots in _playerSlots.Values)
@@ -132,7 +137,9 @@ public sealed class AbilityExecutor
                 if (!_definitions.TryGetValue(slot.AbilityId.Value, out var def)) continue;
                 if (def.TriggerMode != TriggerMode.Auto) continue;
 
-                float aimYaw = FindNearestEnemyYaw(playerId, world, health, def.AutoRange);
+                // Auto-attacks target the nearest enemy player OR breakable box in range, so they
+                // chip away at boxes (objective modes) the same way they damage players.
+                float aimYaw = FindNearestTargetYaw(playerId, world, health, def.AutoRange);
                 if (float.IsNaN(aimYaw)) continue;
 
                 ActivateSlot(playerId, i, aimYaw, def, currentTick);
@@ -182,7 +189,9 @@ public sealed class AbilityExecutor
         });
     }
 
-    private float FindNearestEnemyYaw(string casterId, MatchPhysicsWorld world,
+    // Nearest auto-attack target: an alive enemy player OR a breakable box (objective modes). Boxes are
+    // only considered when the mode has them (_boxes != null). Returns NaN when nothing is in range.
+    private float FindNearestTargetYaw(string casterId, MatchPhysicsWorld world,
                                        HealthTable health, float range)
     {
         var (cx, cz, _) = world.GetPlayerState(casterId);
@@ -193,11 +202,28 @@ public sealed class AbilityExecutor
 
         for (int i = 0; i < hitCount; i++)
         {
-            string? targetId = world.GetPlayerByEntityId(_overlapScratch[i]);
-            if (targetId == null || targetId == casterId) continue;
-            if (!health.IsAlive(targetId)) continue;
+            int entityId = _overlapScratch[i];
+            string? targetId = world.GetPlayerByEntityId(entityId);
 
-            var (tx, tz, _) = world.GetPlayerState(targetId);
+            float tx, tz;
+            if (targetId != null)
+            {
+                if (targetId == casterId || !health.IsAlive(targetId)) continue;
+                var st = world.GetPlayerState(targetId);
+                tx = st.x;
+                tz = st.z;
+            }
+            else if (_boxes != null && world.IsBoxEntity(entityId))
+            {
+                var bp = world.GetEntityPosition(entityId);
+                tx = bp.x;
+                tz = bp.z;
+            }
+            else
+            {
+                continue; // wall / orb / irrelevant
+            }
+
             float dx = tx - cx;
             float dz = tz - cz;
             float distSq = dx * dx + dz * dz;
@@ -211,9 +237,10 @@ public sealed class AbilityExecutor
         return bestYaw;
     }
 
-    // Like FindNearestEnemyYaw, but returns the enemy's world position (for TargetPoint auto-aim).
-    private bool FindNearestEnemyPoint(string casterId, MatchPhysicsWorld world, HealthTable health,
-                                       float range, out float x, out float z)
+    // Like FindNearestTargetYaw, but returns the target's world position (for TargetPoint auto-aim).
+    // Considers alive enemy players AND breakable boxes (objective modes).
+    private bool FindNearestTargetPoint(string casterId, MatchPhysicsWorld world, HealthTable health,
+                                        float range, out float x, out float z)
     {
         var (cx, cz, _) = world.GetPlayerState(casterId);
         int hitCount = world.OverlapCircle(cx, cz, range, _overlapScratch);
@@ -225,11 +252,28 @@ public sealed class AbilityExecutor
 
         for (int i = 0; i < hitCount; i++)
         {
-            string? targetId = world.GetPlayerByEntityId(_overlapScratch[i]);
-            if (targetId == null || targetId == casterId) continue;
-            if (!health.IsAlive(targetId)) continue;
+            int entityId = _overlapScratch[i];
+            string? targetId = world.GetPlayerByEntityId(entityId);
 
-            var (tx, tz, _) = world.GetPlayerState(targetId);
+            float tx, tz;
+            if (targetId != null)
+            {
+                if (targetId == casterId || !health.IsAlive(targetId)) continue;
+                var st = world.GetPlayerState(targetId);
+                tx = st.x;
+                tz = st.z;
+            }
+            else if (_boxes != null && world.IsBoxEntity(entityId))
+            {
+                var bp = world.GetEntityPosition(entityId);
+                tx = bp.x;
+                tz = bp.z;
+            }
+            else
+            {
+                continue; // wall / orb / irrelevant
+            }
+
             float dx = tx - cx;
             float dz = tz - cz;
             float distSq = dx * dx + dz * dz;
@@ -399,7 +443,24 @@ public sealed class AbilityExecutor
         {
             int entityId = _overlapScratch[i];
             string? targetId = world.GetPlayerByEntityId(entityId);
-            if (targetId == null) continue;
+            if (targetId == null)
+            {
+                // Breakable box (objective modes): same hit damages it; orbs/walls are ignored.
+                if (_boxes != null && cfg.Effect == HitboxEffect.Damage && world.IsBoxEntity(entityId))
+                {
+                    if (cfg.Shape != HitboxShape.Circle)
+                    {
+                        var (bx, bz) = world.GetEntityPosition(entityId);
+                        if (!ShapeContains(cfg, startX, startZ, dirX, dirZ, bx, bz))
+                            continue;
+                    }
+                    var boxHitSet = ability.HitboxHitEntities[nodeIndex] ??= new HashSet<int>();
+                    if (cfg.HitIntervalTicks == 0 && !boxHitSet.Add(entityId)) continue;
+                    _boxes.ApplyDamage(world, entityId, cfg.Amount * DamageMultiplier(ability.CasterId),
+                        ability.CasterId, currentTick);
+                }
+                continue;
+            }
             if (!cfg.HitSelf && targetId == ability.CasterId) continue;
 
             // Refine the broad-phase circle against the exact Capsule/Cone footprint.
@@ -413,7 +474,9 @@ public sealed class AbilityExecutor
             var hitSet = ability.HitboxHitEntities[nodeIndex] ??= new HashSet<int>();
             if (cfg.HitIntervalTicks == 0 && !hitSet.Add(entityId)) continue;
 
-            float amount = cfg.Amount;
+            float amount = cfg.Effect == HitboxEffect.Damage
+                ? cfg.Amount * DamageMultiplier(ability.CasterId)
+                : cfg.Amount;
             if (cfg.Effect == HitboxEffect.Damage)
             {
                 float newHealth = health.ApplyDamage(targetId, amount);
@@ -509,6 +572,9 @@ public sealed class AbilityExecutor
         float dz = pz - (az + abz * t);
         return dx * dx + dz * dz;
     }
+
+    private float DamageMultiplier(string casterId) =>
+        _progression?.GetDamageMultiplier(casterId) ?? 1f;
 
     private void MarkSlotInactive(string casterId, AbilityId abilityId)
     {

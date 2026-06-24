@@ -20,12 +20,24 @@ namespace ClashUp.Shared.Simulation
         // shimmer against walls. Keep these two values in sync.
         public const float DefaultPlayerRadius = 0.5f;
 
+        // Orbs live on their own physics layer (bit 5) so they collide with walls (Environment=2)
+        // and with each other, but NOT with players — pickup is a proximity query, not a physical
+        // shove. PhysicsLayers only predefines 0..4, so we build the orb filter by hand.
+        private const int OrbLayer = 5;
+        private const ushort OrbCategoryBits = 1 << OrbLayer;
+        private const ushort OrbMaskBits = (1 << 2) | (1 << OrbLayer); // Environment + other orbs
+        /// <summary>layerMask for <see cref="OverlapCircle"/> to find only loose point orbs.</summary>
+        public const int OrbQueryMask = 1 << OrbLayer;
+
         private readonly PhysicsWorldManager _world;
         private readonly float _playerRadius;
         private readonly Dictionary<string, int> _playerIds = new();
         private readonly Dictionary<int, string> _entityToPlayer = new();
         private readonly Dictionary<string, float> _playerMoveSpeeds = new();
         private readonly Dictionary<string, Vector2> _pendingVel = new();
+        private readonly HashSet<int> _boxEntities = new();
+        private readonly HashSet<int> _orbEntities = new();
+        private readonly Stack<int> _freeIds = new(); // recycled box/orb entity ids
         private readonly PhysicsQueryBuffer _queryBuffer = new();
         private int _nextId;
 
@@ -38,9 +50,12 @@ namespace ClashUp.Shared.Simulation
             {
                 Gravity = Vector2.Zero,
                 AllowSleeping = false,
-                MaxBodies = 256,
+                // Headroom for players + map geometry + breakable boxes + many loose orbs.
+                MaxBodies = 512,
             });
         }
+
+        private int AllocId() => _freeIds.Count > 0 ? _freeIds.Pop() : _nextId++;
 
         public IEnumerable<string> PlayerIds => _playerIds.Keys;
 
@@ -187,6 +202,74 @@ namespace ClashUp.Shared.Simulation
 
         public int GetEntityIdForPlayer(string playerId) =>
             _playerIds.TryGetValue(playerId, out var id) ? id : -1;
+
+        // ── Server-only objects: breakable boxes + loose point orbs ──────────────
+        // Only the server populates these; the client's world only holds the local player.
+
+        /// <summary>Create a static, player-blocking breakable box on the Environment layer.</summary>
+        public int SpawnBox(float x, float z, float halfExtent)
+        {
+            int id = AllocId();
+            var def = new BodyDef
+            {
+                BodyType = BodyType.Static,
+                Position = new Vector2(x, z),
+                FixedRotation = true,
+            };
+            var body = _world.CreateBody(def, id);
+            var fixture = body.CreateRectangle(halfExtent * 2f, halfExtent * 2f, 1f, new AVec2(0f, 0f));
+            var filter = CollisionFilter.FromLayer(2); // Environment — blocks players, hit by abilities
+            fixture.CollisionCategories = (Category)filter.CategoryBits;
+            fixture.CollidesWith = (Category)filter.MaskBits;
+            fixture.CollisionGroup = filter.GroupIndex;
+            _boxEntities.Add(id);
+            return id;
+        }
+
+        /// <summary>
+        /// Create a dynamic point orb that scatters (initial velocity), settles (damping), and collides
+        /// with walls + other orbs but not players. Pickup is via <see cref="OverlapCircle"/> with
+        /// <see cref="OrbQueryMask"/>.
+        /// </summary>
+        public int SpawnOrb(float x, float z, float velX, float velZ, float radius)
+        {
+            int id = AllocId();
+            var def = new BodyDef
+            {
+                BodyType = BodyType.Dynamic,
+                Position = new Vector2(x, z),
+                LinearDamping = 4.5f, // brings the scatter to rest in ~1s
+                FixedRotation = true,
+            };
+            var body = _world.CreateBody(def, id);
+            var fixture = body.CreateCircle(radius, 0.4f, new AVec2(0f, 0f));
+            fixture.Restitution = 0.25f;
+            fixture.Friction = 0.4f;
+            fixture.CollisionCategories = (Category)OrbCategoryBits;
+            fixture.CollidesWith = (Category)OrbMaskBits;
+            fixture.CollisionGroup = 0;
+            _orbEntities.Add(id);
+            _world.SetLinearVelocity(id, new Vector2(velX, velZ));
+            return id;
+        }
+
+        public bool IsBoxEntity(int entityId) => _boxEntities.Contains(entityId);
+        public bool IsOrbEntity(int entityId) => _orbEntities.Contains(entityId);
+
+        public (float x, float z) GetEntityPosition(int entityId)
+        {
+            var ts = _world.GetBodyState(entityId);
+            return (ts.Position.X, ts.Position.Y);
+        }
+
+        /// <summary>Destroy a box/orb body and recycle its entity id for reuse.</summary>
+        public void DestroyEntity(int entityId)
+        {
+            if (!_boxEntities.Remove(entityId) && !_orbEntities.Remove(entityId))
+                return;
+            _world.DestroyBody(entityId);
+            _freeIds.Push(entityId);
+        }
 
         public void Dispose() { }
     }

@@ -17,12 +17,14 @@ namespace ClashUp.Client.Matchmaking
     {
         private readonly MatchmakingClient _matchmaking;
         private readonly GameFlowController _flow;
+        private readonly SelectedGameModeStore _selectedGameMode;
         private readonly IDebugLogger _log;
 
-        public MatchmakingEntryPoint(MatchmakingClient matchmaking, GameFlowController flow, IDebugLogger log)
+        public MatchmakingEntryPoint(MatchmakingClient matchmaking, GameFlowController flow, SelectedGameModeStore selectedGameMode, IDebugLogger log)
         {
             _matchmaking = matchmaking;
             _flow = flow;
+            _selectedGameMode = selectedGameMode;
             _log = log;
         }
 
@@ -42,7 +44,7 @@ namespace ClashUp.Client.Matchmaking
                 RunTimerAsync(ui, startTime, timerCts.Token).Forget();
 
                 var handoff = await _matchmaking.EnqueueAndWaitAsync(
-                    new QueueRequest { ModeId = "default" }, cancelCts.Token);
+                    new QueueRequest { ModeId = _selectedGameMode.Selected }, cancelCts.Token);
 
                 timerCts.Cancel();
                 ui.SetStatus("Match found!");

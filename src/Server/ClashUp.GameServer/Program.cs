@@ -38,6 +38,7 @@ builder.Services.AddScoped<MatchCharactersHolder>();
 builder.Services.AddScoped<IServerSimulation, AetherServerSimulation>();
 builder.Services.AddScoped<InputBuffer>();
 builder.Services.AddScoped<MatchClock>();
+builder.Services.AddScoped<BotDirector>();
 
 builder.Services.AddSingleton<GameServerIdentity>();
 builder.Services.AddSingleton<IServicesRegistryClient, ServicesRegistryClient>();

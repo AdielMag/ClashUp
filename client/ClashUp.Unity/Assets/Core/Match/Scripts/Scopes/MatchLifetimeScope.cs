@@ -28,6 +28,7 @@ namespace ClashUp.Client.Match
             builder.RegisterInstance(new MatchHandoffHolder { Value = flow.PendingHandoff });
             builder.Register<MatchCharactersHolder>(Lifetime.Singleton);
             builder.Register<MatchAbilitiesHolder>(Lifetime.Singleton);
+            builder.Register<MatchModeHolder>(Lifetime.Singleton);
 
             builder.Register<MatchHubReceiver>(Lifetime.Singleton);
             builder.Register<MatchSession>(Lifetime.Singleton);
@@ -49,6 +50,11 @@ namespace ClashUp.Client.Match
 
             builder.RegisterEntryPoint<MatchSessionRunner>();
             builder.RegisterEntryPoint<RespawnScreenController>();
+
+            // Objective-mode render-only systems (no-op when the server sends no boxes/orbs).
+            builder.RegisterEntryPoint<BoxViewSystem>();
+            builder.RegisterEntryPoint<PointOrbViewSystem>();
+            builder.RegisterEntryPoint<EliminationHudController>();
 
             if (_abilityVisualRegistry != null)
             {

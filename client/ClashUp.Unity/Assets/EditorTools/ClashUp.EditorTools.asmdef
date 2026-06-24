@@ -1,0 +1,23 @@
+{
+    "name": "ClashUp.EditorTools",
+    "rootNamespace": "ClashUp.Client.EditorTools",
+    "references": [
+        "ClashUp.Lobby",
+        "ClashUp.UI",
+        "ClashUp.CoreStarter",
+        "ClashUp.Match",
+        "ClashUp.Matchmaking",
+        "Unity.TextMeshPro",
+        "VContainer",
+        "VContainer.Unity"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "noEngineReferences": false
+}

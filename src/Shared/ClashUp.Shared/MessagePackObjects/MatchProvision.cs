@@ -18,6 +18,9 @@ namespace ClashUp.Shared.MessagePackObjects
         [Key(6)] public IReadOnlyList<PlayerAssignment> PlayerAssignments { get; init; } = System.Array.Empty<PlayerAssignment>();
         [Key(7)] public CharactersConfig Characters { get; init; } = CharactersConfig.Default;
         [Key(8)] public AbilitiesConfig Abilities { get; init; } = AbilitiesConfig.Default;
+
+        /// <summary>Game-mode discriminator (e.g. "survival", "elimination"). Drives server rules.</summary>
+        [Key(9)] public string ObjectiveType { get; init; } = "survival";
     }
 
     [MessagePackObject]
@@ -25,6 +28,10 @@ namespace ClashUp.Shared.MessagePackObjects
     {
         [Key(0)] public PlayerId PlayerId { get; init; }
         [Key(1)] public int TeamId { get; init; }
+
+        /// <summary>True for AI-controlled slots. Bots get no match token and never connect;
+        /// the GameServer materializes them into the roster from these assignments.</summary>
+        [Key(2)] public bool IsBot { get; init; }
     }
 
     [MessagePackObject]

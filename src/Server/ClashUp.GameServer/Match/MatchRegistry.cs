@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Concurrent;
 using ClashUp.Server.GameServer.Maps;
 using ClashUp.Server.GameServer.Registration;
 using ClashUp.Server.GameServer.Simulation;
+using ClashUp.Shared.Characters;
 using ClashUp.Shared.MessagePackObjects;
 
 namespace ClashUp.Server.GameServer.Match;
@@ -50,6 +52,34 @@ public sealed class MatchRegistry : IMatchRegistry, IDisposable
         var mapData = _mapStore.GetMap(provision.MapId);
         if (mapData != null)
             context.Simulation.LoadMap(mapData);
+
+        // Apply game-mode rules after the map is loaded (boxes are seeded from map data).
+        context.Simulation.Configure(provision.ObjectiveType);
+
+        // Materialize AI bots from the provision BEFORE the tick loop starts, so they're in the
+        // roster (spawn, appear in JoinResult.Players) and get driven by the BotDirector each tick.
+        var charactersConfig = provision.Characters ?? CharactersConfig.Default;
+        var roster = charactersConfig.Characters;
+        var botRng = new Random(unchecked((int)context.Simulation.RandomSeed));
+        foreach (var assignment in provision.PlayerAssignments)
+        {
+            if (!assignment.IsBot) continue;
+            string botId = assignment.PlayerId.Value;
+            CharacterId character = roster.Count > 0
+                ? roster[botRng.Next(roster.Count)].Id
+                : new CharacterId(charactersConfig.DefaultCharacterId);
+            string shortId = botId.StartsWith("bot:", StringComparison.Ordinal) ? botId.Substring(4) : botId;
+            context.AddPlayer(new PlayerSummary
+            {
+                Id = assignment.PlayerId,
+                DisplayName = "Bot " + shortId.Substring(0, Math.Min(4, shortId.Length)),
+                TeamId = assignment.TeamId,
+                ColorSlot = context.GetPlayers().Count,
+                CharacterId = character,
+                IsBot = true,
+            });
+            context.Bots.RegisterBot(botId, context.Simulation.RandomSeed);
+        }
 
         context.OnMatchEndedEarly = id => _ = NotifyMatchEndedAsync(id);
         context.OnMatchEnded = id => RemoveAndDispose(id);

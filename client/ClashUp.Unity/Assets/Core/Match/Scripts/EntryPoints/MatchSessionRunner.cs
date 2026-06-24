@@ -30,11 +30,13 @@ namespace ClashUp.Client.Match
         private readonly MapRegistry _mapRegistry;
         private readonly MatchCharactersHolder _characters;
         private readonly MatchAbilitiesHolder _abilities;
+        private readonly MatchModeHolder _mode;
         private readonly JoystickInputProvider _joystickProvider;
         private readonly AbilityInputProvider _abilityProvider;
 
         private MatchUI _matchUI;
         private GameObject _mapVisualInstance;
+        private int _localTeamId;
         private int _durationSeconds;
         private double _serverElapsedAtJoin;
         private DateTimeOffset _joinWallClock;
@@ -57,6 +59,7 @@ namespace ClashUp.Client.Match
             MapRegistry mapRegistry,
             MatchCharactersHolder characters,
             MatchAbilitiesHolder abilities,
+            MatchModeHolder mode,
             JoystickInputProvider joystickProvider,
             AbilityInputProvider abilityProvider)
         {
@@ -72,6 +75,7 @@ namespace ClashUp.Client.Match
             _mapRegistry = mapRegistry;
             _characters = characters;
             _abilities = abilities;
+            _mode = mode;
             _joystickProvider = joystickProvider;
             _abilityProvider = abilityProvider;
         }
@@ -101,6 +105,10 @@ namespace ClashUp.Client.Match
                 var join = await _session.ConnectAndJoinAsync(_handoff.Value, cancellation);
                 _characters.Initialize(join.Characters);
                 _abilities.Initialize(join.Abilities);
+                _mode.Initialize(join.ObjectiveType);
+                _localTeamId = 0;
+                foreach (var p in join.Players)
+                    if (p.Id.Equals(join.You)) { _localTeamId = p.TeamId; break; }
                 _durationSeconds = join.DurationSeconds;
                 _serverElapsedAtJoin = join.ElapsedSeconds;
                 _joinWallClock = DateTimeOffset.UtcNow;
@@ -173,7 +181,7 @@ namespace ClashUp.Client.Match
             _matchEnded = true;
             _inputGate.Disable();
             _timerCts?.Cancel();
-            _matchUI?.ShowMatchEnded(result);
+            _matchUI?.ShowMatchEnded(result, _localTeamId);
             _log.Log($"[Match] Match ended. Winner team={result.WinningTeamId}");
         }
 
@@ -186,15 +194,19 @@ namespace ClashUp.Client.Match
                 return;
             }
 
+            MapData mapData = null;
             if (mapDef.BakedMapJson != null)
             {
-                var mapData = MapDataDeserializer.Deserialize(mapDef.BakedMapJson.text);
+                mapData = MapDataDeserializer.Deserialize(mapDef.BakedMapJson.text);
                 if (mapData != null)
                     _sim.LoadMap(mapData);
             }
 
+            // Authored prefab wins; otherwise build a readable grid-floor arena straight from the map data.
             if (mapDef.VisualPrefab != null)
                 _mapVisualInstance = UnityEngine.Object.Instantiate(mapDef.VisualPrefab);
+            else if (mapData != null)
+                _mapVisualInstance = MapVisualBuilder.Build(mapData);
         }
 
         private void OnJoystickTouching(bool active)
