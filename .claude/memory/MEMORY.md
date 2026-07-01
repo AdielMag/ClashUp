@@ -4,6 +4,7 @@
 Unity multiplayer game with C# server backend (ASP.NET Core 8 + MagicOnion 7.10.0).
 
 ## Key Paths
+- **Server tests**: `src/Server/ClashUp.GameServer.Tests` — consolidated xUnit suite for all server/shared logic. See [server-test-suite.md](server-test-suite.md).
 - **Server solution**: `src/Server/ClashUp.Server.sln` (Services, GameServer, Server.Common)
 - **Root solution**: `ClashUp.sln` (all projects including Shared)
 - **Shared project**: `src/Shared/ClashUp.Shared/` — also a Unity local package via `file:` reference
@@ -12,6 +13,7 @@ Unity multiplayer game with C# server backend (ASP.NET Core 8 + MagicOnion 7.10.
 - **Build artifacts**: `.artifacts/` (redirected from bin/obj via Directory.Build.props)
 - **Dotnet path (Windows)**: `"/c/Program Files/dotnet/dotnet.exe"`
 - **AetherNet vendor clone**: `external/AetherNet/` (gitignored, run `tools/setup-aethernet.ps1` after cloning)
+- **UI Toolkit migration**: [ui-toolkit-migration.md](ui-toolkit-migration.md) — runtime UI moving UGUI→UI Toolkit; UXML/USS/fonts/PanelSettings in `Assets/Resources/UI/`; Loading/Lobby/CharacterSelect/joysticks done, in-match chrome+overlays deferred
 
 ## Client Folder Structure (Unity Assets)
 Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Config/, Scopes/, EntryPoints/, Presenters/, UI/, Receivers/). See [folder-conventions.md](folder-conventions.md).
@@ -28,6 +30,9 @@ Scripts live in typed subfolders (Interfaces/, Services/, Clients/, Models/, Con
 | ClashUp.CoreStarter | ClashUp.Client.CoreStarter | Core/CoreStarter/Scripts/ |
 | ClashUp.Lobby | ClashUp.Client.Lobby | Core/Lobby/Scripts/ |
 | ClashUp.Matchmaking | ClashUp.Client.Matchmaking | Core/Matchmaking/Scripts/ |
+| ClashUp.EditorTools | ClashUp.Client.EditorTools | EditorTools/ (editor-only; project-wide editor tools: AndroidSdkPathFix, LobbyUiBuilder, SceneBuildManagerWindow, Setup* scripts) |
+
+> Every client script lives under a domain folder with an asmdef. The old generic `Assets/Scripts/` (dead UI prototype) and `Assets/Editor/` folders were removed — editor tools moved to `Assets/EditorTools/` under [[ClashUp.EditorTools]].
 
 ## Unity Package Versions (manifest.json)
 - `com.unity.cinemachine`: 3.1.6 — namespace `Unity.Cinemachine`; `BindingMode` in `Unity.Cinemachine.TargetTracking`

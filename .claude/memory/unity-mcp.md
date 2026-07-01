@@ -185,6 +185,25 @@ custom editor (e.g. the Ability Editor):
 3. To check node placement/coords precisely, log `node.GetPosition()` for all nodes
    via `script-execute` rather than measuring the screenshot.
 
+## Screenshotting a Runtime UI Toolkit Screen (Play Mode)
+
+`ScreenCapture.CaptureScreenshot` needs Play Mode to render a runtime `UIDocument` (edit-mode preview doesn't render runtime overlay panels to the Game view). Recipe — each numbered step is a **separate** `script-execute` call:
+
+1. `EditorApplication.isPlaying = true`, then return immediately. **Entering Play Mode triggers a domain reload that wipes static fields and any `EditorApplication.update` subscription** — a single script that does `EditorApplication.update += Tick` and expects `Tick` to keep firing across the play-mode-entry boundary will silently stop after one call (the subscription is gone once `isPlaying` flips). Don't try to drive a multi-frame countdown that straddles entry; just flip the flag and poll separately.
+2. Wait a few seconds of wall-clock (Bash `sleep`), then in a **new** script-execute call, confirm `EditorApplication.isPlaying == true` and build the target UI (e.g. `MyScreenUI.Create(...)`). Calls made *after* Play Mode is already active do NOT trigger another domain reload, so normal static state persists fine across these later calls.
+3. The normal boot flow (env picker, loading screen, other lobby canvases) is still running underneath and will cover your target UI in the screenshot. Hide it in the same or a follow-up call:
+   ```csharp
+   foreach (var c in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None)) c.gameObject.SetActive(false);
+   foreach (var d in Object.FindObjectsByType<UIDocument>(FindObjectsSortMode.None))
+       if (d.gameObject.name != "MyTargetDocName") d.gameObject.SetActive(false);
+   ```
+   Both passes are needed — legacy UGUI boot screens are `Canvas`-based, but the loading screen is itself a `UIDocument` (UI Toolkit), so disabling only `Canvas` still leaves it covering everything.
+4. In another call: `ScreenCapture.CaptureScreenshot(absPath)` (an absolute path under the scratchpad dir; the capture happens at end-of-frame).
+5. Poll with a Bash loop (`for i in ...; do [ -f path ] && break; sleep 1; done`) until the file exists, then `Read` the PNG.
+6. `EditorApplication.isPlaying = false` to clean up when done.
+
+**Fast CSS iteration bonus**: after this, editing the screen's `.uxml`/`.uss` and calling `assets-refresh` hot-reloads the already-open `UIDocument`'s visual tree with **no domain reload** (non-.cs assets don't force a recompile) — logs `"UI was recreated and no companion MonoBehaviour found, some UI functionality may have been lost."` This is fine for a quick re-screenshot loop, but note it **rebuilds the tree from the raw UXML defaults**, discarding any C# runtime data-binding applied after `Create()` (e.g. `Select()`-populated label text reverts to the UXML's placeholder values). Often convenient anyway since UXML placeholder text/values are usually the mock's own demo data.
+
 ## When to Use MCP vs Editor Scripts
 - **MCP first**: For one-time setup tasks (creating scenes, modifying build settings, adding components)
 - **Editor scripts**: Only when the setup needs to be repeatable by other team members without MCP

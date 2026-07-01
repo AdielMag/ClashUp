@@ -1,5 +1,15 @@
 # Debugging & Common Pitfalls
 
+## UI Toolkit — Inline UXML `style=` Overrides Silently Diverge From the USS Spec
+
+**Symptom**: A UI Toolkit screen "looks wrong" (misaligned, thinner outline, wrong size) even though the `.uss` file looks correct and matches the design spec.
+
+**Root cause**: A `<ui:Label style="...">` or `<ui:VisualElement style="...">` inline attribute in the `.uxml` silently overrides the shared USS class for that ONE element, and inline styles are easy to miss because reviewers naturally check the `.uss` file, not per-element attributes buried in the `.uxml`. Two real instances found in the same session:
+- `LobbyPlay.uxml`'s "Heroes" nav icon had `style="height: 80px; width: 74px;"` while its siblings (Store/Guild/Quests) used the shared `.nav-icon` class (56×56) — pushed the Heroes label to a different row than the other four nav tabs.
+- `CharacterSelect.uxml`'s `cs-title` ("HEROES") and `hero-name` ("BOOMER") labels had inline `-unity-text-outline-width: 2px` / `3px` overrides while the CSS spec (`.cs-title` / `.hero-name`) called for `3px` / `5px` — silently thinning the outline below the design's intended chunky-comic look screen-wide.
+
+**Fix**: When a screen doesn't match its mock and the `.uss` looks right, grep the `.uxml` for `style="` and check every hit against the class it's layered on top of. Remove the inline override (or make it deliberate and consistent with siblings) rather than patching the USS class, since the USS is usually already correct.
+
 ## UIToolkit GraphView — StretchToParentSize Covers Siblings
 
 **Symptom**: Toolbar added before a `GraphView` is invisible — covered by the graph.
