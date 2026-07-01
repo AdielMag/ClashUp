@@ -117,6 +117,16 @@ Then call `scene-save`. Always verify with a follow-up script-execute that reads
 - `LockToTargetOnAssign` = 0
 - When setting via `pathPatches`, use the integer value: `{"typeName": "Unity.Cinemachine.TargetTracking.BindingMode", "value": 4}`
 
+## assets-refresh Can Time Out (300s) Even When the Refresh Succeeded
+
+Observed: `assets-refresh` occasionally sends no response/progress for 300s and the tool call aborts with a timeout error, even though nothing is actually wrong. Likely cause: the refresh triggers a domain reload, and the response plumbing gets lost across the reload boundary (same family of issue as [[unity-mcp]] "Screenshotting" step 1 — domain reload wipes in-flight state).
+
+**Don't retry blindly or assume the editor is stuck.** Verify via a cheap, unrelated read-only call instead (e.g. `scene-list-opened`) — if it responds normally, the editor is fine and the refresh almost certainly completed; then check `console-get-logs` (Error/Exception filters) for actual compile problems before concluding anything failed.
+
+## Unity MCP (ai-game-developer) Token Expiration Mid-Session
+
+The `ai-game-developer` MCP connector's auth token can expire mid-session (`"requires re-authorization (token expired)"`). This is a non-interactive-session limitation — tell the user their MCP connection needs re-auth (via `claude mcp` or `/mcp`), and note that any pending Unity-side verification (compile check, prefab edit) is blocked until then. It can also silently resolve itself on a later call (observed: a later `assets-refresh` succeeded without any explicit re-auth action) — don't assume the whole session is unrecoverable, just flag the gap and retry the blocked step later.
+
 ## assets-refresh Pre-Flight Check
 
 Before calling `assets-refresh`, always check if Unity is in play mode and stop it first. Refreshing while playing can cause compilation to be deferred or ignored until play mode exits.

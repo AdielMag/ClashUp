@@ -48,6 +48,36 @@
 
 See [scene-ownership.md](scene-ownership.md) for domain placement rules.
 
+## Assembly Definitions (asmdef)
+| Name | Namespace | Location |
+|------|-----------|----------|
+| ClashUp.AppStarter | ClashUp.Client.AppStarter | _Bootstrap/AppStarter/Scripts/ |
+| ClashUp.Core | ClashUp.Client.Core | Core/Scripts/ |
+| ClashUp.UI | ClashUp.Client.UI | Core/UI/Scripts/ |
+| ClashUp.Networking | ClashUp.Client.Networking | Core/Networking/Scripts/ |
+| ClashUp.Gameplay | ClashUp.Client.Gameplay | Core/Gameplay/Scripts/ — subfolders: Interfaces/, Services/, Input/, Player/, Camera/ |
+| ClashUp.Match | ClashUp.Client.Match | Core/Match/Scripts/ |
+| ClashUp.CoreStarter | ClashUp.Client.CoreStarter | Core/CoreStarter/Scripts/ |
+| ClashUp.Lobby | ClashUp.Client.Lobby | Core/Lobby/Scripts/ |
+| ClashUp.Matchmaking | ClashUp.Client.Matchmaking | Core/Matchmaking/Scripts/ |
+| ClashUp.EditorTools | ClashUp.Client.EditorTools | EditorTools/ (editor-only) |
+
+Every client script lives under a domain folder with an asmdef. The old generic `Assets/Scripts/` and `Assets/Editor/` were removed — editor tools live in `Assets/EditorTools/`.
+
+### Unity Package Versions (manifest.json)
+- `com.unity.cinemachine`: 3.1.6 — namespace `Unity.Cinemachine`; `BindingMode` in `Unity.Cinemachine.TargetTracking`
+- `com.unity.inputsystem`: 1.19.0 — use `Keyboard.current`, `Touchscreen.current`, `Mouse.current` for raw polling
+- Player Settings → Active Input Handling: must be **"Both"** for new Input System + legacy UGUI to coexist
+- `ClashUp.Gameplay.asmdef` refs: `Unity.Cinemachine`, `Unity.InputSystem`, `AetherNet.Unity`, `Unity.TextMeshPro`; precompiled `AetherNet.Shared.dll`
+- `ClashUp.Match.asmdef` refs: `Unity.Cinemachine` (MatchLifetimeScope vcam field)
+
+## Match Camera Architecture
+- **MatchCamera** and **MatchVirtualCamera** are scene objects in `Match.unity` (NOT created via code)
+- `MatchCamera`: Camera + CinemachineBrain + CameraRegistrant (`IsMatchCamera=true`, tag=MainCamera)
+- `MatchVirtualCamera`: CinemachineCamera + CinemachineFollow (offset `(0, 32.5, -32.8)`, WorldSpace binding, 0.15 damping, FOV=35, rotation X=46.1)
+- `MatchCameraRig` (VContainer `ITickable`) receives `CinemachineCamera` via DI, polls `PlayerViewSystem.LocalPlayerTransform` each tick, sets `_vcam.Follow` once player spawns
+- `MatchLifetimeScope` has `[SerializeField] CinemachineCamera _virtualCamera` — must be wired to scene vcam
+
 ## Client Environment Switching
 - `EnvironmentConfig` ScriptableObject in `Core/Networking/Scripts/Config/`
 - `ServerEnvironment` enum: Local, Dev

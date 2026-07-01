@@ -128,3 +128,20 @@ Registered as `builder.RegisterEntryPoint<RespawnScreenController>()` in `MatchL
 ## Status
 
 `HealthTable.ApplyDamage` wired with invulnerability guard; spawn invulnerability 3s. Abilities deal damage: Brawler Punch 10 / Charge 20. Health flows in `PlayerStateDto.Health` every tick. **Respawn has a 5-second delay** — server counts 150 ticks then restores HP + 3s invuln + snaps to spawn. Client shows death screen + countdown and hides all input controls while dead.
+
+## Update: CharacterRegistry → CharacterCatalog (supersedes "Character Definitions" above)
+
+`CharacterRegistry` (static lookup, described above) is **DELETED**. Replaced by:
+- **`CharacterCatalog`**: instance class (not static) in `ClashUp.Shared/Characters/`, initialized from `CharactersConfig`. `Get(CharacterId)` falls back to `Default` on unknown id. Both server and client hold a `MatchCharactersHolder` wrapping one, initialized from the wire config.
+- **`CharactersConfig`**: MessagePack object in `ClashUp.Shared/MessagePackObjects/` — `DefaultCharacterId` + `Characters[]`. Static `Default` = Brawler. DB key `characters:registry`, fetched by `CharacterConfigProvider` (60s cache), sent in `MatchProvision.Characters` (Key 7) / `JoinResult.Characters`.
+- **Roster = Brawler + Mage** — both in `CharactersConfig.Default` AND the `ConfigSeeder` DB seed. Adding a character = update both; the seeder only writes when the DB key is missing, so an existing dev DB needs the doc dropped/updated to pick up new characters.
+- **Character selection** is no longer hardcoded: pre-matchmaking `CharacterSelectUI`, choice held in `SelectedCharacterStore` (CoreStarter scope), sent via `MatchJoinRequest.CharacterId` (Key 2), validated server-side in `MatchHub.JoinAsync`. See [character-selection.md](character-selection.md).
+- `StatBlock` is now MessagePack-annotated (sent inside `CharactersConfig`) — it's no longer "NOT MessagePack" as stated above.
+- **Per-player move speed**: `MatchPhysicsWorld.EnsurePlayer` + `MovementModel.Step` both accept an optional `moveSpeed` param now (per-character, not a shared constant).
+
+## World-space Health Bar UI (current)
+
+- `WorldSpaceHealthBar.cs` (`Core/Gameplay/Scripts/UI/`) uses a `Slider _slider` (**NOT** `Image.fillAmount` as an older note said) — `SetHealth` sets `slider.value = current/max`. Player.prefab: `HealthBar` has a Slider component + `WorldSpaceHealthBar`; `Fill` child Image is the Slider's fillRect.
+- **HP number overlay**: `WorldSpaceHealthBar` also has a `_hpText` (TMP_Text) field — a `HpText` child under `HealthBar`, stretched to fill it, showing `"{current} / {max}"`. Added because the bar alone didn't show exact numbers.
+- `PlayerViewSystem` caches a per-player ref and calls `SetHealth(current, max)` each frame.
+- **Per-player point counter**: `PlayerViewSystem` shows a gold points label above each player's nameplate (objective modes only, gated by `MatchModeHolder.IsElimination`). Built via `CreatePointsLabel` — a `TextMeshProUGUI` under the WorldUI canvas at anchoredPosition (0,+40) (name centered, HealthBar at −40). Points come from `PlayerStateDto.Points`, captured for ALL players in `OnSnapshotDecoded`. Separate from the local-player screen-space `EliminationHudController` "POINTS N" HUD readout (top-right, see [elimination-mode.md](elimination-mode.md)).

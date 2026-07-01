@@ -1,5 +1,17 @@
 # Debugging & Common Pitfalls
 
+## UI Toolkit — Shared Pointer-Capture Element Needs pointerId Filtering on Capture-Out
+
+**Symptom**: Two independent drag controls (e.g. two joysticks) that share ONE `VisualElement` for `CapturePointer`/pointer events start interfering — one control's release/cancel wrongly resets the other's still-active drag.
+
+**Root cause**: `PointerCaptureOutEvent` fires on **every** callback registered for that event type on the shared element, regardless of which `pointerId` actually lost capture. A handler written as `RegisterCallback<PointerCaptureOutEvent>(_ => Reset())` (ignoring the event payload) reacts to ANY pointer losing capture on that element, not just its own.
+
+**Fix**: Always filter by pointerId: `RegisterCallback<PointerCaptureOutEvent>(e => { if (e.pointerId == _pointerId) Reset(); });`. This bug only appears once multiple independent handlers share a single capture element (fine with dedicated elements per control) — audit every event callback on a newly-shared element for missing pointerId checks. Full context: [[joystick-ui]].
+
+## UI Toolkit — Floating Re-anchor: Clamp-to-Zone-Bounds Beats Distance-Threshold
+
+A "float the control to wherever you touch, but only if the touch is close to the rest position" design is tempting but breaks in practice if the touch zone is much bigger than the control itself — almost no natural tap falls within a small threshold, so the float rule essentially never fires and the control feels broken/unresponsive. Prefer: always float to the touch, clamped only so the control stays fully inside its zone bounds (inset by its own radius) — no arbitrary closeness gate. See [[joystick-ui]] for the concrete before/after.
+
 ## UI Toolkit — Inline UXML `style=` Overrides Silently Diverge From the USS Spec
 
 **Symptom**: A UI Toolkit screen "looks wrong" (misaligned, thinner outline, wrong size) even though the `.uss` file looks correct and matches the design spec.
