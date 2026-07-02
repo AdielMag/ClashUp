@@ -186,6 +186,17 @@ public sealed class ProcessSupervisor : IProcessSupervisor
             env.Add("ASPNETCORE_ENVIRONMENT=Production");
         }
 
+        // Disable the .NET write-xor-execute JIT feature. On newer host kernels
+        // (COS moved to 6.6.x) it triggers a general-protection-fault crash in the
+        // backend's dotnet process on startup (preceded by a "memfd_create() called
+        // without MFD_EXEC or MFD_NOEXEC_SEAL set" warning) → the backend never
+        // reports healthy and the prewarm/on-demand spawn fails with gs_provision_failed.
+        // Setting this to 0 is the standard runtime workaround and is kernel/COS-agnostic.
+        if (!env.Any(e => e.StartsWith("DOTNET_EnableWriteXorExecute=", StringComparison.Ordinal)))
+        {
+            env.Add("DOTNET_EnableWriteXorExecute=0");
+        }
+
         return env;
     }
 

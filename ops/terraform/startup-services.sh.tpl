@@ -55,6 +55,7 @@ docker run -d --name clashup-gateway \
   --restart always \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v /proc:/host/proc:ro \
+  -e "DOTNET_EnableWriteXorExecute=0" \
   -e "Gateway__Tier=Services" \
   -e "Gateway__ListenPort=5001" \
   -e "Gateway__AdminPort=9001" \
