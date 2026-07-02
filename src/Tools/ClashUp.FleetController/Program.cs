@@ -18,7 +18,13 @@ var opts = app.Services.GetRequiredService<IOptions<FleetControllerOptions>>().V
 // public ingress (allUsers run.invoker) — it can't present an OIDC token before it
 // even has an endpoint. Cloud Run IAM is therefore open, so we gate routes in-app
 // with shared keys instead: a low-privilege ResolveKey for the public /resolve wake
-// path, and an AdminKey for the scheduler/dashboard sleep/wake controls.
+// path, and an AdminKey for the dashboard's /wake + /state controls.
+//
+// /tick is deliberately UNAUTHENTICATED: it's the Cloud Scheduler idle check, and
+// the scheduler authenticates with an OIDC token, NOT the X-ClashUp-Key header — so
+// gating it with a key permanently 401s the scheduler and the fleet never sleeps.
+// Leaving it open is safe: /tick only ever SLEEPS a genuinely-idle fleet (CCU 0
+// across the lookback window); it can't force-sleep an active fleet or wake anything.
 static bool KeyMatches(HttpContext ctx, string expected) =>
     !string.IsNullOrEmpty(expected) &&
     ctx.Request.Headers.TryGetValue("X-ClashUp-Key", out var got) &&
@@ -45,13 +51,10 @@ app.MapGet("/state", async (FleetManager fleet, HttpContext ctx, CancellationTok
         ? Results.Json(await fleet.GetStateAsync(ct))
         : Results.Unauthorized());
 
-app.MapPost("/tick", async (FleetManager fleet, HttpContext ctx, ILogger<Program> log, CancellationToken ct) =>
+// Unauthenticated by design — see the note on KeyMatches above. The scheduler's
+// OIDC token can't carry the X-ClashUp-Key header, and /tick only sleeps an idle fleet.
+app.MapPost("/tick", async (FleetManager fleet, ILogger<Program> log, CancellationToken ct) =>
 {
-    if (!KeyMatches(ctx, opts.AdminKey))
-    {
-        return Results.Unauthorized();
-    }
-
     var result = await fleet.TickAsync(ct);
     log.LogInformation("Idle tick: {Message}", result.Message);
     return Results.Json(result);
