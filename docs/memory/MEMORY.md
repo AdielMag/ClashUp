@@ -11,6 +11,7 @@
 ## Tooling / Meta
 - **Claude memory system** (location config, index-driven recall, foldering rules): [claude-memory-system.md](reference/claude-memory-system.md)
 - **Obsidian vault + agent skills + CLI**: [obsidian-vault.md](reference/obsidian-vault.md)
+- **Auto-mode secret handling**: [secret-handling-auto-mode.md](reference/secret-handling-auto-mode.md) — classifier blocks live secrets touching Bash in any form; use the IaC-native tool or hand value-entry to the user
 
 ## Project Overview
 Unity multiplayer game with C# server backend (ASP.NET Core 8 + MagicOnion 7.10.0).
@@ -84,6 +85,7 @@ Shared `MapData` POCOs, server/client loaders, baker editor tool, procedural vis
 - [feedback-telegraph-vs-castvfx.md](feedback/feedback-telegraph-vs-castvfx.md) — "Telegraph" (range indicator) ≠ "cast VFX" (triggered area-of-damage); ask if ambiguous
 - [feedback-ability-editor-sync.md](feedback/feedback-ability-editor-sync.md) — Change the ability data model → also update the Ability Editor tool or fields drop on save
 - [feedback-ticket-status.md](feedback/feedback-ticket-status.md) — Never mark Monday tickets Done without user confirmation it's working
+- [feedback-user-facing-shell-syntax.md](feedback/feedback-user-facing-shell-syntax.md) — Copy-paste commands for the USER's own terminal need PowerShell syntax (no `&&`), not bash
 
 ## Boot Flow / Client Lifecycle
 Scene loading, environment picker, reconnect/disconnect, pause-reset. See [boot-flow.md](boot/boot-flow.md).
