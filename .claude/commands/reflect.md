@@ -12,11 +12,17 @@ Go through the full conversation and identify:
 
 ## Step 2: Read Existing Memory
 
-Read all files in the memory directory to understand what's already documented:
-- `C:\Users\Adiel\.claude\projects\C--Users-Adiel-Documents-ClashUp\memory\MEMORY.md`
-- Check for any other `.md` files in that directory.
+Memory now lives IN the repo at `docs/memory/` (git-tracked, inside the Obsidian vault) via the
+`autoMemoryDirectory` setting. Files are organized into topical subfolders (architecture/, netcode/,
+abilities/, characters/, maps/, ui/, gameplay/, ops/, boot/, feedback/, reference/) with `MEMORY.md`
+at the root as the index. See `docs/memory/reference/claude-memory-system.md`.
+
+Read to understand what's already documented:
+- `docs/memory/MEMORY.md` (the index)
+- Any relevant topic files under `docs/memory/<subfolder>/`.
 
 Do NOT duplicate information that already exists. Update existing entries if you have new or corrected information.
+New topic files go in the matching subfolder and are linked from `MEMORY.md` with a subfolder-qualified path.
 
 ## Step 3: Write/Update Memory Files
 
@@ -36,13 +42,13 @@ Organize findings into memory files:
 
 Only create a topic file if there's enough substance for it. Don't create empty or near-empty files.
 
-## Step 4: Sync Memory Files to Repo
+## Step 4: Commit Memory Files
 
-After writing all memory files, copy them into the repo and commit:
+Memory files ARE the repo files under `docs/memory/` — no copy step needed. Just stage that path
+(only that path, to avoid sweeping unrelated working-tree changes) and commit:
 
 ```bash
-cp "C:/Users/Adiel/.claude/projects/C--Users-Adiel-Documents-ClashUp/memory/"*.md .claude/memory/
-git add .claude/memory/
+git add docs/memory/
 git diff --cached --quiet || git commit -m "Update Claude memory files"
 ```
 

@@ -4,7 +4,13 @@
      characters/, maps/, ui/, gameplay/, ops/, boot/, feedback/, reference/). MEMORY.md stays at the
      root as the index. When adding a new memory, place the file in the matching subfolder and link it
      here with the subfolder-qualified path, e.g. `[title](<subfolder>/<name>.md)`. Body [[wikilinks]] resolve
-     by filename in Obsidian regardless of folder. -->
+     by filename in Obsidian regardless of folder.
+     This memory dir lives at docs/memory/ (git-tracked, inside the Obsidian vault) via
+     autoMemoryDirectory. How the memory system works + why subfolders are safe: reference/claude-memory-system.md -->
+
+## Tooling / Meta
+- **Claude memory system** (location config, index-driven recall, foldering rules): [claude-memory-system.md](reference/claude-memory-system.md)
+- **Obsidian vault + agent skills + CLI**: [obsidian-vault.md](reference/obsidian-vault.md)
 
 ## Project Overview
 Unity multiplayer game with C# server backend (ASP.NET Core 8 + MagicOnion 7.10.0).
@@ -68,6 +74,17 @@ Shared `MapData` POCOs, server/client loaders, baker editor tool, procedural vis
 - **Fix vendored packages at the source** — never create project-side workarounds for issues in vendored packages (AetherNet, etc.)
 - **Tests on a real phone** and reports UX bugs tersely ("doesn't work well") without repro steps — when this happens, audit the relevant code for root cause (e.g. a threshold/geometry mismatch) rather than asking for more detail; MCP tools can't drive live multi-touch, so reason from the UI Toolkit event model and flag explicitly that a fix is untested on-device.
 
+## Feedback / Working Style (corrections to honor)
+- [feedback-client-authority.md](feedback/feedback-client-authority.md) — Never synthesize server-authoritative events on the client as a fallback; fix the server to deliver reliably
+- [feedback-no-singletons.md](feedback/feedback-no-singletons.md) — No static singletons for server services; register via DI with interface
+- [feedback-scope-narrowing.md](feedback/feedback-scope-narrowing.md) — Start systems with the minimum fields mentioned; don't add speculative fields
+- [feedback-reread-before-edit.md](feedback/feedback-reread-before-edit.md) — Re-read files right before editing; code drifts between plan and implementation
+- [feedback-plan-revision.md](feedback/feedback-plan-revision.md) — "Revise plan, make it optimized/correct" = real efficiency/leak/scope pass, not prose polish
+- [feedback-ui-scope.md](feedback/feedback-ui-scope.md) — "Hide UI" during input = input canvases only (joystick/ability), keep informational HUD
+- [feedback-telegraph-vs-castvfx.md](feedback/feedback-telegraph-vs-castvfx.md) — "Telegraph" (range indicator) ≠ "cast VFX" (triggered area-of-damage); ask if ambiguous
+- [feedback-ability-editor-sync.md](feedback/feedback-ability-editor-sync.md) — Change the ability data model → also update the Ability Editor tool or fields drop on save
+- [feedback-ticket-status.md](feedback/feedback-ticket-status.md) — Never mark Monday tickets Done without user confirmation it's working
+
 ## Boot Flow / Client Lifecycle
 Scene loading, environment picker, reconnect/disconnect, pause-reset. See [boot-flow.md](boot/boot-flow.md).
 
@@ -85,8 +102,8 @@ MagicOnion source-gen requirement, shader stripping, emulator ports. See [androi
 - [debugging.md](reference/debugging.md) — Common pitfalls and solutions (incl. full match-end freeze sequence, UI Toolkit gotchas, MagicOnion per-connection send, reflecting into NuGet packages)
 - [unity-mcp.md](reference/unity-mcp.md) — Unity MCP CLI usage patterns and gotchas
 - [dev-environment.md](ops/dev-environment.md) — CLASHUP_DEV define, Tailscale phone testing, ServerEnvironment enum
-- [feedback-ticket-status.md](feedback/feedback-ticket-status.md) — Never mark tickets Done without user confirmation it's working
-- [feedback-plan-revision.md](feedback/feedback-plan-revision.md) — "Revise plan, make it optimized/correct" = real efficiency/leak/scope pass, not prose polish
+- [monday-api.md](reference/monday-api.md) — Monday.com API: endpoint/auth, board & column IDs, status-column gotcha (used by `/ticket`)
+- [mvp1-architecture.md](architecture/mvp1-architecture.md) — Player persistence plan (session cache + write-behind, NOT yet built) + zero-data-loss mandate
 - [elimination-mode.md](gameplay/elimination-mode.md) — 2nd game mode: no-respawn + points economy + breakable boxes/orbs
 - [forfeit-leave-match.md](gameplay/forfeit-leave-match.md) — Mid-match "Leave Match"/forfeit flow (client + server)
 - [bot-system.md](gameplay/bot-system.md) — Server-side AI bots: matchmaking fill, BotDirector FSM, perception

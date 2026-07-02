@@ -1,7 +1,9 @@
 ---
-name: ""
-metadata: 
+name: feedback-telegraph-vs-castvfx
+description: "\"Telegraph\" (persistent range indicator) and \"cast VFX\" (triggered area-of-damage effect) are distinct systems — don't conflate them"
+metadata:
   node_type: memory
+  type: feedback
   originSessionId: 33cbf27a-951e-448a-8363-4a9134277285
 ---
 
