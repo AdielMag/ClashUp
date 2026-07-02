@@ -23,12 +23,31 @@ namespace ClashUp.Client.Networking
             { ServerEnvironment.Dev, "https://dev.clashup.example.com" }
         };
 
+        [Header("Dynamic discovery (cloud/Dev only)")]
+        [Tooltip("Fleet-controller Cloud Run URL. The client GETs {url}/resolve at boot to " +
+                 "learn the current Services IP and wake the fleet. From `terraform output fleet_controller_url`.")]
+        [SerializeField] private string controllerUrl = "";
+
+        [Tooltip("Shared key sent as X-ClashUp-Key on /resolve. From `terraform output fleet_resolve_key`.")]
+        [SerializeField] private string resolveKey = "";
+
         public ServerEnvironment Current => current;
 
         public string GetServicesUrl()
         {
             return servicesUrls.TryGetValue(current, out var url) ? url : "http://localhost:5001";
         }
+
+        public string ControllerUrl => controllerUrl;
+        public string ResolveKey => resolveKey;
+
+        /// <summary>
+        /// True when the current environment's Services IP is provisioned on demand by the
+        /// fleet-controller (released while asleep) and must be discovered at boot rather than
+        /// baked in. Only the cloud (Dev) environment uses this; local/emulator/tailscale are static.
+        /// </summary>
+        public bool RequiresDiscovery =>
+            current == ServerEnvironment.Dev && !string.IsNullOrEmpty(controllerUrl);
 
         public void SetCurrent(ServerEnvironment env) => current = env;
 

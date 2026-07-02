@@ -8,10 +8,8 @@ output "services_endpoint" {
   value       = local.services_endpoint
 }
 
-output "nat_ip" {
-  description = "Static egress IP for Services instances. Allowlist this in MongoDB Atlas → Network Access."
-  value       = google_compute_address.nat.address
-}
+# The NAT egress IP is now runtime-managed by the fleet-controller (re-allocated
+# each wake) and auto-allowlisted in Atlas — there is no static IP to output.
 
 output "artifact_registry" {
   description = "Base Docker image path. Push images as <base>/clashup-<tier>:<version>."

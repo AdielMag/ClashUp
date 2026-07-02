@@ -20,6 +20,7 @@ namespace ClashUp.Client.AppStarter
             builder.Register<IDeviceIdStore, PlayerPrefsDeviceIdStore>(Lifetime.Singleton);
             builder.Register<ISceneLoader, UniTaskSceneLoader>(Lifetime.Singleton);
             builder.Register<MagicOnionChannelProvider>(Lifetime.Singleton);
+            builder.Register<ServicesEndpointResolver>(Lifetime.Singleton);
             builder.Register<PingHubClient>(Lifetime.Singleton);
 
             builder.RegisterEntryPoint<BootBootstrapper>();

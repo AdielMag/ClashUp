@@ -26,3 +26,10 @@ ccu_per_instance_target  = 100
 mongo_connection_string    = "mongodb+srv://USER:PASS@cluster0.example.mongodb.net/clashup"
 jwt_end_user_signing_key   = "REPLACE-with-32+byte-key"
 jwt_inter_tier_signing_key = "REPLACE-with-32+byte-key"
+
+# MongoDB Atlas Admin API key (Project IP Access List Admin role). The fleet
+# controller uses it to re-allowlist the NAT egress IP on each wake so the idle
+# fleet can release the static NAT IP (→ $0 idle networking). See README.
+atlas_public_key  = "REPLACE-atlas-public-key"
+atlas_private_key = "REPLACE-atlas-private-key"
+atlas_project_id  = "REPLACE-atlas-project-group-id"

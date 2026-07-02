@@ -53,6 +53,35 @@ resource "google_project_iam_member" "fc_monitoring_viewer" {
   member  = "serviceAccount:${google_service_account.fleet_controller.email}"
 }
 
+# Allocate/release the static IPs, add/remove the Cloud NAT on the router.
+resource "google_project_iam_member" "fc_network_admin" {
+  project = var.project_id
+  role    = "roles/compute.networkAdmin"
+  member  = "serviceAccount:${google_service_account.fleet_controller.email}"
+}
+
+# Create/delete the L4 forwarding rule against the backend service.
+resource "google_project_iam_member" "fc_lb_admin" {
+  project = var.project_id
+  role    = "roles/compute.loadBalancerAdmin"
+  member  = "serviceAccount:${google_service_account.fleet_controller.email}"
+}
+
+# --- Shared keys gating the (public-ingress) controller endpoints -----------
+# The service must accept public ingress so the client can hit /resolve at boot
+# before it has any endpoint or token. Routes are gated in-app by shared keys
+# instead of Cloud Run IAM: ResolveKey (client, low privilege) and AdminKey
+# (dashboard wake). Generated here; surfaced via (sensitive) outputs.
+resource "random_password" "resolve_key" {
+  length  = 32
+  special = false
+}
+
+resource "random_password" "admin_key" {
+  length  = 32
+  special = false
+}
+
 # --- Cloud Run service ------------------------------------------------------
 resource "google_cloud_run_v2_service" "fleet_controller" {
   name     = "clashup-fleet-controller"
@@ -102,27 +131,57 @@ resource "google_cloud_run_v2_service" "fleet_controller" {
         name  = "Fleet__GameServerAutoscaler"
         value = google_compute_region_autoscaler.gameserver.name
       }
+
+      # Networking resources the controller allocates on wake / releases on sleep.
+      # Runtime teardown/recreate is L4-mode only; in HTTPS mode (services_domain set)
+      # the LB uses a stable global address + domain and this stays empty (no-op).
+      env {
+        name  = "Fleet__ServicesBackendService"
+        value = try(google_compute_region_backend_service.services_l4[0].name, "")
+      }
+      env {
+        name  = "Fleet__Router"
+        value = google_compute_router.router.name
+      }
+
+      # MongoDB Atlas allowlist automation for the re-allocated NAT egress IP.
+      env {
+        name  = "Fleet__AtlasPublicKey"
+        value = var.atlas_public_key
+      }
+      env {
+        name  = "Fleet__AtlasPrivateKey"
+        value = var.atlas_private_key
+      }
+      env {
+        name  = "Fleet__AtlasProjectId"
+        value = var.atlas_project_id
+      }
+
+      # Shared-key gates for the public endpoints.
+      env {
+        name  = "Fleet__ResolveKey"
+        value = random_password.resolve_key.result
+      }
+      env {
+        name  = "Fleet__AdminKey"
+        value = random_password.admin_key.result
+      }
     }
   }
 
   depends_on = [google_project_service.run]
 }
 
-# Callers allowed to invoke the (authenticated) service.
-resource "google_cloud_run_v2_service_iam_member" "scheduler_invoker" {
+# Public ingress: the client hits /resolve at boot before it holds any endpoint or
+# token, so Cloud Run IAM must be open. Authorization is enforced IN-APP by shared
+# keys (see Program.cs): ResolveKey for /resolve, AdminKey for /wake+/state, and
+# /tick is unauthenticated but harmless (it only sleeps an already-idle fleet).
+resource "google_cloud_run_v2_service_iam_member" "public_invoker" {
   name     = google_cloud_run_v2_service.fleet_controller.name
   location = var.region
   role     = "roles/run.invoker"
-  member   = "serviceAccount:${google_service_account.fleet_controller.email}"
-}
-
-# The local read-only dashboard SA can TRIGGER the controller but cannot touch
-# compute itself — fleet-control rights stay on the controller SA only.
-resource "google_cloud_run_v2_service_iam_member" "dashboard_invoker" {
-  name     = google_cloud_run_v2_service.fleet_controller.name
-  location = var.region
-  role     = "roles/run.invoker"
-  member   = "serviceAccount:clashup-dashboard@${var.project_id}.iam.gserviceaccount.com"
+  member   = "allUsers"
 }
 
 # Read-only: lets the dashboard read the idle-check job's state + next-run time for
@@ -161,6 +220,18 @@ resource "google_cloud_scheduler_job" "idle_check" {
 }
 
 output "fleet_controller_url" {
-  description = "Cloud Run URL of the idle-fleet controller. Set this as Gcp:FleetControllerUrl in the dashboard."
+  description = "Cloud Run URL of the idle-fleet controller. Set this as Gcp:FleetControllerUrl in the dashboard AND as the client's boot discovery URL."
   value       = google_cloud_run_v2_service.fleet_controller.uri
+}
+
+output "fleet_resolve_key" {
+  description = "Shared key the CLIENT sends on GET /resolve. Bake into the client EnvironmentConfig (X-ClashUp-Key)."
+  value       = random_password.resolve_key.result
+  sensitive   = true
+}
+
+output "fleet_admin_key" {
+  description = "Shared key the DASHBOARD sends on POST /wake + /state. Set as Gcp:FleetControllerAdminKey in the dashboard."
+  value       = random_password.admin_key.result
+  sensitive   = true
 }

@@ -23,8 +23,14 @@ public sealed class DashboardOptions
 
     /// <summary>
     /// Base URL of the Cloud Run fleet controller (from <c>terraform output
-    /// fleet_controller_url</c>). The Wake button POSTs to <c>{url}/wake</c> with an
-    /// OIDC token minted for this audience. Empty = Wake disabled.
+    /// fleet_controller_url</c>). The Wake button POSTs to <c>{url}/wake</c>. Empty = Wake disabled.
     /// </summary>
     public string? FleetControllerUrl { get; set; }
+
+    /// <summary>
+    /// Admin key sent as <c>X-ClashUp-Key</c> on the controller's /wake + /state routes (from
+    /// <c>terraform output fleet_admin_key</c>). The controller has public ingress and gates
+    /// these routes in-app by this shared key rather than Cloud Run IAM.
+    /// </summary>
+    public string? FleetControllerAdminKey { get; set; }
 }

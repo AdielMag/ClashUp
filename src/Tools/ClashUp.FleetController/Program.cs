@@ -1,4 +1,5 @@
 using ClashUp.Tools.FleetController;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,26 +7,63 @@ var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls($"http://0.0.0.0:{Environment.GetEnvironmentVariable("PORT") ?? "8080"}");
 
 builder.Services.Configure<FleetControllerOptions>(builder.Configuration.GetSection("Fleet"));
+builder.Services.AddSingleton<AtlasAccessListClient>();
 builder.Services.AddSingleton<FleetManager>();
 
 var app = builder.Build();
 
-// Liveness only — every other route is gated by Cloud Run IAM (run.invoker), so the
-// scheduler SA and the dashboard SA are the only callers that can reach /tick and /wake.
+var opts = app.Services.GetRequiredService<IOptions<FleetControllerOptions>>().Value;
+
+// The client discovers the Services IP here at boot, so this service must accept
+// public ingress (allUsers run.invoker) — it can't present an OIDC token before it
+// even has an endpoint. Cloud Run IAM is therefore open, so we gate routes in-app
+// with shared keys instead: a low-privilege ResolveKey for the public /resolve wake
+// path, and an AdminKey for the scheduler/dashboard sleep/wake controls.
+static bool KeyMatches(HttpContext ctx, string expected) =>
+    !string.IsNullOrEmpty(expected) &&
+    ctx.Request.Headers.TryGetValue("X-ClashUp-Key", out var got) &&
+    string.Equals(got.ToString(), expected, StringComparison.Ordinal);
+
+// Liveness only — always open.
 app.MapGet("/healthz", () => Results.Ok("ok"));
 
-app.MapGet("/state", async (FleetManager fleet, CancellationToken ct) =>
-    Results.Json(await fleet.GetStateAsync(ct)));
-
-app.MapPost("/tick", async (FleetManager fleet, ILogger<Program> log, CancellationToken ct) =>
+// Public boot discovery: returns the live Services endpoint, waking the fleet if asleep.
+app.MapGet("/resolve", async (FleetManager fleet, HttpContext ctx, ILogger<Program> log, CancellationToken ct) =>
 {
+    if (!KeyMatches(ctx, opts.ResolveKey))
+    {
+        return Results.Unauthorized();
+    }
+
+    var endpoint = await fleet.ResolveServicesEndpointAsync(ct);
+    log.LogInformation("Resolve -> {Endpoint}", endpoint);
+    return Results.Json(new { endpoint });
+});
+
+app.MapGet("/state", async (FleetManager fleet, HttpContext ctx, CancellationToken ct) =>
+    KeyMatches(ctx, opts.AdminKey)
+        ? Results.Json(await fleet.GetStateAsync(ct))
+        : Results.Unauthorized());
+
+app.MapPost("/tick", async (FleetManager fleet, HttpContext ctx, ILogger<Program> log, CancellationToken ct) =>
+{
+    if (!KeyMatches(ctx, opts.AdminKey))
+    {
+        return Results.Unauthorized();
+    }
+
     var result = await fleet.TickAsync(ct);
     log.LogInformation("Idle tick: {Message}", result.Message);
     return Results.Json(result);
 });
 
-app.MapPost("/wake", async (FleetManager fleet, ILogger<Program> log, CancellationToken ct) =>
+app.MapPost("/wake", async (FleetManager fleet, HttpContext ctx, ILogger<Program> log, CancellationToken ct) =>
 {
+    if (!KeyMatches(ctx, opts.AdminKey))
+    {
+        return Results.Unauthorized();
+    }
+
     var result = await fleet.WakeAsync(ct);
     log.LogInformation("Wake: {Message}", result.Message);
     return Results.Json(result);

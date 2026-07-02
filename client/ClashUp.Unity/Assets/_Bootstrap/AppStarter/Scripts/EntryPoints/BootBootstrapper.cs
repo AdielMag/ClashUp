@@ -20,6 +20,7 @@ namespace ClashUp.Client.AppStarter
         private readonly ISceneLoader _sceneLoader;
         private readonly ClashUpEndpoints _endpoints;
         private readonly EnvironmentConfig _environmentConfig;
+        private readonly ServicesEndpointResolver _endpointResolver;
 
         public BootBootstrapper(
             IDebugLogger log,
@@ -27,7 +28,8 @@ namespace ClashUp.Client.AppStarter
             PingHubClient pingHub,
             ISceneLoader sceneLoader,
             ClashUpEndpoints endpoints,
-            EnvironmentConfig environmentConfig)
+            EnvironmentConfig environmentConfig,
+            ServicesEndpointResolver endpointResolver)
         {
             _log = log;
             _deviceIdStore = deviceIdStore;
@@ -35,6 +37,7 @@ namespace ClashUp.Client.AppStarter
             _sceneLoader = sceneLoader;
             _endpoints = endpoints;
             _environmentConfig = environmentConfig;
+            _endpointResolver = endpointResolver;
         }
 
         public async UniTask StartAsync(CancellationToken cancellation)
@@ -50,9 +53,25 @@ namespace ClashUp.Client.AppStarter
 #if CLASHUP_DEV || UNITY_EDITOR
             var selectedEnv = await EnvironmentPickerUI.ShowAndWaitAsync(_environmentConfig);
             _environmentConfig.SetCurrent(selectedEnv);
-            _endpoints.ServicesAddress = _environmentConfig.GetServicesUrl();
-            _log.Log($"[Boot] Environment: {selectedEnv} → {_endpoints.ServicesAddress}");
+            _log.Log($"[Boot] Environment: {selectedEnv}");
 #endif
+
+            // Resolve the Services endpoint. In the cloud environment the public IP is
+            // provisioned on demand by the fleet-controller (released while asleep for $0
+            // idle cost), so it is discovered at boot rather than baked in; this GET also
+            // wakes the fleet. Static environments (local/emulator/tailscale) use their
+            // fixed URL directly.
+            if (_environmentConfig.RequiresDiscovery)
+            {
+                loadingScreen.SetStepText("Waking server...");
+                _endpoints.ServicesAddress = await _endpointResolver.ResolveAsync(cancellation);
+            }
+            else
+            {
+                _endpoints.ServicesAddress = _environmentConfig.GetServicesUrl();
+            }
+            _log.Log($"[Boot] Services address → {_endpoints.ServicesAddress}");
+
             ClashUpEndpoints.ResolvedServicesAddress = _endpoints.ServicesAddress;
             ClashUpEndpoints.ResolvedEnvironment = _environmentConfig.Current;
             loadingScreen.SetProgress(0.2f);

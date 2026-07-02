@@ -11,19 +11,24 @@
 locals {
   use_https = var.services_domain != ""
 
-  services_endpoint = local.use_https ? "https://${var.services_domain}" : "http://${one(google_compute_address.services_l4[*].address)}:5001"
-  services_lb_ip    = local.use_https ? one(google_compute_global_address.services_https[*].address) : one(google_compute_address.services_l4[*].address)
+  # In L4 mode the public IP + forwarding rule are provisioned at runtime by the
+  # fleet-controller (released on sleep for $0 idle cost, re-allocated on wake), so
+  # there is no static Terraform IP to surface — clients discover it via /resolve.
+  services_endpoint = local.use_https ? "https://${var.services_domain}" : "runtime (fleet-controller /resolve)"
+  services_lb_ip    = local.use_https ? one(google_compute_global_address.services_https[*].address) : "runtime (fleet-controller /resolve)"
 }
 
 # ---------------------------------------------------------------------------
 # L4 external passthrough Network LB (default — no domain, plaintext h2c)
 # ---------------------------------------------------------------------------
-
-resource "google_compute_address" "services_l4" {
-  count  = local.use_https ? 0 : 1
-  name   = "clashup-services-ip"
-  region = var.region
-}
+#
+# NOTE: the L4 public IP (clashup-services-ip) and forwarding rule (clashup-
+# services-l4-fr) are NO LONGER Terraform-managed. The fleet-controller owns their
+# lifecycle so it can release them on sleep (→ $0 idle) and re-create them on wake.
+# The health check, backend service and firewall below are durable (free while
+# idle) and stay in Terraform; the runtime forwarding rule targets this backend.
+# See src/Tools/ClashUp.FleetController + ops/terraform/README.md (fleet-controller
+# owned resources) for the terraform state rm bootstrap.
 
 resource "google_compute_region_health_check" "services_l4" {
   count  = local.use_https ? 0 : 1
@@ -48,16 +53,9 @@ resource "google_compute_region_backend_service" "services_l4" {
   }
 }
 
-resource "google_compute_forwarding_rule" "services_l4" {
-  count                 = local.use_https ? 0 : 1
-  name                  = "clashup-services-l4-fr"
-  region                = var.region
-  load_balancing_scheme = "EXTERNAL"
-  ip_protocol           = "TCP"
-  ports                 = ["5001"]
-  ip_address            = google_compute_address.services_l4[0].id
-  backend_service       = google_compute_region_backend_service.services_l4[0].id
-}
+# The forwarding rule (clashup-services-l4-fr) is created at runtime by the
+# fleet-controller against google_compute_region_backend_service.services_l4 —
+# see the note at the top of this file. It is intentionally absent here.
 
 # A passthrough NLB preserves the client source IP, so clients reach instances
 # directly on :5001 — allow public ingress to that port (NLB mode only).

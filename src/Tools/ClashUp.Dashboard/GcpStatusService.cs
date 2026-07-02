@@ -186,9 +186,9 @@ public sealed class GcpStatusService
 
     /// <summary>
     /// Triggers the Cloud Run fleet controller's <c>/wake</c> endpoint. The dashboard
-    /// holds no compute-write rights itself — it mints an OIDC token for the controller's
-    /// audience (its SA just needs <c>roles/run.invoker</c>) and lets the controller do the
-    /// scaling. Throws if <see cref="DashboardOptions.FleetControllerUrl"/> is unset.
+    /// holds no compute-write rights itself — the controller does the scaling. The
+    /// controller has public ingress and gates /wake in-app by the shared admin key, so
+    /// the dashboard authenticates with that header. Throws if the URL/key are unset.
     /// </summary>
     public async Task WakeFleetAsync(CancellationToken cancellationToken)
     {
@@ -196,14 +196,15 @@ public sealed class GcpStatusService
         {
             throw new InvalidOperationException("Gcp:FleetControllerUrl is not configured — run `terraform output fleet_controller_url` and set it.");
         }
+        if (string.IsNullOrWhiteSpace(_options.FleetControllerAdminKey))
+        {
+            throw new InvalidOperationException("Gcp:FleetControllerAdminKey is not configured — run `terraform output -raw fleet_admin_key` and set it.");
+        }
 
         var url = _options.FleetControllerUrl.TrimEnd('/');
-        var credential = await GoogleCredential.GetApplicationDefaultAsync(cancellationToken);
-        var oidcToken = await credential.GetOidcTokenAsync(OidcTokenOptions.FromTargetAudience(url), cancellationToken);
-        var token = await oidcToken.GetAccessTokenAsync(cancellationToken: cancellationToken);
 
         using var http = new HttpClient();
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        http.DefaultRequestHeaders.Add("X-ClashUp-Key", _options.FleetControllerAdminKey);
         var response = await http.PostAsync($"{url}/wake", content: null, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {

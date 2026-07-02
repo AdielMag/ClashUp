@@ -103,3 +103,30 @@ variable "jwt_inter_tier_signing_key" {
   type      = string
   sensitive = true
 }
+
+# --- MongoDB Atlas Admin API (fleet-controller allowlist automation) --------
+# Create a project-scoped API key in Atlas (sidebar: Project Identity & Access →
+# Applications → API Keys) with the "Project Network Access Manager" role (older
+# Atlas UI/docs call this "Project IP Access List Admin" — same role, renamed),
+# then pass its public/private key here. The controller uses it to allowlist the
+# re-allocated NAT egress IP on each wake. The key's own API Access List must
+# include 0.0.0.0/0 since Cloud Run's egress IP is not fixed.
+
+variable "atlas_public_key" {
+  type        = string
+  description = "Atlas Admin API public key (Digest username)."
+  default     = ""
+}
+
+variable "atlas_private_key" {
+  type        = string
+  description = "Atlas Admin API private key (Digest password)."
+  sensitive   = true
+  default     = ""
+}
+
+variable "atlas_project_id" {
+  type        = string
+  description = "Atlas project (group) id whose Network Access list holds the NAT IP."
+  default     = ""
+}

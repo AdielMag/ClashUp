@@ -92,29 +92,89 @@ gcloud iam service-accounts keys create dashboard-sa.json \
 ## Apply (two-phase — instances pull the gateway image at boot)
 
 ```bash
-cp terraform.tfvars.example terraform.tfvars   # fill in project, Mongo, JWT keys
+cp terraform.tfvars.example terraform.tfvars   # fill in project, Mongo, JWT keys, Atlas API key
 terraform init
 
-# Phase 1: registry + network + NAT + instance SA, so images can be pushed and
-# the NAT IP can be allowlisted in Atlas.
+# Phase 1: registry + network + router + instance SA, so images can be pushed.
 terraform apply \
   -target=google_artifact_registry_repository.docker \
   -target=google_compute_subnetwork.subnet \
-  -target=google_compute_router_nat.nat \
+  -target=google_compute_router.router \
   -target=google_service_account.instance
-
-terraform output nat_ip   # → add to MongoDB Atlas → Network Access
 
 # Push the first images: tag a release so CI builds clashup-{services,gameserver,gateway}.
 git tag v1.0.0 && git push origin v1.0.0
 
-# Phase 2: everything else (MIGs, LB, autoscalers, monitoring).
+# Phase 2: everything else (MIGs, LB backend, autoscalers, monitoring, controller).
 terraform apply
+
+# Provision the runtime networking chain (public IP + forwarding rule + Cloud NAT)
+# and allowlist the NAT IP in Atlas — the fleet-controller owns these, so trigger
+# one wake after apply (dashboard Wake button, or):
+curl -H "X-ClashUp-Key: $(terraform output -raw fleet_admin_key)" \
+  -X POST "$(terraform output -raw fleet_controller_url)/wake"
 ```
 
-`terraform output services_endpoint` is what clients (and the GameServer tier)
-use. Point the Unity client's Services URL at it, and set the client's Bundle
-Version to a pushed image tag (e.g. `1.0.0`) so `x-client-version` matches.
+Clients no longer bake a Services IP — they discover it at boot via the controller's
+`/resolve` (which also wakes the fleet). Bake `fleet_controller_url` +
+`fleet_resolve_key` into the client `EnvironmentConfig` (see below), and set the
+client Bundle Version to a pushed image tag (e.g. `1.0.0`) so `x-client-version` matches.
+
+## Idle networking → $0 (fleet-controller owned resources)
+
+The MIG auto-sleep drives compute to 0, but four networking resources used to bill
+~$25/mo even while asleep (an L4 forwarding rule ~$18, two static IPv4s ~$7, Cloud
+NAT). To reach $0 idle, the **fleet-controller owns their full lifecycle** instead
+of Terraform — it releases them on sleep and re-creates them on wake:
+
+| Resource | Terraform | Runtime (controller) |
+|---|---|---|
+| `clashup-services-ip` (public IP) | ❌ | allocated on wake, released on sleep |
+| `clashup-services-l4-fr` (forwarding rule) | ❌ | created on wake → `services-l4-backend` |
+| `clashup-nat-ip` (NAT egress IP) | ❌ | allocated on wake, released on sleep |
+| `clashup-nat` (Cloud NAT) | ❌ | added to the router on wake |
+| health check, backend service, firewall, router | ✅ (durable, free) | referenced by the rule/NAT |
+
+Because the public IP changes each wake, the client discovers it at boot via
+`GET {controller}/resolve` (returns `http://IP:5001`, waking the fleet if asleep).
+Because the NAT IP changes each wake, the controller re-allowlists it in **MongoDB
+Atlas** via the Admin API (`atlas_*` vars) — so no static NAT IP to pin.
+
+### One-time setup
+
+1. **Atlas API key** — in Atlas sidebar: Project Identity & Access → Applications →
+   API Keys → create a project key with role **Project Network Access Manager**
+   (older Atlas UI/docs call this "Project IP Access List Admin" — same role,
+   renamed). The key's own API Access List must include `0.0.0.0/0` (Cloud Run's
+   egress IP isn't fixed). Put `atlas_public_key`, `atlas_private_key`,
+   `atlas_project_id` (found under the ⚙️ Project Settings gear) in `terraform.tfvars`.
+2. **Client config** — bake into the Unity `EnvironmentConfig` asset (Dev env):
+   `controllerUrl = terraform output -raw fleet_controller_url` and
+   `resolveKey = terraform output -raw fleet_resolve_key`. Rebuild + redeploy the client.
+3. **Dashboard config** — set `Gcp:FleetControllerAdminKey = terraform output -raw fleet_admin_key`
+   (alongside the existing `Gcp:FleetControllerUrl`).
+
+### Migrating an EXISTING deployment (resources currently in state)
+
+The four resources above are already in Terraform state from the old design. Hand
+them to the controller WITHOUT deleting the live resources (avoids a public-IP
+flap): remove them from state, then apply.
+
+```bash
+terraform state rm \
+  google_compute_address.services_l4 \
+  google_compute_forwarding_rule.services_l4 \
+  google_compute_address.nat \
+  google_compute_router_nat.nat
+
+terraform apply    # adds controller IAM/env/keys; leaves the live resources alone
+```
+
+From then on the controller manages them: the next sleep releases them, the next
+wake (or client `/resolve`) re-creates them. The security model is public Cloud Run
+ingress gated in-app by shared keys — `resolveKey` for `/resolve` (bounded-cost
+wake), `adminKey` for `/wake`+`/state`, `/tick` unauthenticated (only sleeps an
+already-idle fleet). See `src/Tools/ClashUp.FleetController`.
 
 ## TLS (production)
 
