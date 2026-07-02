@@ -1,0 +1,147 @@
+---
+name: stat-health-system
+description: "Character stats, health tracking, and deterministic RNG architecture for combat prediction"
+metadata: 
+  node_type: memory
+  type: project
+  originSessionId: ed44a8ee-8136-4a5b-85f8-0d83e840934d
+---
+
+# Stat & Health System Architecture
+
+## Character Definitions (Shared)
+
+Files in `src/Shared/ClashUp.Shared/Characters/`:
+- `CharacterId` — string-backed struct, MessagePack-serializable, same pattern as `PlayerId`
+- `StatBlock` — plain C# class: `MaxHealth` (100f), `Damage` (10f), `MoveSpeed` (5f). NOT MessagePack (static config)
+- `CharacterDefinition` — `CharacterId Id`, `string DisplayName`, `StatBlock BaseStats`
+- `CharacterRegistry` — static lookup. `Default` = "Brawler". `Get(id)`, `All`
+
+**Why:** Both client and server need identical stat values. Hardcoded in Shared guarantees this.
+
+## Health Tracking
+
+`HealthTable` in `ClashUp.Shared/Simulation/` — `Dictionary<string, float>` wrapper.
+- `Initialize(playerId, maxHealth)` — set starting health
+- `ApplyDamage(playerId, amount)` → new health (clamped to 0); early-returns current health if player is invulnerable
+- `ApplyHeal(playerId, amount, maxHealth)` → new health (clamped to max)
+- `SnapHealth(playerId, health)` — server reconciliation override
+- `SetInvulnerable(playerId, durationTicks)` — sets invulnerability timer
+- `IsInvulnerable(playerId)` → bool — true if ticks remaining > 0
+- `Tick()` — decrements all invuln counters; must be called once per simulation step
+- `DefaultSpawnInvulnTicks = 90` — 3 seconds at 30 Hz
+
+Owned by both `AetherServerSimulation` and `AetherClientSimulation` as sibling to `MatchPhysicsWorld`.
+
+## Wire Protocol Keys
+
+| DTO | Key | Field | Added |
+|-----|-----|-------|-------|
+| PlayerStateDto | 4 | `float Health` | stat system |
+| PlayerStateDto | 5 | `int LastProcessedInputSeq` | netcode/reconciliation |
+| PlayerStateDto | 6 | `bool IsInvulnerable` | spawn invulnerability |
+| PlayerStateDto | 7 | `int RespawnInTicks` | respawn delay — 0=alive, >0=dead/counting down |
+| JoinResult | 6 | `uint RandomSeed` | stat system |
+| PlayerSummary | 4 | `CharacterId CharacterId` | stat system |
+
+**How to apply:** When adding new fields to these DTOs, use the next available Key index. Never reuse or change existing keys (MessagePack binary compat).
+
+## Deterministic RNG
+
+`DeterministicRng` in `ClashUp.Shared/Simulation/` — Xorshift32 PRNG.
+- Constructor: `DeterministicRng(uint seed)` (seed=0 auto-corrects to 1)
+- `Next()`, `NextFloat()` (0..1), `NextRange(min, max)`
+- `ForTick(baseSeed, tick)` — per-tick re-seeding via `baseSeed ^ (uint)tick`
+
+**Why per-tick re-seeding:** If client mispredicts tick N (different RNG call count), tick N+1 still produces correct random values because each tick is independently seeded. Critical for reconciliation — replaying ticks reproduces exact random sequences.
+
+Server generates seed at `AetherServerSimulation` construction. Sent to client via `JoinResult.RandomSeed`.
+
+## Movement Speed Integration
+
+`MoveSpeed` flows from `StatBlock` through to physics:
+- `MovementModel.Step()` accepts optional `float moveSpeed` param (defaults to `MoveSpeed` const for backward compat)
+- `MatchPhysicsWorld.EnsurePlayer()` accepts optional `float moveSpeed` param, stores in `_playerMoveSpeeds` dictionary
+- `MatchPhysicsWorld.Step()` reads per-player speed from `_playerMoveSpeeds` instead of hardcoded `MovementModel.MoveSpeed`
+- Server/client simulations pass `stats.MoveSpeed` to `_world.EnsurePlayer()`
+
+## Integration Points
+
+- **Server `EnsurePlayer`**: Initializes health and passes move speed from `CharacterRegistry.Default.BaseStats`
+- **Server `EncodeDelta`**: Includes `Health` from `HealthTable` in each `PlayerStateDto`
+- **Client `ReconcileTo`**: Snaps health from server's `PlayerStateDto.Health` (local player only; remote health arrives via `RemotePlayerInterpolator`)
+- **Client `SyncRenderStates`**: Copies health into `PlayerRenderState.Health` / `.MaxHealth` (local player only)
+- **`MatchHub.JoinAsync`**: Sends `RandomSeed` and `CharacterId` in join result/summary
+
+## Integration Points — Invulnerability
+
+- **Server `EnsurePlayer`**: On first join (guarded by `_knownPlayers HashSet`), calls `_health.SetInvulnerable(player.Value, HealthTable.DefaultSpawnInvulnTicks)` after `Initialize`
+- **Server `Step`**: Calls `_health.Tick()` after `_world.Step()` each tick
+- **Server `EncodeDelta`**: Sets `IsInvulnerable = _health.IsInvulnerable(id)` on each `PlayerStateDto`
+- **`PlayerRenderState`**: Has `IsInvulnerable` bool field — wired for future visual effects
+
+## AetherServerSimulation EnsurePlayer Guard (Important)
+
+`MatchTickLoop.Drain()` calls `simulation.EnsurePlayer()` every tick for every player. `MatchPhysicsWorld.EnsurePlayer` has an early-return guard, but the simulation layer must also guard health init — otherwise health resets to max every tick.
+
+**Pattern**: `_knownPlayers HashSet<string>` in `AetherServerSimulation`. `if (!_knownPlayers.Add(player.Value)) return;` at the top of `EnsurePlayer`. Also prevents `_teamSlotCounters` from incrementing on every tick.
+
+## Server Respawn System
+
+`AetherServerSimulation` manages respawning via three dictionaries:
+- `Dictionary<string, float> _maxHealth` — set in `EnsurePlayer` from `stats.MaxHealth`
+- `Dictionary<string, (float X, float Z)> _spawnPositions` — set in `EnsurePlayer` from `SpawnResolver`
+- `Dictionary<string, int> _respawnTimers` — set when player first dies, counts down to 0
+
+**Respawn delay**: `RespawnDelayTicks = 150` (5 seconds at 30 Hz). When a player dies, the timer starts. Each tick decrements it; respawn fires when it hits 0.
+
+**Dead player input gate**: `ApplyInput` still acks the sequence (`_lastSeq[id] = seq`) but returns early before physics/ability processing when `!_health.IsAlive(id)`. This drains the client's pending-input queue correctly while preventing dead-player movement.
+
+Post-tick loop in `Step()`:
+```csharp
+foreach (var id in _world.PlayerIds)
+{
+    if (_health.IsAlive(id)) continue;
+    if (_respawnTimers.TryGetValue(id, out var ticks))
+    {
+        ticks--;
+        if (ticks <= 0) { /* respawn: Initialize HP + invuln + SnapPosition */ }
+        else { _respawnTimers[id] = ticks; }
+    }
+    else { _respawnTimers[id] = RespawnDelayTicks; } // just died
+}
+```
+
+`RespawnInTicks` is broadcast in every `PlayerStateDto` (Key 7): 0 = alive, >0 = dead counting down.
+
+**Client side**: `AetherClientSimulation` stores `_respawnTicks` dict, populated from `dto.RespawnInTicks` in `ReconcileTo`, copied to `PlayerRenderState.RespawnInTicks` in `SyncRenderStates`. `PlayerViewSystem` hides the local player GO (`SetActive(false)`) when dead. Camera holds at last known position during the 5s window (Cinemachine handles inactive follow targets gracefully). `RespawnScreenController` shows "YOU DIED" overlay + countdown; also calls `SetVisible(false)` on `JoystickInputProvider` + `AbilityInputProvider`.
+
+## RespawnScreenController
+
+`Core/Gameplay/Scripts/UI/RespawnScreenController.cs` — `IStartable/ITickable/IDisposable` VContainer service. Injects `AetherClientSimulation`, `JoystickInputProvider`, `AbilityInputProvider`. Creates a canvas overlay in `Start()` (sortingOrder 20). Each `Tick()`:
+- Checks `sim.Players[localId].RespawnInTicks > 0`
+- Shows/hides overlay + toggles input visibility on state change (`_wasDead` flag prevents per-frame calls)
+- Updates `$"Respawning in {ticks/30f:F1}s"` countdown label
+
+Registered as `builder.RegisterEntryPoint<RespawnScreenController>()` in `MatchLifetimeScope`.
+
+## Status
+
+`HealthTable.ApplyDamage` wired with invulnerability guard; spawn invulnerability 3s. Abilities deal damage: Brawler Punch 10 / Charge 20. Health flows in `PlayerStateDto.Health` every tick. **Respawn has a 5-second delay** — server counts 150 ticks then restores HP + 3s invuln + snaps to spawn. Client shows death screen + countdown and hides all input controls while dead.
+
+## Update: CharacterRegistry → CharacterCatalog (supersedes "Character Definitions" above)
+
+`CharacterRegistry` (static lookup, described above) is **DELETED**. Replaced by:
+- **`CharacterCatalog`**: instance class (not static) in `ClashUp.Shared/Characters/`, initialized from `CharactersConfig`. `Get(CharacterId)` falls back to `Default` on unknown id. Both server and client hold a `MatchCharactersHolder` wrapping one, initialized from the wire config.
+- **`CharactersConfig`**: MessagePack object in `ClashUp.Shared/MessagePackObjects/` — `DefaultCharacterId` + `Characters[]`. Static `Default` = Brawler. DB key `characters:registry`, fetched by `CharacterConfigProvider` (60s cache), sent in `MatchProvision.Characters` (Key 7) / `JoinResult.Characters`.
+- **Roster = Brawler + Mage** — both in `CharactersConfig.Default` AND the `ConfigSeeder` DB seed. Adding a character = update both; the seeder only writes when the DB key is missing, so an existing dev DB needs the doc dropped/updated to pick up new characters.
+- **Character selection** is no longer hardcoded: pre-matchmaking `CharacterSelectUI`, choice held in `SelectedCharacterStore` (CoreStarter scope), sent via `MatchJoinRequest.CharacterId` (Key 2), validated server-side in `MatchHub.JoinAsync`. See [character-selection.md](character-selection.md).
+- `StatBlock` is now MessagePack-annotated (sent inside `CharactersConfig`) — it's no longer "NOT MessagePack" as stated above.
+- **Per-player move speed**: `MatchPhysicsWorld.EnsurePlayer` + `MovementModel.Step` both accept an optional `moveSpeed` param now (per-character, not a shared constant).
+
+## World-space Health Bar UI (current)
+
+- `WorldSpaceHealthBar.cs` (`Core/Gameplay/Scripts/UI/`) uses a `Slider _slider` (**NOT** `Image.fillAmount` as an older note said) — `SetHealth` sets `slider.value = current/max`. Player.prefab: `HealthBar` has a Slider component + `WorldSpaceHealthBar`; `Fill` child Image is the Slider's fillRect.
+- **HP number overlay**: `WorldSpaceHealthBar` also has a `_hpText` (TMP_Text) field — a `HpText` child under `HealthBar`, stretched to fill it, showing `"{current} / {max}"`. Added because the bar alone didn't show exact numbers.
+- `PlayerViewSystem` caches a per-player ref and calls `SetHealth(current, max)` each frame.
+- **Per-player point counter**: `PlayerViewSystem` shows a gold points label above each player's nameplate (objective modes only, gated by `MatchModeHolder.IsElimination`). Built via `CreatePointsLabel` — a `TextMeshProUGUI` under the WorldUI canvas at anchoredPosition (0,+40) (name centered, HealthBar at −40). Points come from `PlayerStateDto.Points`, captured for ALL players in `OnSnapshotDecoded`. Separate from the local-player screen-space `EliminationHudController` "POINTS N" HUD readout (top-right, see [elimination-mode.md](elimination-mode.md)).

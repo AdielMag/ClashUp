@@ -78,3 +78,8 @@ external/AetherNet/
 client/ClashUp.Unity/.mcp.json
 Builds
 client/ClashUp.Unity/.utmp
+
+# ===== Obsidian vault (docs/) =====
+# Per-machine UI layout state; keep the rest of docs/.obsidian/ (plugins, hotkeys, appearance) tracked.
+docs/.obsidian/workspace.json
+docs/.obsidian/workspace-mobile.json
