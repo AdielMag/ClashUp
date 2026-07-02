@@ -1,0 +1,18 @@
+{
+  "nodes": [
+    { "id": "a1b2c3d4e5f60001", "type": "text", "x": -520, "y": 0, "width": 240, "height": 90, "color": "5", "text": "# Client input\nLocal player presses move/ability" },
+    { "id": "a1b2c3d4e5f60002", "type": "text", "x": -520, "y": 160, "width": 280, "height": 120, "color": "5", "text": "## Client prediction\nApply input locally *immediately* to hide latency. Keep unacked inputs in a buffer." },
+    { "id": "a1b2c3d4e5f60003", "type": "text", "x": 0, "y": 160, "width": 300, "height": 130, "color": "2", "text": "## Server (authoritative)\nFixed-tick deterministic simulation over AetherNet. Single source of truth." },
+    { "id": "a1b2c3d4e5f60004", "type": "text", "x": 0, "y": 360, "width": 300, "height": 90, "color": "2", "text": "### Snapshot broadcast\nAuthoritative world state sent each tick" },
+    { "id": "a1b2c3d4e5f60005", "type": "text", "x": -520, "y": 360, "width": 300, "height": 130, "color": "4", "text": "## Reconciliation (local player)\nRewind to authoritative state, replay unacknowledged inputs." },
+    { "id": "a1b2c3d4e5f60006", "type": "text", "x": 0, "y": 520, "width": 300, "height": 120, "color": "6", "text": "## Remote interpolation\nBuffer + lerp remote entities between snapshots. NOT predicted." },
+    { "id": "a1b2c3d4e5f60007", "type": "file", "x": 400, "y": 160, "width": 320, "height": 160, "file": "memory/netcode/netcode-architecture.md" }
+  ],
+  "edges": [
+    { "id": "e0001", "fromNode": "a1b2c3d4e5f60001", "fromSide": "bottom", "toNode": "a1b2c3d4e5f60002", "toSide": "top", "toEnd": "arrow" },
+    { "id": "e0002", "fromNode": "a1b2c3d4e5f60002", "fromSide": "right", "toNode": "a1b2c3d4e5f60003", "toSide": "left", "toEnd": "arrow", "label": "send input" },
+    { "id": "e0003", "fromNode": "a1b2c3d4e5f60003", "fromSide": "bottom", "toNode": "a1b2c3d4e5f60004", "toSide": "top", "toEnd": "arrow" },
+    { "id": "e0004", "fromNode": "a1b2c3d4e5f60004", "fromSide": "left", "toNode": "a1b2c3d4e5f60005", "toSide": "right", "toEnd": "arrow", "label": "local player" },
+    { "id": "e0005", "fromNode": "a1b2c3d4e5f60004", "fromSide": "bottom", "toNode": "a1b2c3d4e5f60006", "toSide": "top", "toEnd": "arrow", "label": "remote players" }
+  ]
+}

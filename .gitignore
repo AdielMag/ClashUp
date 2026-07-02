@@ -83,3 +83,7 @@ client/ClashUp.Unity/.utmp
 # Per-machine UI layout state; keep the rest of docs/.obsidian/ (plugins, hotkeys, appearance) tracked.
 docs/.obsidian/workspace.json
 docs/.obsidian/workspace-mobile.json
+
+# .claude/rules is a machine-local junction -> docs/rules (canonical rule docs live in the vault,
+# committed there; recreate the junction on a fresh clone with tools/setup-vault-links.ps1).
+.claude/rules

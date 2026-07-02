@@ -1,3 +1,8 @@
+---
+paths:
+  - "src/Server/**"
+---
+
 # Mongo Data
 
 **When this applies:** Any code that reads from or writes to MongoDB.

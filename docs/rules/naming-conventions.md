@@ -1,3 +1,8 @@
+---
+paths:
+  - "**/*.cs"
+---
+
 # Naming Conventions
 
 **When this applies:** Project-wide. New namespaces, files, types, asmdefs.

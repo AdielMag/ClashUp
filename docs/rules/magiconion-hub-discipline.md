@@ -1,3 +1,8 @@
+---
+paths:
+  - "src/Server/**"
+---
+
 # MagicOnion Hub Discipline
 
 **When this applies:** Any `StreamingHubBase` on the server, primarily `MatchHub`.

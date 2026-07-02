@@ -1,3 +1,8 @@
+---
+paths:
+  - "client/ClashUp.Unity/Assets/**"
+---
+
 # VContainer LifetimeScopes
 
 **When this applies:** Adding or restructuring any `LifetimeScope` on the Unity client.

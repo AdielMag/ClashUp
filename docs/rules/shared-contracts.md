@@ -1,3 +1,8 @@
+---
+paths:
+  - "src/Shared/**"
+---
+
 # Shared Contracts
 
 **When this applies:** Adding or changing any type that crosses the client/server boundary — MagicOnion service or hub interfaces, DTOs, wire formats, enums sent over the wire.

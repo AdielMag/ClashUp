@@ -1,3 +1,8 @@
+---
+paths:
+  - "docs/rules/**"
+---
+
 # ClashUp Project Rules
 
 These are the rules for working on ClashUp. **Keep this file minimal.** When you need to add a rule, create a new `.md` file in this folder and reference it below with a single-line explanation of what it covers and when it applies.

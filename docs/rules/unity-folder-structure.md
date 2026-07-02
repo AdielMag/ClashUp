@@ -1,3 +1,8 @@
+---
+paths:
+  - "client/ClashUp.Unity/Assets/**"
+---
+
 # Unity Folder Structure
 
 **When this applies:** Every file added under `client/ClashUp.Unity/Assets/`.

@@ -1,3 +1,9 @@
+---
+paths:
+  - "client/ClashUp.Unity/Assets/**"
+  - "src/Shared/ClashUp.Shared/**"
+---
+
 # IL2CPP / AOT
 
 **When this applies:** Unity client code (anything under `client/ClashUp.Unity/Assets/`) and any code in `src/Shared/ClashUp.Shared/` that ends up compiled into Unity.

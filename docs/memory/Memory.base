@@ -1,0 +1,30 @@
+filters:
+  and:
+    - 'file.inFolder("memory")'
+    - 'file.ext == "md"'
+    - 'file.name != "MEMORY.md"'
+
+properties:
+  file.folder:
+    displayName: "Category"
+  file.mtime:
+    displayName: "Updated"
+
+views:
+  - type: table
+    name: "By category"
+    groupBy:
+      property: file.folder
+      direction: ASC
+    order:
+      - file.name
+      - file.folder
+      - file.mtime
+
+  - type: table
+    name: "Recently updated"
+    limit: 20
+    order:
+      - file.name
+      - file.folder
+      - file.mtime

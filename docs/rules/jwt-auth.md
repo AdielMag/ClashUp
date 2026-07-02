@@ -1,3 +1,8 @@
+---
+paths:
+  - "src/Server/**"
+---
+
 # JWT Auth
 
 **When this applies:** Anything that mints, signs, validates, transports, or reads JWTs.

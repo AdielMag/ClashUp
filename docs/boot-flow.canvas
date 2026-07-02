@@ -1,0 +1,19 @@
+{
+  "nodes": [
+    { "id": "b1b2c3d4e5f60001", "type": "text", "x": 0, "y": 0, "width": 260, "height": 90, "color": "5", "text": "# App start\nPersistentUI + AppStarter boot" },
+    { "id": "b1b2c3d4e5f60002", "type": "text", "x": 0, "y": 150, "width": 260, "height": 110, "color": "5", "text": "## Environment picker\nChoose ServerEnvironment (dev/staging/prod)" },
+    { "id": "b1b2c3d4e5f60003", "type": "text", "x": 0, "y": 320, "width": 260, "height": 100, "color": "3", "text": "## Connect\nAuth + open MagicOnion connection" },
+    { "id": "b1b2c3d4e5f60004", "type": "text", "x": 0, "y": 480, "width": 260, "height": 90, "color": "4", "text": "## Lobby\nCharacter select + matchmaking" },
+    { "id": "b1b2c3d4e5f60005", "type": "text", "x": 340, "y": 480, "width": 300, "height": 120, "color": "2", "text": "## Match (additive scene)\nMatchLifetimeScope owns the session; server drives state." },
+    { "id": "b1b2c3d4e5f60006", "type": "text", "x": 340, "y": 300, "width": 300, "height": 120, "color": "6", "text": "## Disconnect / reconnect\nPause-reset flow; return to a safe screen." },
+    { "id": "b1b2c3d4e5f60007", "type": "file", "x": 340, "y": 0, "width": 320, "height": 160, "file": "memory/boot/boot-flow.md" }
+  ],
+  "edges": [
+    { "id": "be001", "fromNode": "b1b2c3d4e5f60001", "fromSide": "bottom", "toNode": "b1b2c3d4e5f60002", "toSide": "top", "toEnd": "arrow" },
+    { "id": "be002", "fromNode": "b1b2c3d4e5f60002", "fromSide": "bottom", "toNode": "b1b2c3d4e5f60003", "toSide": "top", "toEnd": "arrow" },
+    { "id": "be003", "fromNode": "b1b2c3d4e5f60003", "fromSide": "bottom", "toNode": "b1b2c3d4e5f60004", "toSide": "top", "toEnd": "arrow" },
+    { "id": "be004", "fromNode": "b1b2c3d4e5f60004", "fromSide": "right", "toNode": "b1b2c3d4e5f60005", "toSide": "left", "toEnd": "arrow", "label": "match found" },
+    { "id": "be005", "fromNode": "b1b2c3d4e5f60005", "fromSide": "top", "toNode": "b1b2c3d4e5f60006", "toSide": "bottom", "toEnd": "arrow", "label": "drop" },
+    { "id": "be006", "fromNode": "b1b2c3d4e5f60006", "fromSide": "left", "toNode": "b1b2c3d4e5f60003", "toSide": "right", "toEnd": "arrow", "label": "retry" }
+  ]
+}

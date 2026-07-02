@@ -1,3 +1,10 @@
+---
+paths:
+  - "src/Server/**"
+  - "src/Shared/**"
+  - "client/ClashUp.Unity/Assets/Core/Gameplay/**"
+---
+
 # Server Authority
 
 **When this applies:** Any code that touches gameplay state — inputs, simulation, hit detection, scoring, match outcomes.

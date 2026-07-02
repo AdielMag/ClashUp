@@ -1,3 +1,8 @@
+---
+paths:
+  - "**/*.cs"
+---
+
 # Async Discipline
 
 **When this applies:** Every method whose body contains `await` or whose return type is async.
