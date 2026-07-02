@@ -587,6 +587,7 @@ public void Initialize(AbilitiesConfig config)
 **When to use each**:
 - `Unlit/Transparent`: textured overlays where alpha comes from the texture; no `mat.color` tinting needed.
 - `Sprites/Default`: solid-color or tinted overlays — supports `_Color` including alpha. Works with `mat.color = new Color(r, g, b, alpha)`.
+- **Ground-plane zone/decal overlays specifically** (spawn zones, grass stealth patches — flat `Quad` laid on the arena floor): this project's established convention is the built-in **Standard** shader with `_Mode: 3` (Transparent) + `stringTagMap: {RenderType: Transparent}` + `_Color` alpha, not `Sprites/Default`. See `SpawnZone.mat`/`GrassZone.mat` in `Assets/Core/Match/Content/Maps/Materials/` — copy one of these directly for a new zone-overlay material rather than picking a shader from scratch. See [[grass-stealth]].
 
 ## C# 9 String Interpolation — No Inline String Literals
 

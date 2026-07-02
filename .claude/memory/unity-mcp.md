@@ -35,6 +35,8 @@ Two modes:
 - `scene-set-active`: can fail on scenes that are already active/only scene — use script-execute fallback
 - `scene-create`: `setupMode: "EmptyScene"` creates a truly empty scene (no camera/light)
 - `assets-create-folder`: can fail with null ref if parent doesn't exist — verify parent folders first
+- `gameobject-component-modify`/`assets-modify` `pathPatches`: for a `MeshRenderer`, the path is the **property** `sharedMaterial` (or `sharedMaterials`), NOT the serialized field `m_Materials`/`m_Materials/[0]`. `pathPatches` navigation goes through reflection on properties, not Unity's serialized-field names — same root cause as the existing `RectTransform` note below (`anchoredPosition` not `m_AnchoredPosition`). If a patch errors `"Segment 'X' not found on type 'Y'"`, the error message lists every available property name — read it, don't guess a second `m_`-prefixed variant.
+- `gameobject-find` with a `path`/`assetPath` combo targeting a GameObject **nested inside a closed prefab asset** does not reliably navigate to the child — it can silently resolve to the prefab root instead. To verify a specific child's final saved state after `assets-prefab-close`, read the raw `.prefab` YAML directly (`Read`/`Grep` for `m_Name: <ChildName>` and the following `Transform`/component blocks) rather than trusting a `gameobject-find` path query against the asset.
 
 ## Unity Slider Prefab Setup via script-execute
 
@@ -148,6 +150,8 @@ To validate code-generated meshes (telegraph/area-flash shapes, etc.) without a 
 1. `script-execute` to spawn the objects in the open scene, parented under one root GameObject (e.g. `FlashTestRoot`), giving meaningful positions.
 2. `screenshot-isolated` on that root with `cameraView: "Top"`, `isolated: true`, `includeChildren: true`, a solid dark `backgroundColor` — renders flat XZ-plane meshes straight down so you can eyeball the shapes.
 3. `script-execute` again to `DestroyImmediate` the root and clean up. **Don't `scene-save`** — leave the open scene untouched.
+
+**No-scripting variant, when the thing to verify is already an authored prefab/scene asset** (not code-generated at runtime): `assets-prefab-instantiate` the prefab into whatever scene is currently open (any scene works — it's temporary), `screenshot-isolated` with `cameraView: "Top"` on the returned instance, then `gameobject-destroy` the instance. No `script-execute` needed, and no scene save. Used to confirm a map's ground-decal placement (e.g. `arena_tdm`'s grass patches) matched the baked JSON coordinates by eyeballing a top-down render before telling the user it was done.
 
 Gotchas:
 - `screenshot-scene-view` / `screenshot-game-view` / `screenshot-camera` are often NOT surfaced via ToolSearch in this environment — only `screenshot-isolated` (and sometimes `screenshot-game-view`) are. Reach for `screenshot-isolated` for object/mesh checks.
