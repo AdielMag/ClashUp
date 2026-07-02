@@ -160,6 +160,15 @@ Two separate rendering paths for local vs remote players:
 - Server's `ResolveCurrentPlayerId()` reads this header (fallback: random GUID — should NOT happen)
 - Same player ID must be used for Enqueue, Poll, and CheckActiveMatch — otherwise reconnect fails
 
+## Adding Optional Capabilities to IServerSimulation — Use Default Interface Methods
+
+`IServerSimulation` has 4 implementations: `AetherServerSimulation` (real), `MovementServerSimulation`, `NullServerSimulation`, and a test `FakeSim` (`BotTests.cs`). When adding a new capability that only ONE implementation needs real logic for (e.g. grass-zone visibility — see [[grass-stealth]]), declare it as a **default interface method** rather than an abstract one:
+```csharp
+bool AnyPlayerHidden() => false;
+ReadOnlyMemory<byte> EncodeDeltaFor(string viewerId, int baselineTick) => EncodeDelta(baselineTick);
+```
+Only `AetherServerSimulation` overrides these; the other three implementations compile untouched with sane fallback behavior. Avoids a 4-file churn for a 1-file feature. Reuse this pattern for any future optional addition to this interface (or any other multi-implementation interface in the codebase).
+
 ## MatchContext End-of-Match Callbacks
 `MatchContext` has two separate callbacks wired by `MatchRegistry.Register`:
 - `OnMatchEndedEarly`: fires `NotifyMatchEndedAsync` (GS → Services, marks DB "Ended") — invoked **before** broadcasting to clients, giving DB time to update

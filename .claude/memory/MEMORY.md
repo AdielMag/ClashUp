@@ -75,14 +75,16 @@ MagicOnion source-gen requirement, shader stripping, emulator ports. See [androi
 - [project-structure.md](project-structure.md) — Assembly defs, package versions, Match Camera, VContainer scopes, Docker Compose, networking layer, additive scenes
 - [scene-ownership.md](scene-ownership.md) — Domain ownership rules (assets live where their lifespan is)
 - [folder-conventions.md](folder-conventions.md) — Script subfolder rules (Interfaces/, Services/, etc.)
-- [patterns.md](patterns.md) — Code patterns (IDebugLogger, canvas scaler, DI patterns, etc.)
-- [debugging.md](debugging.md) — Common pitfalls and solutions (incl. full match-end freeze sequence, UI Toolkit gotchas)
+- [patterns.md](patterns.md) — Code patterns (IDebugLogger, canvas scaler, DI patterns, default-interface-methods for multi-impl interfaces, etc.)
+- [debugging.md](debugging.md) — Common pitfalls and solutions (incl. full match-end freeze sequence, UI Toolkit gotchas, MagicOnion per-connection send, reflecting into NuGet packages)
 - [unity-mcp.md](unity-mcp.md) — Unity MCP CLI usage patterns and gotchas
 - [dev-environment.md](dev-environment.md) — CLASHUP_DEV define, Tailscale phone testing, ServerEnvironment enum
 - [feedback-ticket-status.md](feedback-ticket-status.md) — Never mark tickets Done without user confirmation it's working
+- [feedback-plan-revision.md](feedback-plan-revision.md) — "Revise plan, make it optimized/correct" = real efficiency/leak/scope pass, not prose polish
 - [elimination-mode.md](elimination-mode.md) — 2nd game mode: no-respawn + points economy + breakable boxes/orbs
 - [forfeit-leave-match.md](forfeit-leave-match.md) — Mid-match "Leave Match"/forfeit flow (client + server)
 - [bot-system.md](bot-system.md) — Server-side AI bots: matchmaking fill, BotDirector FSM, perception
+- [grass-stealth.md](grass-stealth.md) — Grass stealth zones: per-viewer snapshot filtering, MagicOnion `group.Single()`, hidden-DTO wire protocol
 - [lobby-ui.md](lobby-ui.md) / [lobby-ui-reskin.md](lobby-ui-reskin.md) — Lobby pager UI + Clash-style reskin
 - [gcp-ops-gotchas.md](gcp-ops-gotchas.md) — Deploy/verify gotchas (GITHUB_TOKEN, MIG update policies, Monitoring REST API)
 - [deployment-architecture.md](deployment-architecture.md) — Version-aware gateway, on-demand backend spawning, CCU model

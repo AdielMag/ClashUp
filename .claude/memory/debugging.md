@@ -75,6 +75,17 @@ Never assume editor console has the relevant errors when the user says "simulato
 - Hub receiver methods (e.g. `OnSnapshot`) return `void` — they are fire-and-forget
 - In MagicOnion v7, `group.All.OnSnapshot()` returns void, NOT a Task
 - Do NOT `await` broadcast calls — use plain call and return `Task.CompletedTask` from the calling method
+- `IGroup<T>` also supports **per-connection targeting**, not just `.All`: `group.Single(Guid connectionId)`, `group.Except(IEnumerable<Guid>)`, `group.Only(IEnumerable<Guid>)`. The connection id is `ServiceContext.ContextId` (`Context.ContextId` inside a hub) — capture it per player on `JoinAsync` if you need to target them individually later (e.g. per-viewer filtered snapshots). Full example: [[grass-stealth]].
+
+## Reflecting Into Installed NuGet Packages to Discover Undocumented API Surface
+
+When a package's real API isn't obvious from source comments or memory (e.g. MagicOnion's `IGroup<T>` per-connection send methods), don't guess — verify by reflecting into the actual installed assembly:
+1. `Get-ChildItem "$env:USERPROFILE\.nuget\packages\<package>" -Recurse -Filter "*.dll"` to find the exact DLL for the version this repo uses (check `Directory.Packages.props`).
+2. Write a throwaway console project in the scratchpad dir (`dotnet new console` + a `PackageReference` at the pinned version) and reflect: `typeof(SomeType).GetMembers()`.
+3. **Gotcha**: `Type.GetMembers()` on an interface only returns members declared directly on that interface — it does NOT walk base interfaces. If a type looks suspiciously empty (e.g. `IGroup<T>` showing only 2 methods when you expect more), also call `type.GetInterfaces()` and `GetMembers()` on each of those.
+4. Clean up the scratchpad project when done — don't leave throwaway probe projects lying around.
+
+This is more reliable than trusting docs/memory for exact method signatures, especially for fast-moving libraries like MagicOnion.
 
 ## NuGet Package Gotchas
 - MagicOnion 7.10.1 does NOT exist — latest is 7.10.0. Always verify versions on nuget.org before upgrading.
